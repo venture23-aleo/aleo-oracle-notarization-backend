@@ -8,10 +8,11 @@ export
 # Variables
 # ─────────────────────────────────────────────────────────────────────────────
 SHELL := /bin/bash
-export VERSION := $(shell git describe --tags --always --dirty)
+APP := aleo-oracle-notarizer-dev
+# export VERSION := $(shell git describe --tags --always --dirty)
 export COMMIT := $(shell git rev-parse HEAD)
 
-LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT)"
+# LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT)"
 GOCMD := go
 LD_LIBRARY_PATH="/lib/x86_64-linux-gnu/"
 MANIFEST_TEMPLATE="build/inputs/${APP}.manifest.template"
@@ -27,12 +28,12 @@ all: fmt vet lint test build
 .PHONY: build
 build:
 	@echo ">> Building $(APP)..."
-	$(GOCMD) build $(LDFLAGS) -o bin/$(APP) ./cmd/server
+	$(GOCMD) build -o bin/$(APP) ./cmd/server
 
 .PHONY: build-cross
 build-cross:
 	@echo ">> Cross-compiling for linux/amd64..."
-	GOOS=linux GOARCH=amd64 $(GOCMD) build $(LDFLAGS) -o bin/$(APP)-linux-amd64 ./cmd/server
+	GOOS=linux GOARCH=amd64 $(GOCMD) build -o bin/$(APP)-linux-amd64 ./cmd/server
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Run and Test
@@ -80,7 +81,7 @@ generate-manifest-template:
 .PHONY: docker-build
 docker-build: generate-manifest-template
 	docker compose build $(APP)
-	docker tag $(APP):latest $(APP):$(VERSION)-$(COMMIT)
+	docker tag $(APP):latest $(APP):$(COMMIT)
 	
 .PHONY: docker-run
 docker-run: docker-build

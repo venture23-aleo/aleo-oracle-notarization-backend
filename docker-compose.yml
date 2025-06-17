@@ -6,7 +6,6 @@ services:
       context: .
       dockerfile: ./build/Dockerfile
       args:
-        VERSION: ${VERSION}
         COMMIT: ${COMMIT}
         APP: ${APP}
     platform: linux/amd64
