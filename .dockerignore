@@ -1,0 +1,5 @@
+artifacts/
+bin/
+scripts/
+Readme.md
+.env.sample

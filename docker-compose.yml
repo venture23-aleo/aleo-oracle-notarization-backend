@@ -1,0 +1,17 @@
+services:
+  aleo-oracle-notarizer-dev:
+    image: ${APP}:latest
+    container_name: notarizer
+    build: 
+      context: .
+      dockerfile: ./build/Dockerfile
+      args:
+        VERSION: ${VERSION}
+        COMMIT: ${COMMIT}
+        APP: ${APP}
+    platform: linux/amd64
+    ports:
+      - ${PORT}:${PORT}
+    devices:
+      - /dev/sgx/enclave:/dev/sgx/enclave
+      - /dev/sgx/provision:/dev/sgx/provision
