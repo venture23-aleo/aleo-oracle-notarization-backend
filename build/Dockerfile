@@ -18,7 +18,7 @@ ARG APP
 COPY . .
 
 # Build the statically linked Go binary
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X 'main.Version=${VERSION}' -X 'main.Commit=${COMMIT}'" -buildvcs=false -o ${APP} ./cmd/server
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -buildvcs=false -o ${APP} ./cmd/server
 
 # =============================
 # Stage 2: Gramine SGX Runtime
