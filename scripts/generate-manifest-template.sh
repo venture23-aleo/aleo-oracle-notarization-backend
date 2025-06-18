@@ -10,10 +10,8 @@ mkdir -p "$(dirname "$MANIFEST_TEMPLATE")"
 cat > $MANIFEST_TEMPLATE <<EOF
 
 [loader.env]
-FORCE_COLOR = "1"
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
-PORT = "$PORT"
-WHITELISTED_DOMAINS = $WHITELISTED_DOMAINS
+PORT="${PORT}"
+WHITELISTED_DOMAINS="${WHITELISTED_DOMAINS}"
 
 [fs.root]
 type = "chroot"
@@ -23,11 +21,11 @@ uri = "file:/"
 mounts = [
   { uri = "file:{{ gramine.runtimedir() }}", path = "/lib" },
   { uri = "file:${LD_LIBRARY_PATH}", path = "$LD_LIBRARY_PATH" },
-  { uri = "file:aleo-oracle-notarizer-dev", path = "/${APP}" },
+  { uri = "file:${APP}", path = "/${APP}" },
   { uri = "file:/etc/ssl/", path = "/etc/ssl/" },
   { uri = "file:/usr/lib/ssl/", path = "/usr/lib/ssl/" },
-  { uri = "file:/etc/resolv.conf", path = "/etc/resolv.conf" },
-  { uri = "file:/etc/hosts", path = "/etc/hosts" },
+  { uri = "file:static_resolv.conf", path = "/etc/resolv.conf" },
+  { uri = "file:static_hosts", path = "/etc/hosts" },
   { uri = "file:/etc/sgx_default_qcnl.conf", path = "/etc/sgx_default_qcnl.conf" }
 ]
 
@@ -37,12 +35,10 @@ edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 trusted_files= [
   "file:{{ gramine.runtimedir() }}/",
   "file:$LD_LIBRARY_PATH",
-  "file:./aleo-oracle-notarizer-dev",
-  "file:/etc/sgx_default_qcnl.conf"
-]
-allowed_files = [
-  "file:/etc/resolv.conf",
-  "file:/etc/hosts",
+  "file:./${APP}",
+  "file:/etc/sgx_default_qcnl.conf",
+  "file:./static_resolv.conf",
+  "file:./static_hosts",
   "file:/etc/ssl/",
   "file:/usr/lib/ssl/"
 ]

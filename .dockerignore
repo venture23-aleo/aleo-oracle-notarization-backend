@@ -2,4 +2,5 @@ artifacts/
 bin/
 scripts/
 Readme.md
-.env.sample
+.env_sample
+secrets/

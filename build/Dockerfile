@@ -1,4 +1,4 @@
-
+# syntax=docker/dockerfile:1.4
 # ========================
 # Stage 1: Build Go Binary
 # ========================
@@ -10,8 +10,6 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
-ARG VERSION
-ARG COMMIT
 ARG APP
 
 # Copy source code
@@ -32,19 +30,17 @@ WORKDIR /app
 
 COPY --from=builder /app/${APP} .
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates libssl-dev libprotobuf-dev protobuf-compiler python3 python3-pip libsgx-dcap-default-qpl && rm -rf /var/lib/apt/lists/*
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libsgx-dcap-default-qpl && rm -rf /var/lib/apt/lists/*
 
 # Copy configuration files
-
 COPY build/inputs/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
-
-COPY build/inputs/entrypoint.sh build/inputs/${APP}.manifest.template ./
+COPY build/inputs/static_hosts build/inputs/static_resolv.conf build/inputs/entrypoint.sh build/inputs/${APP}.manifest.template ./
 
 RUN chmod +x entrypoint.sh
 
-RUN gramine-sgx-gen-private-key && \
+RUN --mount=type=secret,id=gramine-private-key,target=/tmp/private-key.pem \
     gramine-manifest -Dlog_level=debug ${APP}.manifest.template ${APP}.manifest && \
-    gramine-sgx-sign --manifest ${APP}.manifest --output ${APP}.manifest.sgx
+    gramine-sgx-sign --manifest ${APP}.manifest --key /tmp/private-key.pem --date 0000-00-00 --output ${APP}.manifest.sgx
 
 ENV APP=${APP}
 
