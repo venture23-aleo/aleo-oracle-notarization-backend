@@ -1,12 +1,13 @@
 services:
-  aleo-oracle-notarizer-dev:
+  aleo-oracle-notarization-backend:
     image: ${APP}:latest
-    container_name: notarizer
+    container_name: notarization-backend
     build: 
       context: .
       dockerfile: ./build/Dockerfile
+      secrets:
+        - gramine-private-key
       args:
-        COMMIT: ${COMMIT}
         APP: ${APP}
     platform: linux/amd64
     ports:
@@ -14,3 +15,7 @@ services:
     devices:
       - /dev/sgx/enclave:/dev/sgx/enclave
       - /dev/sgx/provision:/dev/sgx/provision
+
+secrets:
+  gramine-private-key:
+    file: ./secrets/enclave-key.pem
