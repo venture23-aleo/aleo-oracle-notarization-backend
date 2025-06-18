@@ -185,7 +185,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 		return nil, ProofPositionalInfo{}, appErrors.ErrPreparationCriticalError
 	}
 
-	log.Printf("preppedAttestationData: %v",preppedAttestationData)
+	// log.Printf("preppedAttestationData: %v",preppedAttestationData)
 
 	attestationDataLen := len(preppedAttestationData)
 
@@ -195,7 +195,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	}
 
 	methodLen := len(req.RequestMethod)
-	log.Printf("methodLen %v",methodLen)
+	// log.Printf("methodLen %v",methodLen)
 
 	if methodLen > math.MaxUint16 {
 		log.Println("Warning: cannot create encoded data meta header - methodLen is too long")
@@ -229,11 +229,11 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 		return nil, ProofPositionalInfo{}, appErrors.ErrPreparationCriticalError
 	}
 
-	log.Printf("attestationDataLen: %v",attestationDataLen)
-	log.Printf("methodLen: %v",methodLen)
-	log.Printf("urlLen: %v",urlLen)
-	log.Printf("selectorLen: %v",selectorLen)
-	log.Printf("headersLen: %v",headersLen)
+	// log.Printf("attestationDataLen: %v",attestationDataLen)
+	// log.Printf("methodLen: %v",methodLen)
+	// log.Printf("urlLen: %v",urlLen)
+	// log.Printf("selectorLen: %v",selectorLen)
+	// log.Printf("headersLen: %v",headersLen)
 
 	// fill the empty meta header with the actual content
 	encoding.CreateMetaHeader(
