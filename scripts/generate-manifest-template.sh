@@ -24,6 +24,8 @@ mounts = [
   { uri = "file:{{ gramine.runtimedir() }}", path = "/lib" },
   { uri = "file:${LD_LIBRARY_PATH}", path = "$LD_LIBRARY_PATH" },
   { uri = "file:aleo-oracle-notarizer-dev", path = "/${APP}" },
+  { uri = "file:/etc/ssl/", path = "/etc/ssl/" },
+  { uri = "file:/usr/lib/ssl/", path = "/usr/lib/ssl/" },
   { uri = "file:/etc/resolv.conf", path = "/etc/resolv.conf" },
   { uri = "file:/etc/hosts", path = "/etc/hosts" },
   { uri = "file:/etc/sgx_default_qcnl.conf", path = "/etc/sgx_default_qcnl.conf" }
@@ -40,7 +42,9 @@ trusted_files= [
 ]
 allowed_files = [
   "file:/etc/resolv.conf",
-  "file:/etc/hosts"
+  "file:/etc/hosts",
+  "file:/etc/ssl/",
+  "file:/usr/lib/ssl/"
 ]
 isvprodid = 1
 isvsvn = 1
