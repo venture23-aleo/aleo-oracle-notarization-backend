@@ -8,9 +8,19 @@ import (
 	aleo "github.com/zkportal/aleo-utils-go"
 )
 
-func RegisterRoutes(mux *http.ServeMux, s aleo.Session ){
-	mux.HandleFunc("/",handlers.GetHealthCheck)
-	mux.HandleFunc("/notarize",handlers.GenerateAttestationReportHandler(s))
-	mux.HandleFunc("/info",handlers.GetInfo(s))
-	mux.HandleFunc("/whitelist",handlers.GetWhiteListedDomains)
+// RegisterRoutes registers the routes for the API.
+func RegisterRoutes(mux *http.ServeMux, s aleo.Session) {
+	// Register the routes.
+
+	// Register the notarization route.
+	mux.HandleFunc("/notarize", handlers.GenerateAttestationReportHandler(s))
+
+	// Register the info route.
+	mux.HandleFunc("/info", handlers.GetInfo)
+
+	// Register the whitelist route.
+	mux.HandleFunc("/whitelist", handlers.GetWhiteListedDomains)
+
+
+	mux.HandleFunc("/", handlers.GetHealthCheck)
 }

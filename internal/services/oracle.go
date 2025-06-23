@@ -2,7 +2,6 @@ package services
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -16,6 +15,7 @@ import (
 	aleo "github.com/zkportal/aleo-utils-go"
 )
 
+// PositionInfo is the positional information of the data.
 type PositionInfo struct {
 	// Index of the block where the write operation started. Indexing starts from 0. Note that this number doesn't account the fact that each chunk contains 32 blocks.
 	//
@@ -26,6 +26,7 @@ type PositionInfo struct {
 	Len int
 }
 
+// ProofPositionalInfo is the positional information of the proof data.
 type ProofPositionalInfo struct {
 	Data            PositionInfo `json:"data"`
 	Timestamp       PositionInfo `json:"timestamp"`
@@ -39,6 +40,7 @@ type ProofPositionalInfo struct {
 	OptionalFields  PositionInfo `json:"optionalFields"` // Optional fields are HTML result type, request content type, request body. They're all encoded together.
 }
 
+// OracleData is the data of the oracle.
 type OracleData struct {
 	// Schnorr signature of a verified Attestation Report.
 	Signature string `json:"signature"`
@@ -80,8 +82,10 @@ type OracleData struct {
 	// ReportExtras *NitroReportExtras `json:"reportExtras"`
 }
 
+// PrepareOracleDataBeforeQuote prepares the oracle data before the quote.
 func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationData string, timestamp uint64, attestationRequest AttestationRequest) (OracleData, error) {
 
+	// Prepare the proof data.
 	userDataProof, encodedPositions, err := PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
 
 	// log.Print("Proof data: ", hex.EncodeToString(userDataProof))
@@ -90,8 +94,8 @@ func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationDat
 		return OracleData{}, appErrors.ErrPreparingProofData
 	}
 
-	// C0 - C7 Chunks
-	userData, err := s.FormatMessage(userDataProof,8)
+	// C0 - C7 Chunks - Format the proof data.
+	userData, err := s.FormatMessage(userDataProof, 8)
 
 	if err != nil {
 		log.Println("failed to format proof data:", err)
@@ -107,6 +111,7 @@ func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationDat
 
 	// log.Printf("Attestation hash: %v", hex.EncodeToString(attestationHash))
 
+	// Prepare the encoded request proof.
 	encodedProofData, err := PrepareEncodedRequestProof(userDataProof, encodedPositions)
 
 	if err != nil {
@@ -114,8 +119,8 @@ func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationDat
 		return OracleData{}, err.(appErrors.AppError)
 	}
 
-	// C0 - C7 Chunks
-	encodedRequest, err := s.FormatMessage(encodedProofData,8)
+	// C0 - C7 Chunks - Format the encoded proof data.
+	encodedRequest, err := s.FormatMessage(encodedProofData, 8)
 	if err != nil {
 		log.Println("failed to format encoded proof data:", err)
 		return OracleData{}, appErrors.ErrFormattingEncodedProofData
@@ -123,6 +128,7 @@ func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationDat
 
 	// log.Print("encodedRequest", hex.EncodeToString(encodedRequest))
 
+	// Create the request hash - Hash the encoded request.
 	requestHash, err := s.HashMessage(encodedRequest)
 
 	if err != nil {
@@ -130,8 +136,7 @@ func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationDat
 		return OracleData{}, appErrors.ErrCreatingRequestHash
 	}
 
-	log.Printf("Request hash bytes : %v", requestHash)
-
+	// Create the request hash string - Hash the encoded request.
 	requestHashString, err := s.HashMessageToString(encodedRequest)
 
 	if err != nil {
@@ -139,9 +144,8 @@ func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationDat
 		return OracleData{}, appErrors.ErrCreatingRequestHash
 	}
 
-	log.Printf("Request hash string: %v", requestHashString)
-
-	timestampBytes := make([]byte, encoding.TARGET_ALIGNMENT)  
+	// Create the timestamped hash input - Hash the encoded request with the timestamp.
+	timestampBytes := make([]byte, encoding.TARGET_ALIGNMENT)
 	binary.LittleEndian.PutUint64(timestampBytes, uint64(timestamp))
 
 	timestampedHashInput := append(requestHash, timestampBytes...)
@@ -149,54 +153,67 @@ func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationDat
 	timestampedHashInputChunk1 := new(big.Int).SetBytes(utils.ReverseBytes(timestampedHashInput[0:16]))
 	timestampedHashInputChunk2 := new(big.Int).SetBytes(utils.ReverseBytes(timestampedHashInput[16:32]))
 
-	timesampedFormatMessage := fmt.Sprintf("{ request_hash: %su128, attestation_timestamp: %su128 }",timestampedHashInputChunk1, timestampedHashInputChunk2)
+	// Create the timestamped format message - Format the timestamped hash input.
+	timesampedFormatMessage := fmt.Sprintf("{ request_hash: %su128, attestation_timestamp: %su128 }", timestampedHashInputChunk1, timestampedHashInputChunk2)
 
 	log.Printf("timesampedFormatMessage: %v", string(timesampedFormatMessage))
 
+	// Create the timestamped hash - Hash the timestamped format message.
 	timestampedHash, err := s.HashMessageToString([]byte(timesampedFormatMessage))
-	
+
+	// Check if the error is not nil.
 	if err != nil {
 		log.Println("failed to creat timestamped hash:", err)
 		return OracleData{}, appErrors.ErrCreatingTimestampedHash
 	}
 
-	log.Printf("Timestamped request hash: %v", timestampedHash)
-
+	// Create the result - Set the user data, encoded positions, encoded request, request hash, and timestamped request hash.
 	result := OracleData{
-		UserData: string(userData),
-		EncodedPositions: encodedPositions,
-		EncodedRequest: string(encodedRequest),
-		RequestHash: requestHashString,
+		UserData:               string(userData),
+		EncodedPositions:       encodedPositions,
+		EncodedRequest:         string(encodedRequest),
+		RequestHash:            requestHashString,
 		TimestampedRequestHash: timestampedHash,
 	}
 
 	return result, nil
 }
 
+// PrepareOracleDataAfterQuote prepares the oracle data after the quote.
 func PrepareOracleDataAfterQuote(s aleo.Session, oracleData OracleData, quote []byte) (OracleData, error) {
+
 	// C0 - C9 Chunks
-	oracleReport, err := s.FormatMessage(quote,10)
+	oracleReport, err := s.FormatMessage(quote, 10)
 
 	if err != nil {
 		log.Println("failed to format message:", err)
 		return oracleData, appErrors.ErrFormattingQuote
 	}
 
+	// Create the hashed message.
 	hashedMessage, err := s.HashMessage(oracleReport)
+
+	// Check if the error is not nil.
 	if err != nil {
 		return oracleData, appErrors.ErrReportHashing
 	}
 
-	log.Println("Hash:", hex.EncodeToString(hashedMessage))
-
+	// Create the signature.
 	signature, err := s.Sign(configs.PrivateKey, hashedMessage)
+
+	// Check if the error is not nil.
 	if err != nil {
 		log.Fatalln("Sign failed:", err)
 		return oracleData, appErrors.ErrGeneratingSignature
 	}
 
+	// Set the report.
 	oracleData.Report = string(oracleReport)
+
+	// Set the signature.
 	oracleData.Signature = signature
+
+	// Set the address.
 	oracleData.Address = configs.PublicKey
 
 	return oracleData, nil

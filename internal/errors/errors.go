@@ -2,16 +2,18 @@ package errors
 
 import "fmt"
 
+// AppError is the error for the application.
 type AppError struct {
 	Code    int
 	Message string
 }
 
+// Error returns the error message for the AppError.
 func (e AppError) Error() string {
 	return fmt.Sprintf("code %d: %s", e.Code, e.Message)
 }
 
-// Validation errors
+// AppErrors are the errors for the application.
 var (
 	ErrMissingURL                 = AppError{1001, "url is required"}
 	ErrMissingRequestMethod       = AppError{1002, "requestMethod is required"}
@@ -48,28 +50,28 @@ var (
 	ErrJSONDecoding               = AppError{1033, "failed to decode the JSON response"}
 	ErrJSONEncoding               = AppError{1034, "failed to encode data to JSON"}
 	ErrReadingTargetInfo          = AppError{1035, "failed to read the target info"}
-	ErrWrittingTargetInfo         = AppError{1035, "failed to write the target info"}
 	ErrWrittingReportData         = AppError{1036, "failed to write the report data"}
 	ErrGeneratingQuote            = AppError{1037, "failed to generate the quote"}
 	ErrReadingQuote               = AppError{1038, "failed to read the quote"}
-	ErrWrappingQuote              = AppError{1039, "failed to wrap quote in openenclave format"}
-	ErrEncodingAttestationData    = AppError{1040, "failed to encode attestation data"}
-	ErrEncodingResponseFormat     = AppError{1041, "failed to encode response format"}
-	ErrEncodingEncodingOptions    = AppError{1042, "failed to encode encoding options"}
-	ErrEncodingHeaders            = AppError{1043, "failed to encode headers"}
-	ErrEncodingOptionalFields     = AppError{1044, "failed to encode optional fields"}
-	ErrPreparationCriticalError   = AppError{1045, "critical error while preparing data"}
-	ErrWrittingAttestationData    = AppError{1046, "failed to write attestation data to buffer"}
-	ErrWrittingTimestamp          = AppError{1047, "failed to write timestamp to buffer"}
-	ErrWrittingStatusCode         = AppError{1048, "failed to write status code to buffer"}
-	ErrWrittingUrl                = AppError{1049, "failed to write url to buffer"}
-	ErrWrittingSelector           = AppError{1050, "failed to write selector to buffer"}
-	ErrWrittingResponseFormat     = AppError{1051, "failed to write response format to buffer"}
-	ErrWrittingRequestMethod      = AppError{1052, "failed to write request method to buffer"}
-	ErrWrittingEncodingOptions    = AppError{1053, "failed to write encoding options to buffer"}
-	ErrWrittingRequestHeaders     = AppError{1054, "failed to write request headers to buffer"}
-	ErrWrittingOptionalFields     = AppError{1055, "failed to write optinal headers to buffer"}
-	ErrInvalidSelectorPart 		  = AppError{1056, "invalid selector part"}	
-	ErrExpectedArray              = AppError{1057, "expected array at key"}
-	ErrIndexOutOfBound            = AppError{1058, "index out of bounds"}
+	ErrWrittingTargetInfo         = AppError{1039, "failed to write the target info"}
+	ErrWrappingQuote              = AppError{1040, "failed to wrap quote in openenclave format"}
+	ErrEncodingAttestationData    = AppError{1041, "failed to encode attestation data"}
+	ErrEncodingResponseFormat     = AppError{1042, "failed to encode response format"}
+	ErrEncodingEncodingOptions    = AppError{1043, "failed to encode encoding options"}
+	ErrEncodingHeaders            = AppError{1044, "failed to encode headers"}
+	ErrEncodingOptionalFields     = AppError{1045, "failed to encode optional fields"}
+	ErrPreparationCriticalError   = AppError{1046, "critical error while preparing data"}
+	ErrWrittingAttestationData    = AppError{1047, "failed to write attestation data to buffer"}
+	ErrWrittingTimestamp          = AppError{1048, "failed to write timestamp to buffer"}
+	ErrWrittingStatusCode         = AppError{1049, "failed to write status code to buffer"}
+	ErrWrittingUrl                = AppError{1050, "failed to write url to buffer"}
+	ErrWrittingSelector           = AppError{1051, "failed to write selector to buffer"}
+	ErrWrittingResponseFormat     = AppError{1052, "failed to write response format to buffer"}
+	ErrWrittingRequestMethod      = AppError{1053, "failed to write request method to buffer"}
+	ErrWrittingEncodingOptions    = AppError{1054, "failed to write encoding options to buffer"}
+	ErrWrittingRequestHeaders     = AppError{1055, "failed to write request headers to buffer"}
+	ErrWrittingOptionalFields     = AppError{1056, "failed to write optinal headers to buffer"}
+	ErrInvalidSelectorPart        = AppError{1057, "invalid selector part"}
+	ErrExpectedArray              = AppError{1058, "expected array at key"}
+	ErrIndexOutOfBound            = AppError{1059, "index out of bounds"}
 )

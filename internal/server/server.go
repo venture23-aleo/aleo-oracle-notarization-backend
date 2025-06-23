@@ -11,24 +11,33 @@ import (
 	aleo "github.com/zkportal/aleo-utils-go"
 )
 
+// IdleTimeout and ReadWriteTimeout are the timeout for the server.
 const (
 	IdleTimeout      = 30
 	ReadWriteTimeout = 60
 )
 
+// StartServer starts the server.
 func StartServer(s aleo.Session) error {
+
+	// Create a new serve mux.
 	mux := http.NewServeMux()
 
-	api.RegisterRoutes(mux,s)
+	// Register the routes.
+	api.RegisterRoutes(mux, s)
 
+	// Get the port from the environment variable.
 	port := os.Getenv("PORT")
 
+	// If the port is not set, use the default port.
 	if port == "" {
-    	port = "8080" // default port
+		port = "8080" // default port
 	}
 
+	// Create the bind address.
 	bindAddr := fmt.Sprintf("0.0.0.0:%s", port)
 
+	// Create the server.
 	server := &http.Server{
 		IdleTimeout:       time.Second * IdleTimeout,
 		ReadHeaderTimeout: time.Second * ReadWriteTimeout,
@@ -37,7 +46,9 @@ func StartServer(s aleo.Session) error {
 		Handler:           mux,
 	}
 
-	log.Printf("Server is running on %v",bindAddr)
+	// Log the server is running on the bind address.
+	log.Printf("Server is running on %v", bindAddr)
 
+	// Listen and serve the server.
 	return server.ListenAndServe()
 }
