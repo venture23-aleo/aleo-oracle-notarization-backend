@@ -52,18 +52,24 @@ test:
 	$(GOCMD) test -v -race -timeout 30s ./...
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Quality Checks
+# Formatting
 # ─────────────────────────────────────────────────────────────────────────────
 .PHONY: fmt
 fmt:
 	@echo ">> Formatting code..."
 	$(GOCMD) fmt ./...
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Vet
+# ─────────────────────────────────────────────────────────────────────────────
 .PHONY: vet
 vet:
 	@echo ">> Vetting code..."
 	$(GOCMD) vet ./...
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Lint
+# ─────────────────────────────────────────────────────────────────────────────
 .PHONY: lint
 lint:
 	@echo ">> Static analysis (staticcheck)..."
@@ -99,10 +105,11 @@ clean:
 	rm -rf bin/*
 
 .PHONY: gen-key
+# ─────────────────────────────────────────────────────────────────────────────
 # Generate the enclave private key for SGX signing
 # Usage: make gen-key
 # Requires gramine-sgx-gen-private-key to be installed
-
+# ─────────────────────────────────────────────────────────────────────────────
 gen-key:
 	@mkdir -p secrets
 	@echo ">> Generating enclave private key at secrets/enclave-key.pem ..."
@@ -110,21 +117,25 @@ gen-key:
 	gramine-sgx-gen-private-key secrets/enclave-key.pem
 
 .PHONY: gen-key-openssl
+# ─────────────────────────────────────────────────────────────────────────────
 # Generate the enclave private key for SGX signing using OpenSSL (exponent 3)
 # Usage: make gen-key-openssl
 # Requires OpenSSL 1.1.1 or later
-
+# ─────────────────────────────────────────────────────────────────────────────
 gen-key-openssl:
 	@mkdir -p secrets
 	@echo ">> Generating enclave private key at secrets/enclave-key.pem using OpenSSL ..."
 	openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -pkeyopt rsa_keygen_pubexp:3 -out secrets/enclave-key.pem
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Help
+# ─────────────────────────────────────────────────────────────────────────────
 .PHONY: help
 help:
 	@echo "Usage:"
 	@echo "  make [target]"
 	@echo
-	@echo "Targets:"
+	@echo "Development Targets:"
 	@echo "  all             Run fmt, vet, lint, test, build"
 	@echo "  build           Compile binary"
 	@echo "  build-cross     Build linux/amd64 binary"
@@ -133,9 +144,16 @@ help:
 	@echo "  fmt             Format code"
 	@echo "  vet             Static vetting"
 	@echo "  lint            Static analysis (staticcheck)"
-	@echo "  docker-build    Build Docker image"
-	@echo "  docker-run      Run Docker container"
-	@echo "  gen-key         Generate enclave private key for SGX signing (Gramine tool)"
-	@echo "  gen-key-openssl Generate enclave private key for SGX signing (OpenSSL)"
 	@echo "  clean           Remove binaries"
+	@echo
+	@echo "Docker Targets:"
+	@echo "  docker-build    Build Docker image"
+	@echo "  docker-run      Build and run Docker container"
+	@echo
+	@echo "SGX/Enclave Targets:"
+	@echo "  generate-manifest-template  Generate manifest template"
+	@echo "  gen-key                     Generate enclave private key (Gramine tool)"
+	@echo "  gen-key-openssl             Generate enclave private key (OpenSSL)"
+	@echo
+	@echo "Utility:"
 	@echo "  help            Show this help"
