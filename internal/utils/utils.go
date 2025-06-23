@@ -22,9 +22,9 @@ func isAcceptedHeader(header string) bool {
 }
 
 // Masks unaccepted headers by replacing their values with "******"
-func MaskUnacceptedHeaders(headers map[string]string) (map[string]string){
+func MaskUnacceptedHeaders(headers map[string]string) map[string]string {
 	finalHeaders := make(map[string]string)
-	for headerName,headerValue := range headers {
+	for headerName, headerValue := range headers {
 		if !isAcceptedHeader(headerName) {
 			finalHeaders[headerName] = "******"
 		} else {
@@ -34,12 +34,21 @@ func MaskUnacceptedHeaders(headers map[string]string) (map[string]string){
 	return finalHeaders
 }
 
-func IsAcceptedDomain(endpoint string) (bool){
-	parsedURL, err := url.Parse(fmt.Sprintf("https://%s",endpoint))
-    if err != nil {
-        fmt.Println("Error parsing URL:", err)
-        return false
-    }
+// Checks if a domain is in the list of whitelisted domains.
+func IsAcceptedDomain(endpoint string) bool {
+	// Check if the endpoint already has a protocol
+	var urlToParse string
+	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
+		urlToParse = endpoint
+	} else {
+		urlToParse = fmt.Sprintf("https://%s", endpoint)
+	}
+	
+	parsedURL, err := url.Parse(urlToParse)
+	if err != nil {
+		fmt.Println("Error parsing URL:", err)
+		return false
+	}
 	for _, domainName := range configs.WHITELISTED_DOMAINS {
 		if domainName == parsedURL.Hostname() {
 			return true
@@ -48,6 +57,7 @@ func IsAcceptedDomain(endpoint string) (bool){
 	return false
 }
 
+// Reverses the bytes of a byte slice.
 func ReverseBytes(b []byte) []byte {
 	reversed := make([]byte, len(b))
 	for i := range b {
@@ -56,11 +66,12 @@ func ReverseBytes(b []byte) []byte {
 	return reversed
 }
 
+// Generates a short request ID.
 func GenerateShortRequestID() string {
-    b := make([]byte, 16)
-    _, err := rand.Read(b)
-    if err != nil {
-        return "unknown-request-id"
-    }
-    return hex.EncodeToString(b) // e.g., "f4e3d2a1b3c0d9e8"
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "unknown-request-id"
+	}
+	return hex.EncodeToString(b) // e.g., "f4e3d2a1b3c0d9e8"
 }

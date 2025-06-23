@@ -1,5 +1,6 @@
 package constants
 
+// GraminePathsStruct is the structure for the Gramine paths.
 type GraminePathsStruct struct {
 	MY_TARGET_INFO_PATH   string
 	TARGET_INFO_PATH      string
@@ -9,6 +10,7 @@ type GraminePathsStruct struct {
 	QUOTE_PATH            string
 }
 
+// GRAMINE_PATHS is the structure for the Gramine paths.
 var GRAMINE_PATHS = GraminePathsStruct{
 	MY_TARGET_INFO_PATH:   "/dev/attestation/my_target_info",
 	TARGET_INFO_PATH:      "/dev/attestation/target_info",
@@ -18,6 +20,7 @@ var GRAMINE_PATHS = GraminePathsStruct{
 	QUOTE_PATH:            "/dev/attestation/quote",
 }
 
+// ALLOWED_HEADERS defines which HTTP headers are permitted. Non-whitelisted header values are masked with asterisks for security.
 var ALLOWED_HEADERS = []string{
 	"Accept",
 	"Accept-Charset",
