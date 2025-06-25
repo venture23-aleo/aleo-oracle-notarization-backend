@@ -108,6 +108,11 @@ func (ar *AttestationRequest) Validate() error {
 		return appErrors.ErrInvalidEncodingOption
 	}
 
+	// Check if the encoding option precision is valid (only for float encoding).
+	if ar.EncodingOptions.Value == "float" && (ar.EncodingOptions.Precision > encoding.ENCODING_OPTION_FLOAT_MAX_PRECISION) {
+		return appErrors.ErrInvalidEncodingPrecision
+	}
+
 	// Check if the domain is accepted.
 	if !utils.IsAcceptedDomain(ar.Url) {
 		return appErrors.ErrUnacceptedDomain

@@ -2,53 +2,17 @@ package services
 
 import (
 	"bytes"
-	"errors"
 	"log"
 	"math"
-	"math/big"
 	"strings"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 
 	encoding "github.com/zkportal/aleo-oracle-encoding"
 	"github.com/zkportal/aleo-oracle-encoding/positionRecorder"
 )
-
-// PriceFeedBtcUrl, PriceFeedEthUrl, and PriceFeedAleoUrl are the URLs for the price feeds.
-const (
-	PriceFeedBtcUrl  = "price_feed: btc"
-	PriceFeedEthUrl  = "price_feed: eth"
-	PriceFeedAleoUrl = "price_feed: aleo"
-
-	// AttestationDataSizeLimit is the size limit for the attestation data.
-	AttestationDataSizeLimit = 1024 * 3
-)
-
-// getPadding gets the padding for the array.
-func getPadding(arr []byte, alignment int) []byte {
-	var paddingSize int
-	overflow := len(arr) % alignment
-
-	// Check if there is an overflow.
-	if overflow != 0 {
-		paddingSize = alignment - overflow // Calculate the padding size.
-	} else {
-		paddingSize = 0
-	}
-
-	// Create the padding.
-	padding := make([]byte, paddingSize)
-
-	// Return the padding.
-	return padding
-}
-
-// padStringToLength pads the string to the target length.
-func padStringToLength(str string, paddingChar byte, targetLength int) string {
-
-	// Pad the string to the target length.
-	return str + strings.Repeat(string(paddingChar), targetLength-len(str))
-}
 
 // prepareAttestationData prepares the attestation data.
 func prepareAttestationData(attestationData string, encodingOptions *encoding.EncodingOptions) string {
@@ -57,43 +21,23 @@ func prepareAttestationData(attestationData string, encodingOptions *encoding.En
 	switch encodingOptions.Value {
 	case encoding.ENCODING_OPTION_STRING:
 		// Pad the string to the target length.
-		return padStringToLength(attestationData, 0x00, AttestationDataSizeLimit)
+		return utils.PadStringToLength(attestationData, 0x00, constants.AttestationDataSizeLimit)
 	case encoding.ENCODING_OPTION_FLOAT:
 		// Check if the attestation data contains a dot.
 		if strings.Contains(attestationData, ".") {
-			return padStringToLength(attestationData, '0', math.MaxUint8)
+			return utils.PadStringToLength(attestationData, '0', math.MaxUint8)
 		} else {
 			// Pad the string to the target length.
-			return padStringToLength(attestationData+".", '0', math.MaxUint8)
+			return utils.PadStringToLength(attestationData+".", '0', math.MaxUint8)
 		}
 	case encoding.ENCODING_OPTION_INT:
 		// For integers we prepend zeroes instead of appending, that allows strconv to parse it no matter how many zeroes there are
-		return padStringToLength("", '0', math.MaxUint8-len(attestationData)) + attestationData
+		return utils.PadStringToLength("", '0', math.MaxUint8-len(attestationData)) + attestationData
 	}
 
 	return attestationData
 }
 
-// SliceToU128 converts a byte slice to a big integer.
-func SliceToU128(buf []byte) (*big.Int, error) {
-
-	// Check if the buffer is 16 bytes.
-	if len(buf) != 16 {
-		return nil, errors.New("cannot convert slice to u128: invalid size")
-	}
-
-	// Create the result.
-	result := big.NewInt(0)
-
-	// Convert the buffer to a big integer.
-	for idx, b := range buf {
-		bigByte := big.NewInt(int64(b))
-		bigByte.Lsh(bigByte, 8*uint(idx))
-		result.Add(result, bigByte)
-	}
-
-	return result, nil
-}
 
 // PrepareProofData prepares the proof data.
 func PrepareProofData(statusCode int, attestationData string, timestamp int64, req AttestationRequest) ([]byte, ProofPositionalInfo, error) {
@@ -102,7 +46,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	preppedAttestationData := attestationData
 
 	// Check if the URL is a price feed.
-	if req.Url != PriceFeedBtcUrl && req.Url != PriceFeedEthUrl && req.Url != PriceFeedAleoUrl {
+	if req.Url != constants.PriceFeedBtcUrl && req.Url != constants.PriceFeedEthUrl && req.Url != constants.PriceFeedAleoUrl {
 		preppedAttestationData = prepareAttestationData(attestationData, &req.EncodingOptions)
 	}
 
@@ -243,7 +187,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	urlLen := len(req.Url)
 
 	// Add the padding to the URL length.
-	urlLenWithPadding := len(req.Url) + len(getPadding([]byte(req.Url), encoding.TARGET_ALIGNMENT))
+	urlLenWithPadding := len(req.Url) + len(utils.GetPadding([]byte(req.Url), encoding.TARGET_ALIGNMENT))
 
 	// Check if the URL length is too long.
 	if urlLen > math.MaxUint16 {
@@ -254,7 +198,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	selectorLen := len(req.Selector)
 
 	// Add the padding to the selector length.
-	selectorLenWithPadding := len(req.Selector) + len(getPadding([]byte(req.Selector), encoding.TARGET_ALIGNMENT))
+	selectorLenWithPadding := len(req.Selector) + len(utils.GetPadding([]byte(req.Selector), encoding.TARGET_ALIGNMENT))
 
 	// Check if the selector length is too long.
 	if selectorLen > math.MaxUint16 {

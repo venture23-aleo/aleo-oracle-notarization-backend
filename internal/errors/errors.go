@@ -74,4 +74,32 @@ var (
 	ErrInvalidSelectorPart        = AppError{1057, "invalid selector part"}
 	ErrExpectedArray              = AppError{1058, "expected array at key"}
 	ErrIndexOutOfBound            = AppError{1059, "index out of bounds"}
+	ErrMissingSymbol              = AppError{1060, "symbol parameter is required"}
+	ErrInvalidSymbol              = AppError{1061, "invalid symbol. Supported symbols: BTC, ETH, ALEO"}
+	ErrPriceFeedFailed            = AppError{1062, "failed to get price feed data"}
+	ErrReadingReport              = AppError{1063, "failed to read the report"}
+	ErrUnsupportedPriceFeedURL    = AppError{1064, "unsupported price feed URL"}
+	// Exchange configuration errors
+	ErrExchangeNotConfigured      = AppError{1065, "exchange not configured"}
+	ErrSymbolNotSupportedByExchange = AppError{1066, "symbol not supported by exchange"}
+	ErrUnsupportedExchange        = AppError{1067, "unsupported exchange"}
+	// Exchange API errors
+	ErrExchangeFetchFailed        = AppError{1068, "failed to fetch from exchange"}
+	ErrExchangeInvalidStatusCode  = AppError{1069, "exchange returned invalid status code"}
+	ErrExchangeResponseDecodeFailed = AppError{1070, "failed to decode exchange response"}
+	ErrExchangeResponseParseFailed = AppError{1071, "failed to parse exchange response"}
+	// Data format errors
+	ErrInvalidPriceFormat         = AppError{1072, "invalid price format"}
+	ErrInvalidVolumeFormat        = AppError{1073, "invalid volume format"}
+	ErrInvalidExchangeResponseFormat = AppError{1074, "invalid exchange response format"}
+	ErrInvalidDataFormat          = AppError{1075, "invalid data format"}
+	ErrInvalidItemFormat          = AppError{1076, "invalid item format"}
+	ErrNoDataInResponse           = AppError{1077, "no data in response"}
+	// Data parsing errors
+	ErrPriceParseFailed           = AppError{1078, "failed to parse price"}
+	ErrVolumeParseFailed          = AppError{1079, "failed to parse volume"}
+	// Price feed validation errors
+	ErrInsufficientExchangeData   = AppError{1080, "insufficient data from exchanges"}
+	// Encoding validation errors
+	ErrInvalidEncodingPrecision   = AppError{1081, "invalid encoding precision"}
 )
