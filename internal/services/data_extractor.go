@@ -9,10 +9,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-
-	encoding "github.com/zkportal/aleo-oracle-encoding"
 
 	"github.com/antchfx/htmlquery"
 )
@@ -96,8 +96,8 @@ func getNestedValueFlexible(m map[string]interface{}, path string) (interface{},
 	return current, nil
 }
 
-// FetchDataFromAPIEndpoint fetches the data from the API endpoint.
-func FetchDataFromAPIEndpoint(attestationRequest AttestationRequest) (string, string, int, error) {
+// ExtractDataFromJSON fetches the data from the JSON response.
+func ExtractDataFromJSON(attestationRequest AttestationRequest) (string, string, int, error) {
 
 	// Create the body reader.
 	var bodyReader io.Reader
@@ -128,18 +128,13 @@ func FetchDataFromAPIEndpoint(attestationRequest AttestationRequest) (string, st
 	}
 
 	// Create the client.
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 
 	// Do the request.
 	resp, err := client.Do(req)
 
-	// Check if the status code is greater than or equal to 400 and less than 500.
-	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		return "", "", resp.StatusCode, appErrors.ErrFetchingData
-	}
-
-	// Check if the status code is greater than or equal to 500 and less than 600.
-	if resp.StatusCode >= 500 && resp.StatusCode < 600 {
+	// Check if the status code is greater than or equal to 400 and less than 600.
+	if resp.StatusCode >= 400 && resp.StatusCode < 600 {
 		return "", "", resp.StatusCode, appErrors.ErrFetchingData
 	}
 
@@ -172,14 +167,15 @@ func FetchDataFromAPIEndpoint(attestationRequest AttestationRequest) (string, st
 
 	// Check if the encoding option is float.
 	if attestationRequest.EncodingOptions.Value == "float" {
+		precision := attestationRequest.EncodingOptions.Precision
 		splitted := strings.SplitN(valueStr, ".", 2) // Split at most once
 
 		// If there's no decimal point, or it's already within limits.
-		if len(splitted) == 1 || len(splitted[1]) <= encoding.ENCODING_OPTION_FLOAT_MAX_PRECISION {
+		if len(splitted) == 1 || len(splitted[1]) <= int(precision) {
 			// Safe to use as-is.
 		} else {
 			// Truncate the decimal part to max precision.
-			splitted[1] = splitted[1][:encoding.ENCODING_OPTION_FLOAT_MAX_PRECISION]
+			splitted[1] = splitted[1][:precision]
 			valueStr = splitted[0] + "." + splitted[1]
 		}
 	}
@@ -199,8 +195,8 @@ func FetchDataFromAPIEndpoint(attestationRequest AttestationRequest) (string, st
 	return jsonString, valueStr, http.StatusOK, nil
 }
 
-// ScrapDataFromWebsite scrapes the data from the website.
-func ScrapDataFromWebsite(attestationRequest AttestationRequest) (string, string, int, error) {
+// ExtractDataFromHTML scrapes the data from the HTML response.
+func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string, int, error) {
 
 	// Create the body reader.
 	var bodyReader io.Reader
@@ -215,6 +211,10 @@ func ScrapDataFromWebsite(attestationRequest AttestationRequest) (string, string
 
 	// Create the request.
 	req, err := http.NewRequest(attestationRequest.RequestMethod, url, bodyReader)
+
+	if err != nil {
+		return "", "", http.StatusBadRequest, appErrors.ErrInvalidHTTPRequest
+	}
 
 	// Set the request headers.
 	for key, value := range attestationRequest.RequestHeaders {
@@ -240,13 +240,8 @@ func ScrapDataFromWebsite(attestationRequest AttestationRequest) (string, string
 	// Close the response body.
 	defer resp.Body.Close()
 
-	// Check if the status code is greater than or equal to 400 and less than 500.
-	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		return "", "", resp.StatusCode, appErrors.ErrReadingHTMLContent
-	}
-
-	// Check if the status code is greater than or equal to 500 and less than 600.
-	if resp.StatusCode >= 500 && resp.StatusCode < 600 {
+	// Check if the status code is greater than or equal to 400 and less than 600.
+	if resp.StatusCode >= 400 && resp.StatusCode < 600 {
 		return "", "", resp.StatusCode, appErrors.ErrReadingHTMLContent
 	}
 
@@ -275,49 +270,88 @@ func ScrapDataFromWebsite(attestationRequest AttestationRequest) (string, string
 		return "", "", http.StatusInternalServerError, appErrors.ErrSelectorNotFound
 	}
 
+	valueStr := result.FirstChild.Data
+
+	if attestationRequest.EncodingOptions.Value == "float" {	
+		valueStr1, err := strconv.ParseFloat(valueStr, 64)
+		if err != nil {
+			return "", "", http.StatusInternalServerError, appErrors.ErrParsingHTMLContent
+		}
+		valueStr = fmt.Sprintf("%.*f", attestationRequest.EncodingOptions.Precision, valueStr1)
+	}
+
 	// Return the HTML content, data, status code, and error.
-	return htmlContent, result.FirstChild.Data, resp.StatusCode, nil
+	return htmlContent, valueStr, resp.StatusCode, nil
 }
 
-// FetchDataFromAttestationRequest fetches the data from the attestation request.
-func FetchDataFromAttestationRequest(attestationRequest AttestationRequest) (string, string, int, error) {
-	// const attestationRequest = {
-	//     url: 'google.com',
-	//     requestMethod: 'GET',
-	//     responseFormat: 'html',
-	//     htmlResultType: 'value',
-	//     selector: '/html/head/title',
-	//     encodingOptions: {
-	//         value: 'string',
-	//     },
-	// };
+// ExtractPriceFeedData handles price feed requests and always returns the volume-weighted average price (VWAP)
+// This ensures consistent and reliable price data for oracle attestations
+func ExtractPriceFeedData(attestationRequest AttestationRequest) (string, string, int, error) {
 
-	// Check if the response format is HTML.
-	if attestationRequest.ResponseFormat == "html" {
-		responseBody, data, statusCode, err := ScrapDataFromWebsite(attestationRequest)
+	if attestationRequest.EncodingOptions.Value != "float" {
+		return "", "", http.StatusBadRequest, appErrors.ErrInvalidEncodingOption
+	}
 
-		// Check if the error is not nil.
-		if err != nil {
-			return "", "", statusCode, err
-		}
+	// Extract symbol from the price feed URL
+	var symbol string
+	switch attestationRequest.Url {
+	case constants.PriceFeedBtcUrl:
+		symbol = "BTC"
+	case constants.PriceFeedEthUrl:
+		symbol = "ETH"
+	case constants.PriceFeedAleoUrl:
+		symbol = "ALEO"
+	default:
+		return "", "", http.StatusBadRequest, appErrors.ErrUnsupportedPriceFeedURL
+	}
 
-		// Return the response body, data, status code, and error.
-		return responseBody, data, statusCode, nil
+	// Get the price feed data
+	result, err := GetPriceFeed(symbol)
+	if err != nil {
+		log.Printf("Error getting price feed for %s: %v", symbol, err)
+		return "", "", http.StatusInternalServerError, appErrors.ErrFetchingData
+	}
 
-		// Check if the response format is JSON.
+	
+	// Marshal the response to JSON
+	jsonBytes, err := json.Marshal(result)
+	if err != nil {
+		return "", "", http.StatusInternalServerError, appErrors.ErrJSONEncoding
+	}
+
+	// Extract the value based on the selector
+	// For price feeds, always use weightedAvgPrice (volume-weighted average price)
+	var valueStr string = result.VolumeWeightedAvg
+	
+	// Handle precision based on encoding options
+
+	precision := attestationRequest.EncodingOptions.Precision
+	splitted := strings.SplitN(valueStr, ".", 2) // Split at most once
+
+	// If there's no decimal point, or it's already within limits.
+	if len(splitted) == 1 || len(splitted[1]) <= int(precision) {
+		// Safe to use as-is.
+	} else {
+		// Truncate the decimal part to max precision.
+		splitted[1] = splitted[1][:precision]
+		valueStr = splitted[0] + "." + splitted[1]
+	}
+
+	return string(jsonBytes), valueStr, http.StatusOK, nil
+}
+
+// ExtractDataFromTargetURL fetches the data from the attestation request target URL.
+func ExtractDataFromTargetURL(attestationRequest AttestationRequest) (string, string, int, error) {
+	// Check if the URL is a price feed request
+	if attestationRequest.Url == constants.PriceFeedBtcUrl || attestationRequest.Url == constants.PriceFeedEthUrl || attestationRequest.Url == constants.PriceFeedAleoUrl {
+		return ExtractPriceFeedData(attestationRequest)
+	} else if attestationRequest.ResponseFormat == "html" {
+		return ExtractDataFromHTML(attestationRequest)
 	} else if attestationRequest.ResponseFormat == "json" {
-		responseBody, data, statusCode, err := FetchDataFromAPIEndpoint(attestationRequest)
-
-		// Check if the error is not nil.
-		if err != nil {
-			return "", "", statusCode, err
-		}
-
-		// Return the response body, data, status code, and error.
-		return responseBody, data, statusCode, nil
-
-		// Return the error.
+		return ExtractDataFromJSON(attestationRequest)
 	} else {
 		return "", "", http.StatusNotFound, appErrors.ErrInvalidResponseFormat
 	}
 }
+
+

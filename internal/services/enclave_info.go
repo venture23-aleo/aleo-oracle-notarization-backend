@@ -71,6 +71,11 @@ func GetSgxInfo() (SgxInfo, error) {
 
 	report, err := os.ReadFile(constants.GRAMINE_PATHS.REPORT_PATH)
 
+	if err != nil {
+		log.Print("Error reading report:", err)
+		return SgxInfo{}, appErrors.ErrReadingReport
+	}
+
 	// The report is structured as follows:
 	/*
 	   | Field       | Offset | Size (bytes) |

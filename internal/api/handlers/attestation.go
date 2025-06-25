@@ -66,7 +66,7 @@ func GenerateAttestationReportHandler(s aleo.Session) http.HandlerFunc {
 		timestamp := time.Now().Unix()
 
 		// Fetch the data from the attestation request.
-		responseBody, attestationData, statusCode, err := services.FetchDataFromAttestationRequest(attestationRequest)
+		responseBody, attestationData, statusCode, err := services.ExtractDataFromTargetURL(attestationRequest)
 
 		// Check if the error is not nil.
 		if err != nil {

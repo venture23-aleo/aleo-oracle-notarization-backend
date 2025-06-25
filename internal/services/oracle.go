@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
@@ -92,6 +93,14 @@ func PrepareOracleDataBeforeQuote(s aleo.Session, statusCode int, attestationDat
 
 	if err != nil {
 		return OracleData{}, appErrors.ErrPreparingProofData
+	}
+
+	if attestationRequest.Url == constants.PriceFeedAleoUrl {
+		userDataProof[0] = 8
+	} else if attestationRequest.Url == constants.PriceFeedBtcUrl {
+		userDataProof[0] = 12
+	} else if attestationRequest.Url == constants.PriceFeedEthUrl {
+		userDataProof[0] = 11
 	}
 
 	// C0 - C7 Chunks - Format the proof data.
