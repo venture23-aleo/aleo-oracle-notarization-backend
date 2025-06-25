@@ -52,7 +52,7 @@ type ExchangeConfig struct {
 var exchangeConfigs = map[string]ExchangeConfig{
 	"binance": {
 		Name: "Binance",
-		BaseURL: "api.binance.us",
+		BaseURL: "api.binance.com",
 		Symbols: map[string]string{
 			"BTC": "BTCUSDT",
 			"ETH": "ETHUSDT",
