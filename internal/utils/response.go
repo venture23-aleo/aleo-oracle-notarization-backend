@@ -32,13 +32,9 @@ func WriteJsonError(w http.ResponseWriter, statusCode int, appError appErrors.Ap
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
-	// Create the error response.
-	resp := ErrorResponse{
-		ErrorMessage: appError.Message,
-		ErrorCode:    appError.Code,
-		RequestID:    requestID,
-	}
+	// Set the request ID.
+	appError.RequestID = requestID
 
 	// Encode the error response.
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(appError)
 }

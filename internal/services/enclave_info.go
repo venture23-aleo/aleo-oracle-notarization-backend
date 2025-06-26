@@ -40,14 +40,14 @@ type InstanceInfo struct {
 }
 
 // GetSgxInfo gets the SGX info for the instance.
-func GetSgxInfo() (SgxInfo, error) {
+func GetSgxInfo() (SgxInfo, *appErrors.AppError) {
 
 	// Read the target info from target info path.
 	targetInfo, err := os.ReadFile(constants.GRAMINE_PATHS.MY_TARGET_INFO_PATH)
 
 	if err != nil {
 		log.Print("Error reading target info", err)
-		return SgxInfo{}, appErrors.ErrReadingTargetInfo
+		return SgxInfo{}, appErrors.NewAppError(appErrors.ErrReadingTargetInfo)
 	}
 
 	// Write the target info to the target info path.
@@ -55,7 +55,7 @@ func GetSgxInfo() (SgxInfo, error) {
 
 	if err != nil {
 		log.Print("Error writting target info", err)
-		return SgxInfo{}, appErrors.ErrWrittingTargetInfo
+		return SgxInfo{}, appErrors.NewAppError(appErrors.ErrWrittingTargetInfo)
 	}
 
 	// The report data is a 64 byte array.
@@ -66,14 +66,14 @@ func GetSgxInfo() (SgxInfo, error) {
 
 	if err != nil {
 		log.Print("Error while writting report data:", err)
-		return SgxInfo{}, appErrors.ErrWrittingReportData
+		return SgxInfo{}, appErrors.NewAppError(appErrors.ErrWrittingReportData)
 	}
 
 	report, err := os.ReadFile(constants.GRAMINE_PATHS.REPORT_PATH)
 
 	if err != nil {
 		log.Print("Error reading report:", err)
-		return SgxInfo{}, appErrors.ErrReadingReport
+		return SgxInfo{}, appErrors.NewAppError(appErrors.ErrReadingReport)
 	}
 
 	// The report is structured as follows:

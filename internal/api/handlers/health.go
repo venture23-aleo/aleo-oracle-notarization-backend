@@ -14,12 +14,6 @@ type HealthResponse struct {
 
 // GetHealthCheck handles the request to get the health check.
 func GetHealthCheck(w http.ResponseWriter, r *http.Request) {
-	// Check if the request method is not GET.
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	if r.URL.Path != "/" {
         http.NotFound(w, r)
         return

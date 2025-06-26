@@ -82,7 +82,7 @@ type OracleData struct {
 }
 
 // PrepareOracleDataBeforeQuote prepares the oracle data before the quote.
-func PrepareOracleDataBeforeQuote(aleoContext AleoPublicContext, statusCode int, attestationData string, timestamp uint64, attestationRequest AttestationRequest) (OracleData, error) {
+func PrepareOracleDataBeforeQuote(aleoContext AleoPublicContext, statusCode int, attestationData string, timestamp uint64, attestationRequest AttestationRequest) (OracleData, *appErrors.AppError) {
 
 	// Prepare the proof data.
 	userDataProof, encodedPositions, err := PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
@@ -90,7 +90,7 @@ func PrepareOracleDataBeforeQuote(aleoContext AleoPublicContext, statusCode int,
 	// log.Print("Proof data: ", hex.EncodeToString(userDataProof))
 
 	if err != nil {
-		return OracleData{}, appErrors.ErrPreparingProofData
+		return OracleData{}, appErrors.NewAppError(appErrors.ErrPreparingProofData)
 	}
 
 	if attestationRequest.Url == constants.PriceFeedAleoUrl {
@@ -102,11 +102,11 @@ func PrepareOracleDataBeforeQuote(aleoContext AleoPublicContext, statusCode int,
 	}
 
 	// C0 - C7 Chunks - Format the proof data.
-	userData, err := aleoContext.GetSession().FormatMessage(userDataProof, 8)
+	userData, formatError := aleoContext.GetSession().FormatMessage(userDataProof, 8)
 
-	if err != nil {
-		log.Println("failed to format proof data:", err)
-		return OracleData{}, appErrors.ErrFormattingProofData
+	if formatError != nil {
+		log.Println("failed to format proof data:", formatError)
+		return OracleData{}, appErrors.NewAppError(appErrors.ErrFormattingProofData)
 	}
 
 	// attestationHash, err := s.HashMessage(userData)
@@ -119,36 +119,36 @@ func PrepareOracleDataBeforeQuote(aleoContext AleoPublicContext, statusCode int,
 	// log.Printf("Attestation hash: %v", hex.EncodeToString(attestationHash))
 
 	// Prepare the encoded request proof.
-	encodedProofData, err := PrepareEncodedRequestProof(userDataProof, encodedPositions)
+	encodedProofData, encodeErr := PrepareEncodedRequestProof(userDataProof, encodedPositions)
 
-	if err != nil {
-		log.Println("failed to prepare encoded request proof: ", err)
-		return OracleData{}, err.(appErrors.AppError)
+	if encodeErr != nil {
+		log.Println("failed to prepare encoded request proof: ", encodeErr)
+		return OracleData{}, appErrors.NewAppError(appErrors.ErrFormattingEncodedProofData)
 	}
 
 	// C0 - C7 Chunks - Format the encoded proof data.
-	encodedRequest, err := aleoContext.GetSession().FormatMessage(encodedProofData, 8)
-	if err != nil {
-		log.Println("failed to format encoded proof data:", err)
-		return OracleData{}, appErrors.ErrFormattingEncodedProofData
+	encodedRequest, formatError := aleoContext.GetSession().FormatMessage(encodedProofData, 8)
+	if formatError != nil {
+		log.Println("failed to format encoded proof data:", formatError)
+		return OracleData{}, appErrors.NewAppError(appErrors.ErrFormattingEncodedProofData)
 	}
 
 	// log.Print("encodedRequest", hex.EncodeToString(encodedRequest))
 
 	// Create the request hash - Hash the encoded request.
-	requestHash, err := aleoContext.GetSession().HashMessage(encodedRequest)
+	requestHash, hashError := aleoContext.GetSession().HashMessage(encodedRequest)
 
-	if err != nil {
-		log.Println("failed to create request hash:", err)
-		return OracleData{}, appErrors.ErrCreatingRequestHash
+	if hashError != nil {
+		log.Println("failed to create request hash:", hashError)
+		return OracleData{}, appErrors.NewAppError(appErrors.ErrCreatingRequestHash)
 	}
 
 	// Create the request hash string - Hash the encoded request.
-	requestHashString, err := aleoContext.GetSession().HashMessageToString(encodedRequest)
+	requestHashString, hashError := aleoContext.GetSession().HashMessageToString(encodedRequest)
 
-	if err != nil {
-		log.Println("failed to create request hash:", err)
-		return OracleData{}, appErrors.ErrCreatingRequestHash
+	if hashError != nil {
+		log.Println("failed to create request hash:", hashError)
+		return OracleData{}, appErrors.NewAppError(appErrors.ErrCreatingRequestHash)
 	}
 
 	// Create the timestamped hash input - Hash the encoded request with the timestamp.
@@ -166,12 +166,12 @@ func PrepareOracleDataBeforeQuote(aleoContext AleoPublicContext, statusCode int,
 	log.Printf("timesampedFormatMessage: %v", string(timesampedFormatMessage))
 
 	// Create the timestamped hash - Hash the timestamped format message.
-	timestampedHash, err := aleoContext.GetSession().HashMessageToString([]byte(timesampedFormatMessage))
+	timestampedHash, hashError := aleoContext.GetSession().HashMessageToString([]byte(timesampedFormatMessage))
 
 	// Check if the error is not nil.
-	if err != nil {
+	if hashError != nil {
 		log.Println("failed to creat timestamped hash:", err)
-		return OracleData{}, appErrors.ErrCreatingTimestampedHash
+		return OracleData{}, appErrors.NewAppError(appErrors.ErrCreatingTimestampedHash)
 	}
 
 	// Create the result - Set the user data, encoded positions, encoded request, request hash, and timestamped request hash.
@@ -187,14 +187,14 @@ func PrepareOracleDataBeforeQuote(aleoContext AleoPublicContext, statusCode int,
 }
 
 // PrepareOracleDataAfterQuote prepares the oracle data after the quote.
-func PrepareOracleDataAfterQuote(aleoContext AleoPublicContext, oracleData OracleData, quote []byte) (OracleData, error) {
+func PrepareOracleDataAfterQuote(aleoContext AleoPublicContext, oracleData OracleData, quote []byte) (OracleData, *appErrors.AppError) {
 
 	// C0 - C9 Chunks
 	oracleReport, err := aleoContext.GetSession().FormatMessage(quote, 10)
 
 	if err != nil {
-		log.Println("failed to format message:", err)
-		return oracleData, appErrors.ErrFormattingQuote
+		log.Println("failed to format quote:", err)
+		return oracleData, appErrors.NewAppError(appErrors.ErrFormattingQuote)
 	}
 
 	// Create the hashed message.
@@ -202,7 +202,7 @@ func PrepareOracleDataAfterQuote(aleoContext AleoPublicContext, oracleData Oracl
 
 	// Check if the error is not nil.
 	if err != nil {
-		return oracleData, appErrors.ErrReportHashing
+		return oracleData, appErrors.NewAppError(appErrors.ErrReportHashing)
 	}
 
 	// Create the signature.
@@ -211,7 +211,7 @@ func PrepareOracleDataAfterQuote(aleoContext AleoPublicContext, oracleData Oracl
 	// Check if the error is not nil.
 	if err != nil {
 		log.Print("Sign failed:", err)
-		return oracleData, appErrors.ErrGeneratingSignature
+		return oracleData, appErrors.NewAppError(appErrors.ErrGeneratingSignature)
 	}
 
 	// Set the report.
