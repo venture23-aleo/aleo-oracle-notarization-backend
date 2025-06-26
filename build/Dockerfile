@@ -2,7 +2,7 @@
 # ========================
 # Stage 1: Build Go Binary
 # ========================
-FROM golang:1.21-alpine AS builder
+FROM golang:1.21-alpine@sha256:2414035b086e3c42b99654c8b26e6f5b1b1598080d65fd03c7f499552ff4dc94 AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -buildvcs=false -o ${APP} 
 # =============================
 # Stage 2: Gramine SGX Runtime
 # =============================
-FROM gramineproject/gramine:stable-jammy
+FROM gramineproject/gramine:stable-jammy@sha256:84b3d222e0bd9ab941f0078a462af0dbc5518156b99b147c10a7b83722ac0c38
 
 ARG APP
 
