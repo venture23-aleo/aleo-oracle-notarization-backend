@@ -18,7 +18,7 @@ func RegisterRoutes(mux *http.ServeMux, aleoCtx services.AleoPublicContext) {
 	mux.HandleFunc("GET /info", handlers.GetEnclaveInfo(aleoCtx))
 
 	// Register the whitelist route.
-	mux.HandleFunc("GET/whitelist", handlers.GetWhiteListedDomains)
+	mux.HandleFunc("GET /whitelist", handlers.GetWhiteListedDomains)
 
 	mux.HandleFunc("GET /", handlers.GetHealthCheck)
 }
