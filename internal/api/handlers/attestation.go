@@ -11,12 +11,10 @@ import (
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
-
-	aleo "github.com/zkportal/aleo-utils-go"
 )
 
 // GenerateAttestationReportHandler handles the request to generate an attestation report.
-func GenerateAttestationReportHandler(s aleo.Session) http.HandlerFunc {
+func GenerateAttestationReportHandler(aleoContext services.AleoPublicContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 
 		// Check if the request method is not POST.
@@ -80,7 +78,7 @@ func GenerateAttestationReportHandler(s aleo.Session) http.HandlerFunc {
 		attestationRequest.RequestHeaders = maskedHeaders
 
 		// Prepare the oracle data before the quote.
-		oracleData, err := services.PrepareOracleDataBeforeQuote(s, statusCode, attestationData, uint64(timestamp), services.AttestationRequest(attestationRequest))
+		oracleData, err := services.PrepareOracleDataBeforeQuote(aleoContext, statusCode, attestationData, uint64(timestamp), services.AttestationRequest(attestationRequest))
 
 		// Check if the error is not nil.
 		if err != nil {
@@ -90,7 +88,7 @@ func GenerateAttestationReportHandler(s aleo.Session) http.HandlerFunc {
 		}
 
 		// Hash the oracle data.
-		attestationHash, err := s.HashMessage([]byte(oracleData.UserData))
+		attestationHash, err := aleoContext.GetSession().HashMessage([]byte(oracleData.UserData))
 
 		// Check if the error is not nil.
 		if err != nil {
@@ -116,7 +114,7 @@ func GenerateAttestationReportHandler(s aleo.Session) http.HandlerFunc {
 		}
 
 		// Prepare the oracle data after the quote.
-		oracleData, err = services.PrepareOracleDataAfterQuote(s, oracleData, quote)
+		oracleData, err = services.PrepareOracleDataAfterQuote(aleoContext, oracleData, quote)
 
 		// Check if the error is not nil.
 		if err != nil {

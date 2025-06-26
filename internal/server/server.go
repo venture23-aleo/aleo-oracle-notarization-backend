@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/api"
-	aleo "github.com/zkportal/aleo-utils-go"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services"
 )
 
 // IdleTimeout and ReadWriteTimeout are the timeout for the server.
@@ -18,13 +18,13 @@ const (
 )
 
 // StartServer starts the server.
-func StartServer(s aleo.Session) error {
+func StartServer(aleoCtx services.AleoPublicContext) error {
 
 	// Create a new serve mux.
 	mux := http.NewServeMux()
 
 	// Register the routes.
-	api.RegisterRoutes(mux, s)
+	api.RegisterRoutes(mux, aleoCtx)
 
 	// Get the port from the environment variable.
 	port := os.Getenv("PORT")
