@@ -1,6 +1,6 @@
 module github.com/venture23-aleo/aleo-oracle-notarization-backend
 
-go 1.21.12
+go 1.24.4
 
 require (
 	github.com/antchfx/htmlquery v1.3.4

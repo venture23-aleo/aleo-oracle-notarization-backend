@@ -2,7 +2,7 @@
 # ========================
 # Stage 1: Build Go Binary
 # ========================
-FROM golang:1.21-alpine@sha256:2414035b086e3c42b99654c8b26e6f5b1b1598080d65fd03c7f499552ff4dc94 AS builder
+FROM golang:1.24.4-alpine@sha256:68932fa6d4d4059845c8f40ad7e654e626f3ebd3706eef7846f319293ab5cb7a AS builder
 
 WORKDIR /app
 

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"sync"
 
@@ -56,66 +55,66 @@ type AttestationResponse struct {
 }
 
 // Validate validates the attestation request.
-func (ar *AttestationRequest) Validate() error {
+func (ar *AttestationRequest) Validate() *appErrors.AppError {
 
-	// Check if the url is empty.
+	// Check if the URL is empty.
 	if ar.Url == "" {
-		return appErrors.ErrMissingURL
+		return appErrors.NewAppError(appErrors.ErrMissingURL)
 	}
 
 	// Check if the request method is empty.
 	if ar.RequestMethod == "" {
-		return appErrors.ErrMissingRequestMethod
+		return appErrors.NewAppError(appErrors.ErrMissingRequestMethod)
 	}
 
 	// Check if the selector is empty.
 	if ar.Selector == "" {
-		return appErrors.ErrMissingSelector
+		return appErrors.NewAppError(appErrors.ErrMissingSelector)
 	}
 
-	// Check if the encoding option is empty.
+	// Check if the encoding option value is empty.
 	if ar.EncodingOptions.Value == "" {
-		return appErrors.ErrMissingEncodingOption
+		return appErrors.NewAppError(appErrors.ErrMissingEncodingOption)
 	}
 
 	// Check if the request method is valid.
-	if ar.RequestMethod != http.MethodGet && ar.RequestMethod != http.MethodPost {
-		return appErrors.ErrInvalidRequestMethod
+	if ar.RequestMethod != "GET" && ar.RequestMethod != "POST" {
+		return appErrors.NewAppError(appErrors.ErrInvalidRequestMethod)
 	}
 
-	// Check if the request body is empty.
-	if ar.RequestMethod == http.MethodPost && ar.RequestBody == nil {
-		return appErrors.ErrMissingRequestBody
+	// Check if the request body is required for POST requests.
+	if ar.RequestMethod == "POST" && ar.RequestBody == nil {
+		return appErrors.NewAppError(appErrors.ErrMissingRequestBody)
 	}
 
 	// Check if the response format is valid.
 	if ar.ResponseFormat != "html" && ar.ResponseFormat != "json" {
-		return appErrors.ErrInvalidResponseFormat
+		return appErrors.NewAppError(appErrors.ErrInvalidResponseFormat)
 	}
 
-	// Check if the HTML result type is empty.
+	// Check if the HTML result type is required for HTML response format.
 	if ar.ResponseFormat == "html" && ar.HTMLResultType == nil {
-		return appErrors.ErrMissingHTMLResultType
+		return appErrors.NewAppError(appErrors.ErrMissingHTMLResultType)
 	}
 
 	// Check if the HTML result type is valid.
 	if ar.ResponseFormat == "html" && *ar.HTMLResultType != "value" && *ar.HTMLResultType != "element" {
-		return appErrors.ErrInvalidHTMLResultType
+		return appErrors.NewAppError(appErrors.ErrInvalidHTMLResultType)
 	}
 
 	// Check if the encoding option is valid.
 	if ar.EncodingOptions.Value != "string" && ar.EncodingOptions.Value != "float" && ar.EncodingOptions.Value != "integer" {
-		return appErrors.ErrInvalidEncodingOption
+		return appErrors.NewAppError(appErrors.ErrInvalidEncodingOption)
 	}
 
 	// Check if the encoding option precision is valid (only for float encoding).
 	if ar.EncodingOptions.Value == "float" && (ar.EncodingOptions.Precision > encoding.ENCODING_OPTION_FLOAT_MAX_PRECISION) {
-		return appErrors.ErrInvalidEncodingPrecision
+		return appErrors.NewAppError(appErrors.ErrInvalidEncodingPrecision)
 	}
 
 	// Check if the domain is accepted.
 	if !utils.IsAcceptedDomain(ar.Url) {
-		return appErrors.ErrUnacceptedDomain
+		return appErrors.NewAppError(appErrors.ErrUnacceptedDomain)
 	}
 
 	return nil
@@ -156,7 +155,7 @@ func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) ([]byte, error) {
 var quoteLock sync.Mutex
 
 // GenerateQuote generates a quote for the attestation service.
-func GenerateQuote(inputData []byte) ([]byte, error) {
+func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 
 	// Lock the quote.
 	quoteLock.Lock()
@@ -175,7 +174,7 @@ func GenerateQuote(inputData []byte) ([]byte, error) {
 
 	if err != nil {
 		log.Print("Error while writting report data:", err)
-		return nil, appErrors.ErrWrittingReportData
+		return nil, appErrors.NewAppError(appErrors.ErrWrittingReportData)
 	}
 
 	// Read the quote from the quote path.
@@ -183,14 +182,14 @@ func GenerateQuote(inputData []byte) ([]byte, error) {
 
 	if err != nil {
 		log.Print("Generate Quote err: ", err)
-		return nil, appErrors.ErrReadingQuote
+		return nil, appErrors.NewAppError(appErrors.ErrReadingQuote)
 	}
 
 	// Wrap the raw quote as Open Enclave evidence.
 	finalQuote, err := wrapRawQuoteAsOpenEnclaveEvidence(quote)
 
 	if err != nil {
-		return nil, appErrors.ErrWrappingQuote
+		return nil, appErrors.NewAppError(appErrors.ErrWrappingQuote)
 	}
 
 	// Return the final quote.

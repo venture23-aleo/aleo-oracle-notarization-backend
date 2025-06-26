@@ -12,13 +12,13 @@ func RegisterRoutes(mux *http.ServeMux, aleoCtx services.AleoPublicContext) {
 	// Register the routes.
 
 	// Register the notarization route.
-	mux.HandleFunc("/notarize", handlers.GenerateAttestationReportHandler(aleoCtx))
+	mux.HandleFunc("POST /notarize", handlers.GenerateAttestationReportHandler(aleoCtx))
 
 	// Register the info route.
-	mux.HandleFunc("/info", handlers.GetEnclaveInfo(aleoCtx))
+	mux.HandleFunc("GET /info", handlers.GetEnclaveInfo(aleoCtx))
 
 	// Register the whitelist route.
-	mux.HandleFunc("/whitelist", handlers.GetWhiteListedDomains)
+	mux.HandleFunc("GET/whitelist", handlers.GetWhiteListedDomains)
 
-	mux.HandleFunc("/", handlers.GetHealthCheck)
+	mux.HandleFunc("GET /", handlers.GetHealthCheck)
 }

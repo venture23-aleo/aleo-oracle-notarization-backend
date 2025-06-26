@@ -18,7 +18,7 @@ import (
 )
 
 // getNestedValueFlexible gets the nested value from the map.
-func getNestedValueFlexible(m map[string]interface{}, path string) (interface{}, error) {
+func getNestedValueFlexible(m map[string]interface{}, path string) (interface{}, *appErrors.AppError) {
 
 	// Create the regular expression.
 	re := regexp.MustCompile(`^(\w+)?(?:\[(\d+)\])?$`)
@@ -37,7 +37,7 @@ func getNestedValueFlexible(m map[string]interface{}, path string) (interface{},
 
 		// Check if the matches are valid.
 		if len(matches) < 2 {
-			return nil, appErrors.ErrInvalidSelectorPart
+			return nil, appErrors.NewAppError(appErrors.ErrInvalidSelectorPart)
 		}
 
 		// Get the key.
@@ -51,7 +51,7 @@ func getNestedValueFlexible(m map[string]interface{}, path string) (interface{},
 
 		// Check if the map is valid.
 		if !ok {
-			return nil, appErrors.ErrInvalidMap
+			return nil, appErrors.NewAppError(appErrors.ErrInvalidMap)
 		}
 
 		// Get the value.
@@ -59,7 +59,7 @@ func getNestedValueFlexible(m map[string]interface{}, path string) (interface{},
 
 		// Check if the value exists.
 		if !exists {
-			return nil, appErrors.ErrKeyNotFound
+			return nil, appErrors.NewAppError(appErrors.ErrKeyNotFound)
 		}
 
 		// If index is specified, access the array element.
@@ -71,7 +71,7 @@ func getNestedValueFlexible(m map[string]interface{}, path string) (interface{},
 			// Check if the array is valid.
 			if !ok {
 				log.Printf("expected array at '%s'", key)
-				return nil, appErrors.ErrExpectedArray
+				return nil, appErrors.NewAppError(appErrors.ErrExpectedArray)
 			}
 
 			// Convert the index to an integer.
@@ -80,7 +80,7 @@ func getNestedValueFlexible(m map[string]interface{}, path string) (interface{},
 			// Check if the index is out of bounds.
 			if idx < 0 || idx >= len(array) {
 				log.Printf("index %d out of bounds for '%s'", idx, key)
-				return nil, appErrors.ErrIndexOutOfBound
+				return nil, appErrors.NewAppError(appErrors.ErrIndexOutOfBound)
 			}
 
 			// Get the value.
@@ -97,7 +97,7 @@ func getNestedValueFlexible(m map[string]interface{}, path string) (interface{},
 }
 
 // ExtractDataFromJSON fetches the data from the JSON response.
-func ExtractDataFromJSON(attestationRequest AttestationRequest) (string, string, int, error) {
+func ExtractDataFromJSON(attestationRequest AttestationRequest) (string, string, int, *appErrors.AppError) {
 
 	// Create the body reader.
 	var bodyReader io.Reader
@@ -114,7 +114,7 @@ func ExtractDataFromJSON(attestationRequest AttestationRequest) (string, string,
 	req, err := http.NewRequest(attestationRequest.RequestMethod, url, bodyReader)
 
 	if err != nil {
-		return "", "", http.StatusInternalServerError, appErrors.ErrInvalidHTTPRequest
+		return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrInvalidHTTPRequest)
 	}
 
 	// Set the request headers.
@@ -133,33 +133,33 @@ func ExtractDataFromJSON(attestationRequest AttestationRequest) (string, string,
 	// Do the request.
 	resp, err := client.Do(req)
 
-	// Check if the status code is greater than or equal to 400 and less than 600.
-	if resp.StatusCode >= 400 && resp.StatusCode < 600 {
-		return "", "", resp.StatusCode, appErrors.ErrFetchingData
-	}
-
 	// Check if the error is not nil.
 	if err != nil {
-		return "", "", http.StatusInternalServerError, appErrors.ErrFetchingData
+		return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrFetchingData)
 	}
 
 	// Close the response body.
 	defer resp.Body.Close()
+
+	// Check if the status code is greater than or equal to 400 and less than 600.
+	if resp.StatusCode >= 400 && resp.StatusCode < 600 {
+		return "", "", resp.StatusCode, appErrors.NewAppErrorWithResponseStatus(appErrors.ErrFetchingData, resp.StatusCode)
+	}
 
 	// Create the response.
 	var response map[string]interface{}
 
 	// Decode the response.
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return "", "", http.StatusInternalServerError, appErrors.ErrJSONDecoding
+		return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrJSONDecoding)
 	}
 
 	// Get the value.
-	value, err := getNestedValueFlexible(response, attestationRequest.Selector)
+	value, parseErr := getNestedValueFlexible(response, attestationRequest.Selector)
 
 	// Check if the error is not nil.
-	if err != nil {
-		return "", "", http.StatusInternalServerError, err
+	if parseErr != nil {
+		return "", "", http.StatusInternalServerError, parseErr
 	}
 
 	// Convert the value to a string.
@@ -185,7 +185,7 @@ func ExtractDataFromJSON(attestationRequest AttestationRequest) (string, string,
 
 	// Check if the error is not nil.
 	if err != nil {
-		return "", "", http.StatusInternalServerError, appErrors.ErrJSONEncoding
+		return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrJSONEncoding)
 	}
 
 	// Convert the JSON bytes to a string.
@@ -196,7 +196,7 @@ func ExtractDataFromJSON(attestationRequest AttestationRequest) (string, string,
 }
 
 // ExtractDataFromHTML scrapes the data from the HTML response.
-func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string, int, error) {
+func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string, int, *appErrors.AppError) {
 
 	// Create the body reader.
 	var bodyReader io.Reader
@@ -213,7 +213,7 @@ func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string,
 	req, err := http.NewRequest(attestationRequest.RequestMethod, url, bodyReader)
 
 	if err != nil {
-		return "", "", http.StatusBadRequest, appErrors.ErrInvalidHTTPRequest
+		return "", "", http.StatusBadRequest, appErrors.NewAppError(appErrors.ErrInvalidHTTPRequest)
 	}
 
 	// Set the request headers.
@@ -234,7 +234,7 @@ func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string,
 
 	// Check if the error is not nil or the response is nil.
 	if err != nil || resp == nil {
-		return "", "", http.StatusBadRequest, appErrors.ErrFetchingData
+		return "", "", http.StatusBadRequest, appErrors.NewAppError(appErrors.ErrFetchingData)
 	}
 
 	// Close the response body.
@@ -242,14 +242,14 @@ func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string,
 
 	// Check if the status code is greater than or equal to 400 and less than 600.
 	if resp.StatusCode >= 400 && resp.StatusCode < 600 {
-		return "", "", resp.StatusCode, appErrors.ErrReadingHTMLContent
+		return "", "", resp.StatusCode, appErrors.NewAppErrorWithResponseStatus(appErrors.ErrReadingHTMLContent, resp.StatusCode)
 	}
 
 	// Read the full HTML content.
 	htmlBytes, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		return "", "", http.StatusInternalServerError, appErrors.ErrReadingHTMLContent
+		return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrReadingHTMLContent)
 	}
 
 	// Convert the HTML bytes to a string.
@@ -259,7 +259,7 @@ func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string,
 	htmlDoc, err := htmlquery.Parse(strings.NewReader(htmlContent))
 
 	if err != nil {
-		return "", "", http.StatusInternalServerError, appErrors.ErrParsingHTMLContent
+		return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrParsingHTMLContent)
 	}
 
 	// Query the HTML content.
@@ -267,7 +267,7 @@ func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string,
 
 	// Check if the error is not nil or the result is nil.
 	if err != nil || result == nil {
-		return "", "", http.StatusInternalServerError, appErrors.ErrSelectorNotFound
+		return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrSelectorNotFound)
 	}
 
 	valueStr := result.FirstChild.Data
@@ -275,7 +275,7 @@ func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string,
 	if attestationRequest.EncodingOptions.Value == "float" {	
 		valueStr1, err := strconv.ParseFloat(valueStr, 64)
 		if err != nil {
-			return "", "", http.StatusInternalServerError, appErrors.ErrParsingHTMLContent
+			return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrParsingHTMLContent)
 		}
 		valueStr = fmt.Sprintf("%.*f", attestationRequest.EncodingOptions.Precision, valueStr1)
 	}
@@ -286,14 +286,14 @@ func ExtractDataFromHTML(attestationRequest AttestationRequest) (string, string,
 
 // ExtractPriceFeedData handles price feed requests and always returns the volume-weighted average price (VWAP)
 // This ensures consistent and reliable price data for oracle attestations
-func ExtractPriceFeedData(attestationRequest AttestationRequest) (string, string, int, error) {
+func ExtractPriceFeedData(attestationRequest AttestationRequest) (string, string, int, *appErrors.AppError) {
 
 	if attestationRequest.EncodingOptions.Value != "float" {
-		return "", "", http.StatusBadRequest, appErrors.ErrInvalidEncodingOption
+		return "", "", http.StatusBadRequest, appErrors.NewAppError(appErrors.ErrInvalidEncodingOption)
 	}
 
 	// Extract symbol from the price feed URL
-	var symbol string
+	var symbol string	
 	switch attestationRequest.Url {
 	case constants.PriceFeedBtcUrl:
 		symbol = "BTC"
@@ -302,21 +302,21 @@ func ExtractPriceFeedData(attestationRequest AttestationRequest) (string, string
 	case constants.PriceFeedAleoUrl:
 		symbol = "ALEO"
 	default:
-		return "", "", http.StatusBadRequest, appErrors.ErrUnsupportedPriceFeedURL
+		return "", "", http.StatusBadRequest, appErrors.NewAppError(appErrors.ErrUnsupportedPriceFeedURL)
 	}
 
 	// Get the price feed data
-	result, err := GetPriceFeed(symbol)
-	if err != nil {
-		log.Printf("Error getting price feed for %s: %v", symbol, err)
-		return "", "", http.StatusInternalServerError, appErrors.ErrFetchingData
+	result, appErr := GetPriceFeed(symbol)
+	if appErr.Code != 0 {
+		log.Printf("Error getting price feed for %s: %v", symbol, appErr)
+		return "", "", http.StatusInternalServerError, appErr
 	}
 
 	
 	// Marshal the response to JSON
 	jsonBytes, err := json.Marshal(result)
 	if err != nil {
-		return "", "", http.StatusInternalServerError, appErrors.ErrJSONEncoding
+		return "", "", http.StatusInternalServerError, appErrors.NewAppError(appErrors.ErrJSONEncoding)
 	}
 
 	// Extract the value based on the selector
@@ -341,7 +341,7 @@ func ExtractPriceFeedData(attestationRequest AttestationRequest) (string, string
 }
 
 // ExtractDataFromTargetURL fetches the data from the attestation request target URL.
-func ExtractDataFromTargetURL(attestationRequest AttestationRequest) (string, string, int, error) {
+func ExtractDataFromTargetURL(attestationRequest AttestationRequest) (string, string, int, *appErrors.AppError) {
 	// Check if the URL is a price feed request
 	if attestationRequest.Url == constants.PriceFeedBtcUrl || attestationRequest.Url == constants.PriceFeedEthUrl || attestationRequest.Url == constants.PriceFeedAleoUrl {
 		return ExtractPriceFeedData(attestationRequest)
@@ -350,7 +350,7 @@ func ExtractDataFromTargetURL(attestationRequest AttestationRequest) (string, st
 	} else if attestationRequest.ResponseFormat == "json" {
 		return ExtractDataFromJSON(attestationRequest)
 	} else {
-		return "", "", http.StatusNotFound, appErrors.ErrInvalidResponseFormat
+		return "", "", http.StatusNotFound, appErrors.NewAppError(appErrors.ErrInvalidResponseFormat)
 	}
 }
 

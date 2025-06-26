@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/middleware"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
@@ -15,22 +16,7 @@ import (
 
 // GenerateAttestationReportHandler handles the request to generate an attestation report.
 func GenerateAttestationReportHandler(aleoContext services.AleoPublicContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-
-		// Check if the request method is not POST.
-		if req.Method != http.MethodPost {
-			// Write the status code.
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Check if the content type is not JSON.
-		if req.Header.Get("Content-Type") != "application/json" {
-			// Write the status code.
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
+	return middleware.RequireJSONContentType(func(w http.ResponseWriter, req *http.Request) {
 		// Generate a short request ID.
 		requestId := utils.GenerateShortRequestID()
 
@@ -51,12 +37,9 @@ func GenerateAttestationReportHandler(aleoContext services.AleoPublicContext) ht
 		}
 
 		// Validate the attestation request.
-		err := attestationRequest.Validate()
-
-		// Check if the error is not nil.
-		if err != nil {
+		if err := attestationRequest.Validate(); err != nil {
 			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusBadRequest, err.(appErrors.AppError), requestId)
+			utils.WriteJsonError(w, http.StatusBadRequest, *err, requestId)
 			return
 		}
 
@@ -69,7 +52,7 @@ func GenerateAttestationReportHandler(aleoContext services.AleoPublicContext) ht
 		// Check if the error is not nil.
 		if err != nil {
 			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusInternalServerError, err.(appErrors.AppError), requestId)
+			utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
 			return
 		}
 
@@ -83,15 +66,15 @@ func GenerateAttestationReportHandler(aleoContext services.AleoPublicContext) ht
 		// Check if the error is not nil.
 		if err != nil {
 			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusBadRequest, err.(appErrors.AppError), requestId)
+			utils.WriteJsonError(w, http.StatusBadRequest, *err , requestId)
 			return
 		}
 
 		// Hash the oracle data.
-		attestationHash, err := aleoContext.GetSession().HashMessage([]byte(oracleData.UserData))
+		attestationHash, hashErr := aleoContext.GetSession().HashMessage([]byte(oracleData.UserData))
 
 		// Check if the error is not nil.
-		if err != nil {
+		if hashErr != nil {
 			// Write the JSON error response.
 			utils.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrMessageHashing, requestId)
 			return
@@ -101,28 +84,24 @@ func GenerateAttestationReportHandler(aleoContext services.AleoPublicContext) ht
 		log.Printf("Attestation hash: %v", hex.EncodeToString(attestationHash))
 
 		// Generate the quote.
-		quote, err := services.GenerateQuote(attestationHash)
-
-		// Check if the error is not nil.
+	 	quote, err := services.GenerateQuote(attestationHash)
+		
 		if err != nil {
 			// Log the error.
 			log.Println("error generating quote", err)
 
-			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusInternalServerError, err.(appErrors.AppError), requestId)
+			utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
+			
 			return
 		}
 
 		// Prepare the oracle data after the quote.
 		oracleData, err = services.PrepareOracleDataAfterQuote(aleoContext, oracleData, quote)
-
-		// Check if the error is not nil.
 		if err != nil {
 			// Log the error.
 			log.Println("error preparing oracle data after quote", err)
 
-			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusInternalServerError, err.(appErrors.AppError), requestId)
+			utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
 			return
 		}
 
@@ -140,5 +119,5 @@ func GenerateAttestationReportHandler(aleoContext services.AleoPublicContext) ht
 
 		// Write the JSON success response.
 		utils.WriteJsonSuccess(w, http.StatusOK, response)
-	}
+	})
 }
