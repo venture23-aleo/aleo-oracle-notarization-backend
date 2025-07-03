@@ -1,0 +1,72 @@
+{
+    "security": {
+        "whitelistedDomains": [
+            "iapi.kraken.com",
+            "pro-api.coinmarketcap.com",
+            "www.bybit.com",
+            "www.bitstamp.net",
+            "api.bitfinex.com",
+            "www.kraken.com",
+            "www.bitfinex.com",
+            "api.binance.com",
+            "api.kucoin.com",
+            "www.coinbase.com",
+            "api.exchange.coinbase.com",
+            "www.okx.com",
+            "archive-api.open-meteo.com",
+            "public.bybit.com",
+            "google.com",
+            "testnet.binance.vision",
+            "api.coinbasecloud.net",
+            "api.international.coinbase.com",
+            "api.bybit.com",
+            "www.kucoin.com",
+            "api-futures.kucoin.com",
+            "api.kraken.com",
+            "api.prime.coinbase.com",
+            "api-pub.bitfinex.com",
+            "api-testnet.bybit.com",
+            "data-api.binance.vision",
+            "price_feed: btc",
+            "price_feed: eth",
+            "price_feed: aleo",
+            "api.crypto.com",
+            "xt.com",
+            "api.gateio.ws",
+            "api.mexc.com"
+        ],
+        "maxRequestSize": "10MB",
+        "rateLimitPerMinute": 5,
+        "ddosProtection": {
+            "burstProtection": {
+                "maxBurstRequests": 5,
+                "burstWindowSeconds": 10
+            },
+            "suspiciousActivity": {
+                "maxRequestsPerSecond": 5,
+                "suspiciousThresholdPerMinute": 20
+            },
+            "ipReputation": {
+                "blacklistDuration": "30m"
+            },
+            "cacheSettings": {
+                "ddosCacheDuration": "5m",
+                "blacklistCacheDuration": "30m"
+            }
+        },
+        "whitelistedIPs": [],
+        "blockedIPs": []
+    },
+    "server": {
+        "port": 8000,
+        "host": "0.0.0.0",
+        "readTimeout": "30s",
+        "writeTimeout": "30s",
+        "idleTimeout": "60s",
+        "cacheCleanupInterval": "10m"
+    },
+    "rateLimit": {
+        "maxRequestsPerMinute": 10,
+        "burstSize": 2
+    }
+}

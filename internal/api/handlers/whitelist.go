@@ -10,5 +10,5 @@ import (
 // GetWhiteListedDomains handles the request to get the whitelisted domains.
 func GetWhiteListedDomains(w http.ResponseWriter, req *http.Request) {
 	// Write the JSON success response.
-	utils.WriteJsonSuccess(w, http.StatusOK, configs.WHITELISTED_DOMAINS)
+	utils.WriteJsonSuccess(w, http.StatusOK, configs.GetWhitelistedDomains())
 }

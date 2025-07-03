@@ -5,34 +5,37 @@ import (
 	"net/http"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
+	
+	enclaveInfo "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/enclave_info"
+	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
 
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services"
 )
 
 // GetEnclaveInfo handles the request to get the enclave info.
-func GetEnclaveInfo(aleoContext services.AleoPublicContext) http.HandlerFunc { 
-	return func(w http.ResponseWriter, req *http.Request) {
-		// Generate a short request ID.
-		requestId := utils.GenerateShortRequestID()
+func GetEnclaveInfo(w http.ResponseWriter, req *http.Request) {
+	// Generate a short request ID for tracing
+	requestId := utils.GenerateShortRequestID()
+	
+	sgxInfo, err := enclaveInfo.GetSgxInfo()
+	if err != nil {
+		log.Printf("[%s] ERROR: Failed to get SGX enclave info: %v", requestId, err)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
+		return
+	}
 
-		// Get the enclave info.
-		enclaveInfo, err := services.GetSgxInfo()
+	aleoContext, ctxErr := aleoContext.GetAleoContext()
+	if ctxErr != nil {
+		log.Printf("[%s] ERROR: Failed to get Aleo context: %v", requestId, ctxErr)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *ctxErr, requestId)
+		return
+	}
 
-		// Check if the error is not nil.
-		if err != nil {
-			log.Print("Error getting enclave info:", err)
-			utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
-			return
-		}
-
-		// Create the instance info.
-		instanceInfo := services.InstanceInfo{
-			ReportType:   "sgx",
-			Info:         enclaveInfo,
-			SignerPubKey: aleoContext.GetPublicKey(),
-		}
-
-		// Write the JSON success response.
-		utils.WriteJsonSuccess(w, http.StatusOK, instanceInfo)
-}
+	// Create the instance info response
+	enclaveInfoResponse := enclaveInfo.EnclaveInfoResponse{
+		ReportType:   "sgx",
+		Info:         sgxInfo,
+		SignerPubKey: aleoContext.GetPublicKey(),
+	}
+	
+	utils.WriteJsonSuccess(w, http.StatusOK, enclaveInfoResponse)
 }

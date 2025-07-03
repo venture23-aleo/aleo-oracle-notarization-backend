@@ -1,9 +1,8 @@
-package services
+package attestation
 
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -13,7 +12,7 @@ import (
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 
-	encoding "github.com/zkportal/aleo-oracle-encoding"
+	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 )
 
 // AttestationRequest is the request body for the attestation service.
@@ -54,6 +53,27 @@ type AttestationResponse struct {
 	OracleData OracleData `json:"oracleData"`
 }
 
+type AttestationRequestWithDebug struct {
+	AttestationRequest
+
+	DebugRequest bool `json:"debugRequest"`
+}
+
+type DebugAttestationResponse struct {
+	ReportType string `json:"reportType"`
+
+	AttestationRequest AttestationRequest `json:"attestationRequest"`
+
+	AttestationTimestamp int64 `json:"timestamp"`
+
+	ResponseBody string `json:"responseBody"`
+
+	ResponseStatusCode int `json:"responseStatusCode"`
+
+	AttestationData string `json:"attestationData"`
+}
+
+
 // Validate validates the attestation request.
 func (ar *AttestationRequest) Validate() *appErrors.AppError {
 
@@ -70,6 +90,10 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 	// Check if the selector is empty.
 	if ar.Selector == "" {
 		return appErrors.NewAppError(appErrors.ErrMissingSelector)
+	}
+
+	if ar.ResponseFormat == ""{
+		return appErrors.NewAppError(appErrors.ErrMissingResponseFormat)
 	}
 
 	// Check if the encoding option value is empty.
@@ -108,7 +132,7 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 	}
 
 	// Check if the encoding option precision is valid (only for float encoding).
-	if ar.EncodingOptions.Value == "float" && (ar.EncodingOptions.Precision > encoding.ENCODING_OPTION_FLOAT_MAX_PRECISION) {
+	if ar.EncodingOptions.Value == "float" && (ar.EncodingOptions.Precision <= 0 || ar.EncodingOptions.Precision > encoding.ENCODING_OPTION_FLOAT_MAX_PRECISION) {
 		return appErrors.NewAppError(appErrors.ErrInvalidEncodingPrecision)
 	}
 
@@ -119,6 +143,20 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 
 	return nil
 }
+
+// Masks unaccepted headers by replacing their values with "******"
+func (ar *AttestationRequest) MaskUnacceptedHeaders() {
+	finalHeaders := make(map[string]string)
+	for headerName, headerValue := range ar.RequestHeaders {
+		if !utils.IsAcceptedHeader(headerName) {
+			finalHeaders[headerName] = "******"
+		} else {
+			finalHeaders[headerName] = headerValue
+		}
+	}
+	ar.RequestHeaders = finalHeaders
+}
+
 
 // wrapRawQuoteAsOpenEnclaveEvidence wraps the raw quote as Open Enclave evidence.
 func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) ([]byte, error) {
@@ -148,11 +186,12 @@ func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// dev/attestation/user_report_data -write
-// dev/attestation/quote - read
-
 // quoteLock is the lock for the quote.
 var quoteLock sync.Mutex
+
+func GetQuoteLock() *sync.Mutex {
+	return &quoteLock
+}
 
 // GenerateQuote generates a quote for the attestation service.
 func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
@@ -167,13 +206,11 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 	// Copy the input data to the report data.
 	copy(reportData, inputData)
 
-	fmt.Printf("64-byte report data: %x\n", reportData)
-
 	// Write the report data to the user report data path.
 	err := os.WriteFile(constants.GRAMINE_PATHS.USER_REPORT_DATA_PATH, reportData, 0644)
 
 	if err != nil {
-		log.Print("Error while writting report data:", err)
+		log.Print("[ERROR] Error while writting report data:", err)
 		return nil, appErrors.NewAppError(appErrors.ErrWrittingReportData)
 	}
 

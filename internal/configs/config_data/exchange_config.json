@@ -1,0 +1,82 @@
+{
+  "binance": {
+    "name": "Binance",
+    "baseURL": "api.binance.com",
+    "symbols": {
+      "BTC": "BTCUSDT",
+      "ETH": "ETHUSDT"
+    },
+    "endpoints": {
+      "BTC": "/api/v3/ticker/24hr?symbol=BTCUSDT",
+      "ETH": "/api/v3/ticker/24hr?symbol=ETHUSDT"
+    }
+  },
+  "bybit": {
+    "name": "Bybit",
+    "baseURL": "api.bybit.com",
+    "symbols": {
+      "BTC": "BTCUSDT",
+      "ETH": "ETHUSDT"
+    },
+    "endpoints": {
+      "BTC": "/v5/market/tickers?category=spot\u0026symbol=BTCUSDT",
+      "ETH": "/v5/market/tickers?category=spot\u0026symbol=ETHUSDT"
+    }
+  },
+  "coinbase": {
+    "name": "Coinbase",
+    "baseURL": "api.exchange.coinbase.com",
+    "symbols": {
+      "ALEO": "ALEO-USD",
+      "BTC": "BTC-USD",
+      "ETH": "ETH-USD"
+    },
+    "endpoints": {
+      "ALEO": "/products/ALEO-USD/ticker",
+      "BTC": "/products/BTC-USD/ticker",
+      "ETH": "/products/ETH-USD/ticker"
+    }
+  },
+  "crypto.com": {
+    "name": "Crypto.com",
+    "baseURL": "api.crypto.com",
+    "symbols": {
+      "BTC": "BTC_USDT",
+      "ETH": "ETH_USDT"
+    },
+    "endpoints": {
+      "BTC": "/v2/public/get-ticker?instrument_name=BTC_USDT",
+      "ETH": "/v2/public/get-ticker?instrument_name=ETH_USDT"
+    }
+  },
+  "gate.io": {
+    "name": "Gate.io",
+    "baseURL": "api.gateio.ws",
+    "symbols": {
+      "ALEO": "ALEO_USDT"
+    },
+    "endpoints": {
+      "ALEO": "/api/v4/spot/tickers?currency_pair=ALEO_USDT"
+    }
+  },
+  "mexc": {
+    "name": "MEXC",
+    "baseURL": "api.mexc.com",
+    "symbols": {
+      "ALEO": "ALEOUSDT"
+    },
+    "endpoints": {
+      "ALEO": "/api/v3/ticker/24hr?symbol=ALEOUSDT"
+    }
+  },
+  "xt": {
+    "name": "XT",
+    "baseURL": "xt.com",
+    "symbols": {
+      "ALEO": "ALEO_USDT"
+    },
+    "endpoints": {
+      "ALEO": "/sapi/v4/market/public/ticker/24h?symbol=ALEO_USDT"
+    }
+  }
+}

@@ -7,13 +7,6 @@ import (
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 )
 
-// Error response structure
-type ErrorResponse struct {
-	ErrorMessage string `json:"errorMessage"`
-	ErrorCode    int    `json:"errorCode"`
-	RequestID    string `json:"requestId,omitempty"`
-}
-
 // WriteJsonSuccess writes a JSON success response with optional message and data
 func WriteJsonSuccess(w http.ResponseWriter, statusCode int, data interface{}) {
 

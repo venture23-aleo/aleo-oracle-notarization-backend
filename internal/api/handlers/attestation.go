@@ -2,122 +2,151 @@ package handlers
 
 import (
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/middleware"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/data_extraction"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 )
 
-// GenerateAttestationReportHandler handles the request to generate an attestation report.
-func GenerateAttestationReportHandler(aleoContext services.AleoPublicContext) http.HandlerFunc {
-	return middleware.RequireJSONContentType(func(w http.ResponseWriter, req *http.Request) {
-		// Generate a short request ID.
-		requestId := utils.GenerateShortRequestID()
+// GenerateAttestationReport handles the request to generate an attestation report.
+func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
+	// Generate a short request ID for tracing
+	requestId := utils.GenerateShortRequestID()
+	
+	// Log the incoming request
+	log.Printf("[%s] POST /attestation - Attestation report request received", requestId)
 
-		// Close the request body.
-		defer req.Body.Close()
+	// Validate Content-Type
+	if req.Header.Get("Content-Type") != "application/json" {
+		log.Printf("[%s] ERROR: Invalid Content-Type: %s for %s %s", 
+			requestId, req.Header.Get("Content-Type"), req.Method, req.URL.Path)
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, requestId)
+		return
+	}
 
-		// Create the attestation request.
-		var attestationRequest services.AttestationRequest
+	// Close the request body.
+	defer req.Body.Close()
 
-		// Decode the request body.
-		if err := json.NewDecoder(req.Body).Decode(&attestationRequest); err != nil {
-			// Log the error.
-			log.Println("error reading request:", err)
+	// Create the attestation request.
+	var attestationRequestWithDebug attestation.AttestationRequestWithDebug
 
-			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, requestId)
-			return
-		}
+	// Decode the request body.
+	if err := json.NewDecoder(req.Body).Decode(&attestationRequestWithDebug); err != nil {
+		log.Printf("[%s] ERROR: Failed to decode request body: %v", requestId, err)
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, requestId)
+		return
+	}
 
-		// Validate the attestation request.
-		if err := attestationRequest.Validate(); err != nil {
-			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusBadRequest, *err, requestId)
-			return
-		}
+	attestationRequest := attestationRequestWithDebug.AttestationRequest
 
-		// Get the timestamp.
-		timestamp := time.Now().Unix()
+	// Log request details for debugging
+	log.Printf("[%s] INFO: Processing attestation request for URL: %s, Debug: %t", 
+		requestId, attestationRequest.Url, attestationRequestWithDebug.DebugRequest)
 
-		// Fetch the data from the attestation request.
-		responseBody, attestationData, statusCode, err := services.ExtractDataFromTargetURL(attestationRequest)
+	// Validate the attestation request.
+	if err := attestationRequest.Validate(); err != nil {
+		log.Printf("[%s] ERROR: Attestation request validation failed: %v", requestId, err)
+		utils.WriteJsonError(w, http.StatusBadRequest, *err, requestId)
+		return
+	}
 
-		// Check if the error is not nil.
-		if err != nil {
-			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
-			return
-		}
+	// Get the timestamp.
+	timestamp := time.Now().Unix()
+	log.Printf("[%s] INFO: Using timestamp: %d", requestId, timestamp)
 
-		// Mask the unaccepted headers.
-		maskedHeaders := utils.MaskUnacceptedHeaders(attestationRequest.RequestHeaders)
-		attestationRequest.RequestHeaders = maskedHeaders
+	// Fetch the data from the attestation request.
+	log.Printf("[%s] INFO: Fetching data from target URL: %s", requestId, attestationRequest.Url)
+	extractDataResult, err := data_extraction.ExtractDataFromTargetURL(attestationRequest)
 
-		// Prepare the oracle data before the quote.
-		oracleData, err := services.PrepareOracleDataBeforeQuote(aleoContext, statusCode, attestationData, uint64(timestamp), services.AttestationRequest(attestationRequest))
+	// Check if the error is not nil.
+	if err != nil {
+		log.Printf("[%s] ERROR: Failed to extract data from target URL: %v", requestId, err)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
+		return
+	}
 
-		// Check if the error is not nil.
-		if err != nil {
-			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusBadRequest, *err , requestId)
-			return
-		}
+	log.Printf("[%s] INFO: Successfully extracted data - Status: %d, Data: %v", 
+		requestId, extractDataResult.StatusCode, extractDataResult.AttestationData)
 
-		// Hash the oracle data.
-		attestationHash, hashErr := aleoContext.GetSession().HashMessage([]byte(oracleData.UserData))
+	// Mask the unaccepted headers.
+	attestationRequest.MaskUnacceptedHeaders()
 
-		// Check if the error is not nil.
-		if hashErr != nil {
-			// Write the JSON error response.
-			utils.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrMessageHashing, requestId)
-			return
-		}
-
-		// Log the attestation hash.
-		log.Printf("Attestation hash: %v", hex.EncodeToString(attestationHash))
-
-		// Generate the quote.
-	 	quote, err := services.GenerateQuote(attestationHash)
+	if attestationRequestWithDebug.DebugRequest {
+		log.Printf("[%s] INFO: Returning debug response", requestId)
 		
-		if err != nil {
-			// Log the error.
-			log.Println("error generating quote", err)
-
-			utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
-			
-			return
-		}
-
-		// Prepare the oracle data after the quote.
-		oracleData, err = services.PrepareOracleDataAfterQuote(aleoContext, oracleData, quote)
-		if err != nil {
-			// Log the error.
-			log.Println("error preparing oracle data after quote", err)
-
-			utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
-			return
-		}
-
 		// Create the attestation response.
-		response := &services.AttestationResponse{
+		response := &attestation.DebugAttestationResponse{
 			ReportType:           "sgx",
 			AttestationRequest:   attestationRequest,
 			AttestationTimestamp: timestamp,
-			ResponseBody:         responseBody,
-			AttestationData:      attestationData,
-			ResponseStatusCode:   statusCode,
-			AttestationReport:    base64.StdEncoding.EncodeToString(quote),
-			OracleData:           oracleData,
+			ResponseBody:         extractDataResult.ResponseBody,
+			AttestationData:      extractDataResult.AttestationData,
+			ResponseStatusCode:   extractDataResult.StatusCode,
 		}
 
-		// Write the JSON success response.
+		log.Printf("[%s] SUCCESS: Debug attestation report generated", requestId)
 		utils.WriteJsonSuccess(w, http.StatusOK, response)
-	})
+		return
+	}
+
+	// Prepare the oracle data before the quote.
+	log.Printf("[%s] INFO: Preparing data for quote generation", requestId)
+	quotePrepData, err := attestation.PrepareDataForQuoteGeneration(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), attestationRequest)
+
+	// Check if the error is not nil.
+	if err != nil {
+		log.Printf("[%s] ERROR: Failed to prepare data for quote generation: %v", requestId, err)
+		utils.WriteJsonError(w, http.StatusBadRequest, *err, requestId)
+		return
+	}
+
+	log.Printf("[%s] INFO: Quote preparation successful", requestId)
+
+	// Generate the quote.
+	log.Printf("[%s] INFO: Generating SGX quote", requestId)
+	quote, err := attestation.GenerateQuote(quotePrepData.AttestationHash)
+	
+	if err != nil {
+		log.Printf("[%s] ERROR: Failed to generate SGX quote: %v", requestId, err)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
+		return
+	}
+
+	log.Printf("[%s] INFO: SGX quote generated successfully - Length: %d bytes", requestId, len(quote))
+
+	// Prepare the oracle data after the quote.
+	log.Printf("[%s] INFO: Building complete oracle data", requestId)
+	oracleData, err := attestation.BuildCompleteOracleData(quotePrepData, quote)
+	
+	if err != nil {
+		log.Printf("[%s] ERROR: Failed to build complete oracle data: %v", requestId, err)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
+		return
+	}
+
+	log.Printf("[%s] INFO: Oracle data built successfully", requestId)
+
+	// Create the attestation response.
+	response := &attestation.AttestationResponse{
+		ReportType:           "sgx",
+		AttestationRequest:   attestationRequest,
+		AttestationTimestamp: timestamp,
+		ResponseBody:         extractDataResult.ResponseBody,
+		AttestationData:      extractDataResult.AttestationData,
+		ResponseStatusCode:   extractDataResult.StatusCode,
+		AttestationReport:    base64.StdEncoding.EncodeToString(quote),
+		OracleData:           *oracleData,
+	}
+
+	// Log successful completion
+	log.Printf("[%s] SUCCESS: Attestation report generated successfully - Quote length: %d bytes, Oracle data ready", requestId, len(quote))
+
+	// Write the JSON success response.
+	utils.WriteJsonSuccess(w, http.StatusOK, response)
 }
+
