@@ -92,9 +92,21 @@ docker-build: generate-manifest-template
 	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose build $(APP)
 	docker tag $(APP):latest $(APP):$(COMMIT)
 	
+# Docker compose flags (can be overridden from command line)
+DOCKER_FLAGS ?= -d
+DOCKER_SERVICES ?= $(APP)
+
 .PHONY: docker-run
 docker-run: docker-build
-	docker compose up $(APP)
+	docker compose up $(DOCKER_SERVICES) $(DOCKER_FLAGS)
+
+.PHONY: docker-run-fg
+docker-run-fg: docker-build
+	docker compose up $(DOCKER_SERVICES)
+
+.PHONY: docker-run-rebuild
+docker-run-rebuild: docker-build
+	docker compose up $(DOCKER_SERVICES) --build --force-recreate
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Clean & Help
@@ -133,7 +145,7 @@ gen-key-openssl:
 .PHONY: help
 help:
 	@echo "Usage:"
-	@echo "  make [target]"
+	@echo "  make [target] [VARIABLE=value]"
 	@echo
 	@echo "Development Targets:"
 	@echo "  all             Run fmt, vet, lint, test, build"
@@ -148,7 +160,21 @@ help:
 	@echo
 	@echo "Docker Targets:"
 	@echo "  docker-build    Build Docker image"
-	@echo "  docker-run      Build and run Docker container"
+	@echo "  docker-run      Build and run Docker container (detached mode)"
+	@echo "  docker-run-fg   Build and run Docker container (foreground mode)"
+	@echo "  docker-run-rebuild  Build and run Docker container (force rebuild)"
+	@echo
+	@echo "Docker Variables (can be overridden):"
+	@echo "  DOCKER_FLAGS    Docker compose flags (default: -d)"
+	@echo "  DOCKER_SERVICES Services to run (default: aleo-oracle-notarization-backend)"
+	@echo "  APP             Application name (default: aleo-oracle-notarization-backend)"
+	@echo
+	@echo "Docker Usage Examples:"
+	@echo "  make docker-run                                    # Default detached mode"
+	@echo "  make docker-run DOCKER_FLAGS=\"\"                  # Foreground mode"
+	@echo "  make docker-run DOCKER_FLAGS=\"--build\"           # With build flag"
+	@echo "  make docker-run DOCKER_FLAGS=\"--scale app=2\"     # With scaling"
+	@echo "  make docker-run DOCKER_SERVICES=\"app db\"         # Specific services"
 	@echo
 	@echo "SGX/Enclave Targets:"
 	@echo "  generate-manifest-template  Generate manifest template"

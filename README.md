@@ -11,7 +11,7 @@ The backend can handle different types of data, including integers, floats, and 
 ## Notarization Backend Working Flow
 
 ### 1. Initialization
-- When the backend starts, it generates an Aleo private key.
+- When the backend starts, it generates an Aleo public-private key pair.
 - This key is subsequently used to sign the complete attestation report after it has been serialized and encoded in an Aleo-specific format.
 
 ### 2. Attestation Request
@@ -161,7 +161,7 @@ make help          # Show help
 - **Intel SGX hardware** (with DCAP support and drivers installed)
 - **Access to the SGX device files** (`/dev/sgx/enclave`, `/dev/sgx/provision`)
 - **A Gramine-compatible SGX signing key** (e.g., `enclave-key.pem`)
-- (Optional) **Docker Compose** for easier orchestration
+- **Docker Compose** for easier orchestration
 
 ### 1. Prepare Your Environment
 
@@ -170,29 +170,6 @@ make help          # Show help
   ```sh
   ls /dev/sgx/enclave /dev/sgx/provision
   ```
-- Place your SGX signing key (e.g., `enclave-key.pem`) in a secure location on your host. It is recommended to store it in the `secrets` folder at the root of this project.
-
-- **Setup `.env` file:**
-
-  The application uses the `WHITELISTED_DOMAINS` environment variable to control which external domains are allowed for data fetching. This is a security feature to ensure only trusted sources are queried by the backend.
-  
-  1. Copy the provided `.env_sample` file to `.env` in the project root:
-
-      ```sh
-      cp .env_sample .env
-      ```
-  2. Edit the `WHITELISTED_DOMAINS` line in your `.env` file to include all domains you want to allow, separated by commas:
-      ```env
-      WHITELISTED_DOMAINS=example.com,api.example.com,another.com
-      ```
-  3. Set the `PORT` variable as needed (default is 8080):
-      ```env
-      PORT=8080
-      ```
-
-    **Note:** Only `PORT` and `WHITELISTED_DOMAINS` are required in your `.env` file. Do not include secrets or sensitive information.
-
-    Refer to `.env_sample` for an example configuration.
 
 - **Generating the Enclave Private Key:**
 
@@ -228,7 +205,6 @@ This ensures all arguments, secrets, and environment variables are set correctly
 ### 4. Troubleshooting
 
 - **SGX errors:** Ensure your host has the correct drivers and device files, and that they are mapped into the container.
-- **Network errors:** Ensure your static `resolv.conf` contains valid DNS servers.
 - **Manifest errors:** Check for syntax issues in your Gramine manifest template.
 
 For more details, see the comments in the Dockerfile and the Gramine documentation: https://gramine.readthedocs.io/en/stable/
@@ -258,5 +234,3 @@ This project is designed to support reproducible builds, ensuring that the same 
 
 - **Consistent Enclave Identity (MRENCLAVE):**
   - Because the build process is reproducible and all configuration, code, and dependencies are fixed, the enclave measurement (MRENCLAVE) will remain the same for identical builds. This ensures that the enclave identity is consistent across deployments, which is critical for attestation and trust in SGX-based systems.
-
-

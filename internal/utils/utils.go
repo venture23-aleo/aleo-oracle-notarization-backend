@@ -40,7 +40,7 @@ func PadStringToLength(str string, paddingChar byte, targetLength int) string {
 }
 
 // Checks if a header name is in the list of allowed headers.
-func isAcceptedHeader(header string) bool {
+func IsAcceptedHeader(header string) bool {
 	for _, h := range constants.ALLOWED_HEADERS {
 		if strings.EqualFold(h, header) {
 			return true
@@ -53,7 +53,7 @@ func isAcceptedHeader(header string) bool {
 func MaskUnacceptedHeaders(headers map[string]string) map[string]string {
 	finalHeaders := make(map[string]string)
 	for headerName, headerValue := range headers {
-		if !isAcceptedHeader(headerName) {
+		if !IsAcceptedHeader(headerName) {
 			finalHeaders[headerName] = "******"
 		} else {
 			finalHeaders[headerName] = headerValue
@@ -82,7 +82,7 @@ func IsAcceptedDomain(endpoint string) bool {
 		fmt.Println("Error parsing URL:", err)
 		return false
 	}
-	for _, domainName := range configs.WHITELISTED_DOMAINS {
+	for _, domainName := range configs.GetWhitelistedDomains() {
 		if domainName == parsedURL.Hostname() {
 			return true
 		}

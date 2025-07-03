@@ -1,0 +1,20 @@
+{
+    "ALEO": [
+        "xt",
+        "gate.io",
+        "coinbase",
+        "mexc"
+    ],
+    "BTC": [
+        "binance",
+        "bybit",
+        "coinbase",
+        "crypto.com"
+    ],
+    "ETH": [
+        "binance",
+        "bybit",
+        "coinbase",
+        "crypto.com"
+    ]
+}
