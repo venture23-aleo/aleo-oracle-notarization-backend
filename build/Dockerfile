@@ -39,7 +39,7 @@ COPY build/inputs/static_hosts build/inputs/static_resolv.conf build/inputs/entr
 RUN chmod +x entrypoint.sh
 
 RUN --mount=type=secret,id=gramine-private-key,target=/tmp/private-key.pem \
-    gramine-manifest -Dlog_level=debug ${APP}.manifest.template ${APP}.manifest && \
+    gramine-manifest ${APP}.manifest.template ${APP}.manifest && \
     gramine-sgx-sign --manifest ${APP}.manifest --key /tmp/private-key.pem --date 0000-00-00 --output ${APP}.manifest.sgx
 
 ENV APP=${APP}

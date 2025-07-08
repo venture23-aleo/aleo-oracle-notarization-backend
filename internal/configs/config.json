@@ -22,8 +22,8 @@
                     "ETH": "ETHUSDT"
                 },
                 "endpoints": {
-                    "BTC": "/v5/market/tickers?category=spot\u0026symbol=BTCUSDT",
-                    "ETH": "/v5/market/tickers?category=spot\u0026symbol=ETHUSDT"
+                    "BTC": "/v5/market/tickers?category=spot&symbol=BTCUSDT",
+                    "ETH": "/v5/market/tickers?category=spot&symbol=ETHUSDT"
                 }
             },
             "coinbase": {

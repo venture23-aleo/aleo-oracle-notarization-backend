@@ -377,9 +377,9 @@ func parseGateIOResponse(data map[string]interface{}) (price, volume float64, er
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
-	volumeStr, ok := item["quote_volume"].(string)
+	volumeStr, ok := item["base_volume"].(string)
 	if !ok {
-		logger.Error("Invalid volume format: ", "quote_volume", item["quote_volume"])
+		logger.Error("Invalid volume format: ", "base_volume", item["base_volume"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 

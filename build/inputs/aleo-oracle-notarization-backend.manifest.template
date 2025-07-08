@@ -1,5 +1,7 @@
 
 [loader.env]
+PORT="8000"
+WHITELISTED_DOMAINS=""
 
 [fs.root]
 type = "chroot"
