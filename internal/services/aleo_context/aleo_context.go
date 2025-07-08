@@ -2,10 +2,10 @@ package aleo_context
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	aleo "github.com/venture23-aleo/aleo-utils-go"
 )
 
@@ -94,7 +94,7 @@ func (m *AleoContextManager) GetAleoContext() (AleoPublicContext, *appErrors.App
 		}
 		m.context = aleoCtx
 		m.initialized = true
-		log.Println("Aleo context initialized successfully")
+		logger.Debug("Aleo context initialized successfully")
 	})
 	
 	if initErr != nil {
@@ -114,7 +114,7 @@ func InitAleoContext() error {
 		}
 		aleoManager.context = aleoCtx
 		aleoManager.initialized = true
-		log.Println("Aleo context initialized successfully")
+		logger.Debug("Aleo context initialized successfully")
 	})
 	return initErr
 }

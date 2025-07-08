@@ -10,6 +10,12 @@ import (
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/middlewares"
 )
 
+const (
+	IdleTimeout = 30
+	ReadTimeout = 5
+	WriteTimeout = 10
+)
+
 // InitializeServer initializes the server.
 func NewServer() *http.Server {
 	// Get app config
@@ -28,28 +34,23 @@ func NewServer() *http.Server {
 
 	// Create middleware stack
 	middlewareStack := []middlewares.Middleware{
-		middlewares.LoggingMiddleware,     // Log all requests
+		middlewares.LoggingMiddleware,        // Log all requests with request ID
 		middlewares.DDoSProtectionMiddleware, // DDoS protection
 	}
 
 	// Apply middleware stack to mux
 	handler := middlewares.Chain(mux, middlewareStack...)
 
-	serverConfig := appConfig.Server
-
-	// Parse duration strings
-	idleTimeout, _ := time.ParseDuration(serverConfig.IdleTimeout)
-	readTimeout, _ := time.ParseDuration(serverConfig.ReadTimeout)
-	writeTimeout, _ := time.ParseDuration(serverConfig.WriteTimeout)
+	port := appConfig.Port
 
 	// Create the bind address.
-	bindAddr := fmt.Sprintf("%s:%d", serverConfig.Host, serverConfig.Port)
+	bindAddr := fmt.Sprintf(":%d", port)
 
 	// Create the server.
 	server := &http.Server{
-		IdleTimeout:       idleTimeout,
-		ReadHeaderTimeout: readTimeout,
-		WriteTimeout:      writeTimeout,
+		IdleTimeout:       time.Second * IdleTimeout,
+		ReadHeaderTimeout: time.Second * ReadTimeout,
+		WriteTimeout:      time.Second * WriteTimeout,
 		Addr:              bindAddr,
 		Handler:           handler, // Use the middleware stack
 	}

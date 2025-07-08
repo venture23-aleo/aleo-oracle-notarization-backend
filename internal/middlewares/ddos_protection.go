@@ -32,7 +32,7 @@ var (
 func InitializeDDoSProtection(cfg *configs.AppConfig) {
 	config = cfg
 
-	cacheCleanupInterval, _ := time.ParseDuration(config.Server.CacheCleanupInterval)
+	cacheCleanupInterval, _ := time.ParseDuration(config.CacheCleanupInterval)
 	
 	ddosCacheDuration, _ := time.ParseDuration(config.Security.DDoSProtection.CacheSettings.DDoSCacheDuration)
 	blacklistCacheDuration, _ := time.ParseDuration(config.Security.DDoSProtection.IPReputation.BlacklistDuration)
@@ -75,7 +75,7 @@ func DDoSProtectionMiddleware(next http.Handler) http.Handler {
 		data := getProtectionData(ip)
 		
 		// Check burst protection
-		if !checkBurstProtection(ip, &data) {
+		if !checkBurstProtection(&data) {
 			blacklistIP(ip)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)
@@ -124,7 +124,7 @@ func getProtectionData(ip string) DDoSProtectionData {
 	}
 }
 
-func checkBurstProtection(ip string, data *DDoSProtectionData) bool {
+func checkBurstProtection(data *DDoSProtectionData) bool {
 	now := time.Now()
 	burstWindow := time.Duration(config.Security.DDoSProtection.BurstProtection.BurstWindowSeconds) * time.Second
 	

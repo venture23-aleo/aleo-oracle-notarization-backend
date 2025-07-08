@@ -1,14 +1,17 @@
 package data_extraction
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 )
 
 // ExtractDataResult represents the result of data extraction
@@ -18,29 +21,12 @@ type ExtractDataResult struct {
 	StatusCode      int
 } 
 
-// ExtractDataFromTargetURL fetches the data from the attestation request target URL.
-// This is the main entry point that routes to specific extractors based on the request type.
-func ExtractDataFromTargetURL(attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
-	// Check if the URL is a price feed request
-	if attestationRequest.Url == constants.PriceFeedBtcUrl || 
-	   attestationRequest.Url == constants.PriceFeedEthUrl || 
-	   attestationRequest.Url == constants.PriceFeedAleoUrl {
-		return ExtractPriceFeedData(attestationRequest)
-	} else if attestationRequest.ResponseFormat == "html" {
-		return ExtractDataFromHTML(attestationRequest)
-	} else if attestationRequest.ResponseFormat == "json" {
-		return ExtractDataFromJSON(attestationRequest)
-	} else {
-		return ExtractDataResult{
-			StatusCode: http.StatusNotFound,
-		}, appErrors.NewAppError(appErrors.ErrInvalidResponseFormat)
-	}
-}
-
 // makeHTTPRequest creates and executes an HTTP request with common configuration
-func makeHTTPRequest(attestationRequest attestation.AttestationRequest) (*http.Response, *appErrors.AppError) {
+func makeHTTPRequest(ctx context.Context, attestationRequest attestation.AttestationRequest) (*http.Response, *appErrors.AppError) {
 	// Create the body reader.
 	var bodyReader io.Reader
+
+	reqLogger := logger.FromContext(ctx)
 
 	// Check if the request body is not nil.
 	if attestationRequest.RequestBody != nil {
@@ -55,9 +41,10 @@ func makeHTTPRequest(attestationRequest attestation.AttestationRequest) (*http.R
 		url = "https://" + attestationRequest.Url
 	}
 
-	// Create the request.
-	req, err := http.NewRequest(attestationRequest.RequestMethod, url, bodyReader)
+	// Create the request with context.
+	req, err := retryablehttp.NewRequestWithContext(ctx, attestationRequest.RequestMethod, url, bodyReader)
 	if err != nil {
+		reqLogger.Error("Error while creating HTTP request", "error", err, "url", url)
 		return nil, appErrors.NewAppError(appErrors.ErrInvalidHTTPRequest)
 	}
 
@@ -72,16 +59,18 @@ func makeHTTPRequest(attestationRequest attestation.AttestationRequest) (*http.R
 	}
 
 	// Create the client.
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := utils.GetRetryableHTTPClient(3)
 
-	// Do the request.
+	// Do the request with context.
 	resp, err := client.Do(req)
 	if err != nil {
+		reqLogger.Error("Error while fetching data", "error", err, "url", url)
 		return nil, appErrors.NewAppError(appErrors.ErrFetchingData)
 	}
 
 	// Check if the status code is greater than or equal to 400 and less than 600.
 	if resp.StatusCode >= 400 && resp.StatusCode < 600 {
+		reqLogger.Error("Error while fetching data", "status_code", resp.StatusCode, "url", url)
 		return resp, appErrors.NewAppErrorWithResponseStatus(appErrors.ErrFetchingData, resp.StatusCode)
 	}
 
@@ -107,4 +96,29 @@ func applyFloatPrecision(valueStr string, precision uint) string {
 	}
 }
 
+// ExtractDataFromTargetURL fetches the data from the attestation request target URL.
+// This is the main entry point that routes to specific extractors based on the request type.
+func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
+	// Get logger from context (includes request ID)
+	reqLogger := logger.FromContext(ctx)
+	
+	// Check if the URL is a price feed request
+	if attestationRequest.Url == constants.PriceFeedBtcUrl || 
+	   attestationRequest.Url == constants.PriceFeedEthUrl || 
+	   attestationRequest.Url == constants.PriceFeedAleoUrl {
+		reqLogger.Debug("Processing price feed request", "url", attestationRequest.Url)
+		return ExtractPriceFeedData(ctx, attestationRequest)
+	} else if attestationRequest.ResponseFormat == "html" {
+		reqLogger.Info("Processing HTML request", "url", attestationRequest.Url)
+		return ExtractDataFromHTML(ctx, attestationRequest)
+	} else if attestationRequest.ResponseFormat == "json" {
+		reqLogger.Debug("Processing JSON request", "url", attestationRequest.Url)
+		return ExtractDataFromJSON(ctx, attestationRequest)
+	} else {
+		reqLogger.Error("Invalid response format", "format", attestationRequest.ResponseFormat)
+		return ExtractDataResult{
+			StatusCode: http.StatusNotFound,
+		}, appErrors.NewAppError(appErrors.ErrInvalidResponseFormat)
+	}
+}
 

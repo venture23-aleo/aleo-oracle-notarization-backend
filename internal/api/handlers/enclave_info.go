@@ -1,32 +1,31 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
-	
-	enclaveInfo "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/enclave_info"
-	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
 
+	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
+	enclaveInfo "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/enclave_info"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
 // GetEnclaveInfo handles the request to get the enclave info.
 func GetEnclaveInfo(w http.ResponseWriter, req *http.Request) {
-	// Generate a short request ID for tracing
-	requestId := utils.GenerateShortRequestID()
+	// Get logger from context (request ID automatically included by middleware)
+	reqLogger := logger.FromContext(req.Context())
 	
 	sgxInfo, err := enclaveInfo.GetSgxInfo()
 	if err != nil {
-		log.Printf("[%s] ERROR: Failed to get SGX enclave info: %v", requestId, err)
-		utils.WriteJsonError(w, http.StatusInternalServerError, *err, requestId)
+		reqLogger.Error("Failed to get SGX enclave info", "error", err)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *err, "")
 		return
 	}
 
 	aleoContext, ctxErr := aleoContext.GetAleoContext()
 	if ctxErr != nil {
-		log.Printf("[%s] ERROR: Failed to get Aleo context: %v", requestId, ctxErr)
-		utils.WriteJsonError(w, http.StatusInternalServerError, *ctxErr, requestId)
+		reqLogger.Error("Failed to get Aleo context", "error", ctxErr)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *ctxErr, "")
 		return
 	}
 

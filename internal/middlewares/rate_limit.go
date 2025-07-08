@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"encoding/json"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	"golang.org/x/time/rate"
 )
 
@@ -27,9 +27,9 @@ var (
 // Token bucket rate limiting using golang.org/x/time/rate
 
 func InitializeRateLimit(cfg *configs.AppConfig) {
-	maxRequestsPerMinute = cfg.Security.RateLimitPerMinute
-	cleanupInterval, _ = time.ParseDuration(cfg.Server.CacheCleanupInterval)
-	burstSize = cfg.RateLimit.BurstSize
+	cleanupInterval, _ = time.ParseDuration(cfg.CacheCleanupInterval)
+	maxRequestsPerMinute = cfg.Security.RateLimit.MaxRequestsPerMinute
+	burstSize = cfg.Security.RateLimit.BurstSize
 
 	limiters = make(map[string]*rate.Limiter)
 	limiterLastAccess = make(map[string]time.Time)
@@ -47,7 +47,7 @@ func IPRateLimitMiddleware(next http.Handler) http.Handler {
 		
 		// Check if IP is whitelisted - bypass rate limiting
 		if IsWhitelistedIP(ip) {
-			// log.Printf("[DEBUG] IP %s is whitelisted, bypassing rate limit\n", ip)
+			logger.Debug("IP ", ip, "is whitelisted, bypassing rate limit")
 			w.Header().Set("X-Whitelisted", "true")
 			next.ServeHTTP(w, r)
 			return
@@ -58,11 +58,11 @@ func IPRateLimitMiddleware(next http.Handler) http.Handler {
 		
 		// Get current token count before consuming
 		currentTokens := int(limiter.Tokens())
-		// log.Printf("[DEBUG] IP %s: current tokens = %d\n", ip, currentTokens)
+		logger.Debug("IP ", ip, "current tokens", currentTokens)
 		
 		// Check if we have tokens available (without consuming)
 		if currentTokens < 1 {
-			log.Printf("[DEBUG] IP %s: rate limit exceeded\n", ip)
+			logger.Debug("Rate limit exceeded", "ip", ip)
 			// Rate limit exceeded - calculate when next token will be available
 			// Get the last time a token was consumed and add the regeneration time
 			limitersMutex.RLock()
@@ -128,7 +128,7 @@ func getOrCreateLimiter(ip string) *rate.Limiter {
 	if limiter, exists := limiters[ip]; exists {
 		// Update last access time
 		limiterLastAccess[ip] = time.Now()
-		log.Printf("[DEBUG] Using existing limiter for IP %s\n", ip)
+		logger.Debug("Using existing limiter for IP ", "ip", ip)
 		return limiter
 	}
 	
@@ -137,7 +137,7 @@ func getOrCreateLimiter(ip string) *rate.Limiter {
 	ratePerSecond := float64(maxRequestsPerMinute) / 60.0
 	burstSize := burstSize
 	
-	// log.Printf("[DEBUG] Creating new limiter for IP %s: rate=%.4f/sec, burst=%d\n", ip, ratePerSecond, burstSize)
+	logger.Debug("Creating new limiter for IP ", "ip", ip, "rate", ratePerSecond, "burst", burstSize)
 	
 	limiter := rate.NewLimiter(rate.Limit(ratePerSecond), burstSize)
 	limiters[ip] = limiter
@@ -154,7 +154,7 @@ func cleanupInactiveLimiters() {
 	for range ticker.C {
 		limitersMutex.Lock()
 		
-		log.Println("Cleaning up inactive limiters")
+		logger.Debug("Cleaning up inactive limiters")
 		// Remove limiters inactive for more than 5 minutes
 		cutoff := time.Now().Add(-5 * time.Minute)
 		for ip, lastAccess := range limiterLastAccess {

@@ -1,9 +1,9 @@
 package data_extraction
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -11,6 +11,7 @@ import (
 
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
 // Package data_extraction provides data extraction capabilities for the Aleo Oracle Notarization Backend.
@@ -38,11 +39,12 @@ import (
 //       EncodingOptions: encoding.EncodingOptions{Value: "float", Precision: 6}
 //   }
 //   result, err := ExtractDataFromJSON(request)
-func ExtractDataFromJSON(attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
+func ExtractDataFromJSON(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
 	// Make the HTTP request
-	resp, err := makeHTTPRequest(attestationRequest)
+	reqLogger := logger.FromContext(ctx)
+	resp, err := makeHTTPRequest(ctx, attestationRequest)
 	if err != nil {
-		log.Print("[ERROR] [ExtractDataFromJSON] Error making HTTP request:", err)
+		reqLogger.Error("Error making HTTP request", "error", err, "url", attestationRequest.Url)
 		return ExtractDataResult{
 			StatusCode: resp.StatusCode,
 		}, err
@@ -54,7 +56,7 @@ func ExtractDataFromJSON(attestationRequest attestation.AttestationRequest) (Ext
 
 	// Decode the response.
 	if decodeErr := json.NewDecoder(resp.Body).Decode(&response); decodeErr != nil {
-		log.Print("[ERROR] [ExtractDataFromJSON] Error decoding JSON:", decodeErr)
+		reqLogger.Error("Error decoding JSON: ", "error", decodeErr)
 		return ExtractDataResult{
 			StatusCode: resp.StatusCode,
 		}, appErrors.NewAppError(appErrors.ErrJSONDecoding)
@@ -62,7 +64,7 @@ func ExtractDataFromJSON(attestationRequest attestation.AttestationRequest) (Ext
 
 	value, err := getNestedValue(response, attestationRequest.Selector)
 	if err != nil {
-		log.Print("[ERROR] [ExtractDataFromJSON] Error getting nested value:", err)
+		reqLogger.Error("Error getting nested value: ", "error", err)
 		return ExtractDataResult{
 			StatusCode: resp.StatusCode,
 		}, err
@@ -72,6 +74,13 @@ func ExtractDataFromJSON(attestationRequest attestation.AttestationRequest) (Ext
 
 	// Apply float precision if needed
 	if attestationRequest.EncodingOptions.Value == "float" {
+		_, floatErr := strconv.ParseFloat(valueStr, 64)
+		if floatErr != nil {
+			reqLogger.Error("Error parsing float value: ", "error", floatErr)
+			return ExtractDataResult{
+				StatusCode: resp.StatusCode,
+			}, appErrors.NewAppError(appErrors.ErrParsingHTMLContent)
+		}
 		valueStr = applyFloatPrecision(valueStr, attestationRequest.EncodingOptions.Precision)
 	}
 
@@ -80,7 +89,7 @@ func ExtractDataFromJSON(attestationRequest attestation.AttestationRequest) (Ext
 
 	// Check if the error is not nil.
 	if marshalErr != nil {
-		log.Print("[ERROR] [ExtractDataFromJSON] Error marshalling JSON:", marshalErr)
+		reqLogger.Error("Error marshalling JSON: ", "error", marshalErr)
 		return ExtractDataResult{
 			StatusCode: http.StatusInternalServerError,
 		}, appErrors.NewAppError(appErrors.ErrJSONEncoding)
@@ -144,7 +153,7 @@ func getNestedValue(m map[string]interface{}, path string) (interface{}, *appErr
 
 		// Check if the map is valid.
 		if !ok {
-			log.Print("[ERROR] [getNestedValue] Error getting nested value: Invalid map")
+			logger.Error("Error getting nested value: Invalid map")
 			return nil, appErrors.NewAppError(appErrors.ErrInvalidMap)
 		}
 
@@ -153,7 +162,7 @@ func getNestedValue(m map[string]interface{}, path string) (interface{}, *appErr
 
 		// Check if the value exists.
 		if !exists {
-			log.Print("[ERROR] [getNestedValue] Error getting nested value: Key not found")
+			logger.Error("Error getting nested value: Key not found")
 			return nil, appErrors.NewAppError(appErrors.ErrKeyNotFound)
 		}
 
@@ -164,7 +173,7 @@ func getNestedValue(m map[string]interface{}, path string) (interface{}, *appErr
 
 			// Check if the array is valid.
 			if !ok {
-				log.Print("[ERROR] [getNestedValue] Error getting nested value: Expected array")
+				logger.Error("Error getting nested value: Expected array")
 				return nil, appErrors.NewAppError(appErrors.ErrExpectedArray)
 			}
 
@@ -173,7 +182,7 @@ func getNestedValue(m map[string]interface{}, path string) (interface{}, *appErr
 
 			// Check if the index is out of bounds.
 			if idx < 0 || idx >= len(array) {
-				log.Print("[ERROR] [getNestedValue] Error getting nested value: Index out of bounds")
+				logger.Error("Error getting nested value: Index out of bounds")
 				return nil, appErrors.NewAppError(appErrors.ErrIndexOutOfBound)
 			}
 

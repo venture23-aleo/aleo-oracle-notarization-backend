@@ -1,14 +1,15 @@
 package data_extraction
 
 import (
+	"context"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 
 	"github.com/antchfx/htmlquery"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
 // Package data_extraction provides data extraction capabilities for the Aleo Oracle Notarization Backend.
@@ -42,11 +43,12 @@ import (
 //       EncodingOptions: encoding.EncodingOptions{Value: "float", Precision: 2}
 //   }
 //   result, err := ExtractDataFromHTML(request)
-func ExtractDataFromHTML(attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
+func ExtractDataFromHTML(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
 	// Make the HTTP request
-	resp, err := makeHTTPRequest(attestationRequest)
+	reqLogger := logger.FromContext(ctx)
+	resp, err := makeHTTPRequest(ctx, attestationRequest)
 	if err != nil {
-		log.Print("[ERROR] [ExtractDataFromHTML] Error making HTTP request:", err)
+		reqLogger.Error("Error making HTTP request: ", "error", err)
 		return ExtractDataResult{
 			StatusCode: resp.StatusCode,
 		}, err
@@ -56,7 +58,7 @@ func ExtractDataFromHTML(attestationRequest attestation.AttestationRequest) (Ext
 	// Read the full HTML content.
 	htmlBytes, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
-		log.Print("[ERROR] [ExtractDataFromHTML] Error reading HTML content:", readErr)
+		reqLogger.Error("Error reading HTML content: ", "error", readErr)
 		return ExtractDataResult{
 			StatusCode: resp.StatusCode,
 		}, appErrors.NewAppError(appErrors.ErrReadingHTMLContent)
@@ -68,7 +70,7 @@ func ExtractDataFromHTML(attestationRequest attestation.AttestationRequest) (Ext
 	// Parse the HTML content.
 	htmlDoc, parseErr := htmlquery.Parse(strings.NewReader(htmlContent))
 	if parseErr != nil {
-		log.Print("[ERROR] [ExtractDataFromHTML] Error parsing HTML content:", parseErr)
+		reqLogger.Error("Error parsing HTML content: ", "error", parseErr)
 		return ExtractDataResult{
 			StatusCode: resp.StatusCode,
 		}, appErrors.NewAppError(appErrors.ErrParsingHTMLContent)
@@ -79,7 +81,7 @@ func ExtractDataFromHTML(attestationRequest attestation.AttestationRequest) (Ext
 
 	// Check if the error is not nil or the result is nil.
 	if queryErr != nil || result == nil {
-		log.Print("[ERROR] [ExtractDataFromHTML] Error querying HTML content:", queryErr)
+		reqLogger.Error("Error querying HTML content: ", "error", queryErr)
 		return ExtractDataResult{
 			StatusCode: resp.StatusCode,
 		}, appErrors.NewAppError(appErrors.ErrSelectorNotFound)
@@ -106,7 +108,7 @@ func ExtractDataFromHTML(attestationRequest attestation.AttestationRequest) (Ext
 		attestationRequest.EncodingOptions.Value == "float" {
 		_, floatErr := strconv.ParseFloat(valueStr, 64)
 		if floatErr != nil {
-			log.Print("[ERROR] [ExtractDataFromHTML] Error parsing float value:", floatErr)
+			reqLogger.Error("Error parsing float value: ", "error", floatErr)
 			return ExtractDataResult{
 				StatusCode: resp.StatusCode,
 			}, appErrors.NewAppError(appErrors.ErrParsingHTMLContent)

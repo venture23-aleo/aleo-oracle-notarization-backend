@@ -4,13 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"sync"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
@@ -109,7 +109,7 @@ func GetSgxInfo() (SgxInfo, *appErrors.AppError) {
 
 // loadSgxInfo performs the actual SGX info loading (called only once)
 func loadSgxInfo() (SgxInfo, *appErrors.AppError) {
-	log.Println("[INFO] [loadSgxInfo] Starting SGX info loading process")
+	logger.Debug("Starting SGX info loading process")
 
 	// Step 2: Read and parse SGX report
 	reportData, err := readAndParseSGXReport()
@@ -120,7 +120,7 @@ func loadSgxInfo() (SgxInfo, *appErrors.AppError) {
 	// Step 3: Create SGX info from parsed data
 	sgxInfo := createSgxInfoFromReportData(reportData)
 
-	log.Println("[INFO] [loadSgxInfo] SGX info loading completed successfully")
+	logger.Debug("SGX info loading completed successfully")
 	return sgxInfo, nil
 }
 
@@ -133,31 +133,31 @@ func getSgxReport() ([]byte, *appErrors.AppError) {
 	// Read the target info from target info path
 	targetInfo, err := os.ReadFile(constants.GRAMINE_PATHS.MY_TARGET_INFO_PATH)
 	if err != nil {
-		log.Printf("[ERROR] [getSgxReport] Error reading target info: %v", err)
+		logger.Error("Error reading target info: ", "error", err)
 		return nil, appErrors.NewAppError(appErrors.ErrReadingTargetInfo)
 	}
 
 	// Write the target info to the target info path
 	if err := os.WriteFile(constants.GRAMINE_PATHS.TARGET_INFO_PATH, targetInfo, FILE_PERMISSIONS); err != nil {
-		log.Printf("[ERROR] [getSgxReport] Error writing target info: %v", err)
+		logger.Error("Error writing target info: ", "error", err)
 		return nil, appErrors.NewAppError(appErrors.ErrWrittingTargetInfo)
 	}
 
 	// Create and write report data
 	reportData := make([]byte, REPORT_DATA_BYTES)
 	if err := os.WriteFile(constants.GRAMINE_PATHS.USER_REPORT_DATA_PATH, reportData, FILE_PERMISSIONS); err != nil {
-		log.Printf("[ERROR] [getSgxReport] Error writing report data: %v", err)
+		logger.Error("Error writing report data: ", "error", err)
 		return nil, appErrors.NewAppError(appErrors.ErrWrittingReportData)
 	}
 
 	// Read the report from the report path
 	report, err := os.ReadFile(constants.GRAMINE_PATHS.REPORT_PATH)
 	if err != nil {
-		log.Printf("[ERROR] [getSgxReport] Error reading report: %v", err)
+		logger.Error("Error reading report: ", "error", err)
 		return nil, appErrors.NewAppError(appErrors.ErrReadingReport)
 	}
 
-	log.Println("[INFO] [prepareAttestationEnvironment] Attestation environment prepared successfully")
+	logger.Debug("Attestation environment prepared successfully")
 	return report, nil
 }
 
@@ -172,8 +172,7 @@ func readAndParseSGXReport() (*SGXReportData, *appErrors.AppError) {
 
 	// Validate report size
 	if len(report) < REPORT_DATA_OFFSET+REPORT_DATA_SIZE {
-		log.Printf("[ERROR] [readAndParseSGXReport] Report size too small: expected at least %d bytes, got %d", 
-			REPORT_DATA_OFFSET+REPORT_DATA_SIZE, len(report))
+		logger.Error("Report size too small: expected at least ", "expected", REPORT_DATA_OFFSET+REPORT_DATA_SIZE, "got", len(report))
 		return nil, appErrors.NewAppError(appErrors.ErrReadingReport)
 	}
 
@@ -186,8 +185,7 @@ func readAndParseSGXReport() (*SGXReportData, *appErrors.AppError) {
 		SecurityVersion: report[ISVSVN_OFFSET : ISVSVN_OFFSET+ISVSVN_SIZE],
 	}
 
-	log.Printf("[INFO] [readAndParseSGXReport] Report parsed successfully - Debug: %v, SecurityVersion: %d", 
-		reportData.Debug, binary.LittleEndian.Uint16(reportData.SecurityVersion))
+	logger.Debug("Report parsed successfully - Debug: ", "debug", reportData.Debug, "securityVersion", binary.LittleEndian.Uint16(reportData.SecurityVersion))
 	
 	return reportData, nil
 }
