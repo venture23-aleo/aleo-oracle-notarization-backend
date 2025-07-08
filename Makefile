@@ -1,8 +1,15 @@
+
 # Makefile for Aleo Oracle Notarizer Development Environment
 
-# Pointing to dev env. 
+# Pointing to env. 
+# If .env file does not exist, create it
+ifeq ($(wildcard .env),)
+    $(shell touch .env)
+endif
+
 include .env
 export
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Variables
