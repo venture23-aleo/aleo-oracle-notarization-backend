@@ -30,7 +30,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		reqLogger.Debug("Incoming request",
 			"method", r.Method,
 			"path", r.URL.Path,
-			"remote_addr", getClientIP(r),
+			"remote_addr", utils.GetClientIP(r),
 			"user_agent", r.UserAgent(),
 		)
 		
@@ -47,7 +47,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 			"path", r.URL.Path,
 			"status_code", responseWriter.statusCode,
 			"duration_ms", duration.Milliseconds(),
-			"remote_addr", getClientIP(r),
+			"remote_addr", utils.GetClientIP(r),
 		)
 	})
 }

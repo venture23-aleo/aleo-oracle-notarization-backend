@@ -1,32 +1,4 @@
 {
-    "security": {
-        "maxRequestSize": "10MB",
-        "rateLimitPerMinute": 5,
-        "rateLimit": {
-            "maxRequestsPerMinute": 10,
-            "burstSize": 2
-        },
-        "ddosProtection": {
-            "burstProtection": {
-                "maxBurstRequests": 5,
-                "burstWindowSeconds": 10
-            },
-            "suspiciousActivity": {
-                "maxRequestsPerSecond": 5,
-                "suspiciousThresholdPerMinute": 20
-            },
-            "ipReputation": {
-                "blacklistDuration": "30m"
-            },
-            "cacheSettings": {
-                "ddosCacheDuration": "5m",
-                "blacklistCacheDuration": "30m"
-            }
-        },
-        "whitelistedIPs": [],
-        "blockedIPs": []
-    },
-    "cacheCleanupInterval": "10m",
     "port": 8000,
     "priceFeedConfig": {
         "exchanges": {
