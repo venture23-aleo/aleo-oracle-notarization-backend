@@ -163,7 +163,7 @@ func getSgxReport() ([]byte, *appErrors.AppError) {
 
 // readAndParseSGXReport reads the SGX report and extracts the relevant data
 func readAndParseSGXReport() (*SGXReportData, *appErrors.AppError) {
-	
+
 	// Get the report
 	report, err := getSgxReport()
 	if err != nil {
@@ -186,7 +186,7 @@ func readAndParseSGXReport() (*SGXReportData, *appErrors.AppError) {
 	}
 
 	logger.Debug("Report parsed successfully - Debug: ", "debug", reportData.Debug, "securityVersion", binary.LittleEndian.Uint16(reportData.SecurityVersion))
-	
+
 	return reportData, nil
 }
 

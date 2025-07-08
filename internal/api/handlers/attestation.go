@@ -22,7 +22,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Get logger from context (request ID automatically included by middleware)
 	ctx := req.Context()
 	reqLogger := logger.FromContext(ctx)
-	
+
 	// Log the incoming request
 	reqLogger.Debug("Attestation report request received", "method", req.Method, "path", req.URL.Path)
 
@@ -77,7 +77,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 
 	if attestationRequestWithDebug.DebugRequest {
 		reqLogger.Debug("Returning debug response")
-		
+
 		// Create the attestation response.
 		response := &attestation.DebugAttestationResponse{
 			ReportType:           "sgx",
@@ -109,7 +109,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Generate the quote.
 	reqLogger.Debug("Generating SGX quote")
 	quote, err := attestation.GenerateQuote(quotePrepData.AttestationHash)
-	
+
 	if err != nil {
 		reqLogger.Error("Failed to generate SGX quote", "error", err)
 		utils.WriteJsonError(w, http.StatusInternalServerError, *err, "")
@@ -121,7 +121,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Prepare the oracle data after the quote.
 	reqLogger.Debug("Building complete oracle data")
 	oracleData, err := attestation.BuildCompleteOracleData(quotePrepData, quote)
-	
+
 	if err != nil {
 		reqLogger.Error("Failed to build complete oracle data", "error", err)
 		utils.WriteJsonError(w, http.StatusInternalServerError, *err, "")
@@ -148,4 +148,3 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Write the JSON success response.
 	utils.WriteJsonSuccess(w, http.StatusOK, response)
 }
-

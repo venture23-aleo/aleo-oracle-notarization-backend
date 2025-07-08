@@ -14,7 +14,7 @@ import (
 func GetEnclaveInfo(w http.ResponseWriter, req *http.Request) {
 	// Get logger from context (request ID automatically included by middleware)
 	reqLogger := logger.FromContext(req.Context())
-	
+
 	sgxInfo, err := enclaveInfo.GetSgxInfo()
 	if err != nil {
 		reqLogger.Error("Failed to get SGX enclave info", "error", err)
@@ -35,6 +35,6 @@ func GetEnclaveInfo(w http.ResponseWriter, req *http.Request) {
 		Info:         sgxInfo,
 		SignerPubKey: aleoContext.GetPublicKey(),
 	}
-	
+
 	utils.WriteJsonSuccess(w, http.StatusOK, enclaveInfoResponse)
 }

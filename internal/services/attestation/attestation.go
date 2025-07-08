@@ -73,7 +73,6 @@ type DebugAttestationResponse struct {
 	AttestationData string `json:"attestationData"`
 }
 
-
 // Validate validates the attestation request.
 func (ar *AttestationRequest) Validate() *appErrors.AppError {
 
@@ -92,7 +91,7 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 		return appErrors.NewAppError(appErrors.ErrMissingSelector)
 	}
 
-	if ar.ResponseFormat == ""{
+	if ar.ResponseFormat == "" {
 		return appErrors.NewAppError(appErrors.ErrMissingResponseFormat)
 	}
 
@@ -157,9 +156,8 @@ func (ar *AttestationRequest) MaskUnacceptedHeaders() {
 	ar.RequestHeaders = finalHeaders
 }
 
-
 // wrapRawQuoteAsOpenEnclaveEvidence wraps the raw quote as Open Enclave evidence.
-func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) ([]byte) {
+func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) []byte {
 
 	// Create the Open Enclave version.
 	oeVersion := make([]byte, 4)

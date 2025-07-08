@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	IdleTimeout = 30
-	ReadTimeout = 5
+	IdleTimeout  = 30
+	ReadTimeout  = 5
 	WriteTimeout = 10
 )
 
@@ -28,7 +28,7 @@ func NewServer() *http.Server {
 
 	// Create middleware stack
 	middlewareStack := []middlewares.Middleware{
-		middlewares.LoggingMiddleware,        // Log all requests with request ID
+		middlewares.LoggingMiddleware, // Log all requests with request ID
 	}
 
 	// Apply middleware stack to mux
@@ -47,6 +47,6 @@ func NewServer() *http.Server {
 		Addr:              bindAddr,
 		Handler:           handler, // Use the middleware stack
 	}
-	
+
 	return server
 }

@@ -68,9 +68,9 @@ func newAleoContext() (*AleoContext, error) {
 
 // AleoContextManager manages the singleton Aleo context
 type AleoContextManager struct {
-	context AleoPublicContext
-	once    sync.Once
-	mu      sync.RWMutex
+	context     AleoPublicContext
+	once        sync.Once
+	mu          sync.RWMutex
 	initialized bool
 }
 
@@ -96,7 +96,7 @@ func (m *AleoContextManager) GetAleoContext() (AleoPublicContext, *appErrors.App
 		m.initialized = true
 		logger.Debug("Aleo context initialized successfully")
 	})
-	
+
 	if initErr != nil {
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrAleoContext, initErr.Error())
 	}
@@ -123,7 +123,7 @@ func InitAleoContext() error {
 func ShutdownAleoContext() error {
 	aleoManager.mu.Lock()
 	defer aleoManager.mu.Unlock()
-	
+
 	if aleoManager.initialized && aleoManager.context != nil {
 		if aleoCtx, ok := aleoManager.context.(*AleoContext); ok && aleoCtx.Close != nil {
 			aleoCtx.Close()

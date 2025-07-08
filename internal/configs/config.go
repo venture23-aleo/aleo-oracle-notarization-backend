@@ -22,7 +22,7 @@ type SecurityConfig struct {
 	DDoSProtection     DDoSProtectionConfig `json:"ddosProtection"`
 	WhitelistedIPs     []string             `json:"whitelistedIPs"`
 	BlockedIPs         []string             `json:"blockedIPs"`
-	RateLimit          RateLimitConfig `json:"rateLimit"`
+	RateLimit          RateLimitConfig      `json:"rateLimit"`
 }
 
 // DDoSProtectionConfig holds DDoS protection settings
@@ -73,26 +73,26 @@ type RateLimitConfig struct {
 type SymbolExchanges map[string][]string
 
 type ExchangeConfig struct {
-	Name string `json:"name"`
-	BaseURL string `json:"baseURL"`
-	Symbols map[string]string `json:"symbols"`
+	Name      string            `json:"name"`
+	BaseURL   string            `json:"baseURL"`
+	Symbols   map[string]string `json:"symbols"`
 	Endpoints map[string]string `json:"endpoints"`
 }
 
 type ExchangesConfig map[string]ExchangeConfig
 
 type PriceFeedConfig struct {
-	Exchanges ExchangesConfig `json:"exchanges"`
-	SymbolExchanges     SymbolExchanges `json:"symbolExchanges"`
+	Exchanges       ExchangesConfig `json:"exchanges"`
+	SymbolExchanges SymbolExchanges `json:"symbolExchanges"`
 }
 
 // AppConfig holds application-wide configuration
 type AppConfig struct {
-	Port               int             `json:"port"`
-	Security           SecurityConfig  `json:"security"`
-	PriceFeedConfig    PriceFeedConfig `json:"priceFeedConfig"`
-	WhitelistedDomains []string        `json:"whitelistedDomains"`
-	CacheCleanupInterval string `json:"cacheCleanupInterval"`
+	Port                 int             `json:"port"`
+	Security             SecurityConfig  `json:"security"`
+	PriceFeedConfig      PriceFeedConfig `json:"priceFeedConfig"`
+	WhitelistedDomains   []string        `json:"whitelistedDomains"`
+	CacheCleanupInterval string          `json:"cacheCleanupInterval"`
 }
 
 var (
@@ -208,7 +208,7 @@ func ValidateConfigs() error {
 	}
 
 	if os.Getenv("PORT") != "" {
-		port , err := strconv.Atoi(os.Getenv("PORT"))
+		port, err := strconv.Atoi(os.Getenv("PORT"))
 		logger.Info("PORT", "PORT", port)
 		if err != nil {
 			return fmt.Errorf("failed to parse PORT environment variable: %w", err)
@@ -222,7 +222,6 @@ func ValidateConfigs() error {
 	}
 
 	logger.Info("Configuration validation passed", "exchange_count", len(exchangeConfigs), "symbol_count", len(symbolExchanges), "exchanges", strings.Join(exchangeKeys, ","), "symbols", strings.Join(symbolKeys, ","))
-
 
 	return nil
 }

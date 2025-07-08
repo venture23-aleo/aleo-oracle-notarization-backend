@@ -15,10 +15,10 @@ type HealthResponse struct {
 // GetHealthCheck handles the request to get the health check.
 func GetHealthCheck(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
-        http.NotFound(w, r)
-        return
-    }
-	
+		http.NotFound(w, r)
+		return
+	}
+
 	// Write the JSON success response.
 	utils.WriteJsonSuccess(w, http.StatusOK, HealthResponse{Message: "Server running !!!"})
 }

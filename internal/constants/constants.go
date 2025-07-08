@@ -73,7 +73,6 @@ var ALLOWED_HEADERS = []string{
 	"Sec-GPC",
 }
 
-
 // PriceFeedBtcUrl, PriceFeedEthUrl, and PriceFeedAleoUrl are the URLs for the price feeds.
 const (
 	PriceFeedBtcUrl  = "price_feed: btc"

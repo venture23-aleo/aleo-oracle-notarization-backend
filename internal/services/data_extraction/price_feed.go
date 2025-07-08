@@ -29,13 +29,13 @@ type ExchangePrice struct {
 
 // PriceFeedResult represents the result of a price feed calculation
 type PriceFeedResult struct {
-	Symbol            string           `json:"symbol"`
+	Symbol            string          `json:"symbol"`
 	VolumeWeightedAvg string          `json:"volumeWeightedAvg"`
 	TotalVolume       string          `json:"totalVolume"`
-	ExchangeCount     int              `json:"exchangeCount"`
-	Timestamp         int64            `json:"timestamp"`
-	ExchangePrices    []ExchangePrice  `json:"exchangePrices"`
-	Success           bool             `json:"success"`
+	ExchangeCount     int             `json:"exchangeCount"`
+	Timestamp         int64           `json:"timestamp"`
+	ExchangePrices    []ExchangePrice `json:"exchangePrices"`
+	Success           bool            `json:"success"`
 }
 
 type PriceFeedClient struct {
@@ -47,7 +47,7 @@ type PriceFeedClient struct {
 func NewPriceFeedClient() *PriceFeedClient {
 	exchangeConfigs := configs.GetExchangesConfigs()
 	symbolExchanges := configs.GetSymbolExchanges()
-	
+
 	return &PriceFeedClient{
 		exchangeConfigs: exchangeConfigs,
 		symbolExchanges: symbolExchanges,
@@ -78,14 +78,14 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 	}
 
 	httpClient := utils.GetRetryableHTTPClient(1)
-	
+
 	// Create request with context
 	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		reqLogger.Error("Error creating HTTP request", "error", err, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeFetchFailed, err.Error())
 	}
-	
+
 	resp, err := httpClient.Do(req)
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 
 	// Handle different response types (object vs array)
 	var data map[string]interface{}
-	
+
 	// Try to decode as object first
 	if err := json.Unmarshal(bodyBytes, &data); err != nil {
 		// If object decoding fails and it's Gate.io, try array decoding
@@ -119,7 +119,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 				reqLogger.Error("Error decoding response body", "error", err, "exchange", exchangeKey, "symbol", symbol)
 				return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseDecodeFailed, err.Error())
 			}
-			
+
 			// Convert array to expected format for Gate.io parsing
 			data = map[string]interface{}{
 				"": arrayData,
@@ -455,8 +455,8 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice) (float64, float64, i
 // Fetch prices from all exchanges concurrently
 type fetchResult struct {
 	exchange string
-	price *ExchangePrice
-	err   *appErrors.AppError
+	price    *ExchangePrice
+	err      *appErrors.AppError
 }
 
 // GetPriceFeed fetches and calculates the volume-weighted average price for a given symbol
@@ -518,7 +518,6 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*Pri
 		Success:           true,
 	}, nil
 }
-
 
 // ExtractPriceFeedData handles price feed requests and always returns the volume-weighted average price (VWAP)
 // This ensures consistent and reliable price data for oracle attestations

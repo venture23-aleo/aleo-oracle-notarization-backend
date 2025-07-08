@@ -35,14 +35,15 @@ import (
 // - "element": extracts the complete HTML element including tags
 //
 // Example usage:
-//   request := services.AttestationRequest{
-//       Url: "https://example.com/price-page",
-//       Selector: "//span[@class='price']/text()",
-//       ResponseFormat: "html",
-//       HTMLResultType: &[]string{"value"}[0],
-//       EncodingOptions: encoding.EncodingOptions{Value: "float", Precision: 2}
-//   }
-//   result, err := ExtractDataFromHTML(request)
+//
+//	request := services.AttestationRequest{
+//	    Url: "https://example.com/price-page",
+//	    Selector: "//span[@class='price']/text()",
+//	    ResponseFormat: "html",
+//	    HTMLResultType: &[]string{"value"}[0],
+//	    EncodingOptions: encoding.EncodingOptions{Value: "float", Precision: 2}
+//	}
+//	result, err := ExtractDataFromHTML(request)
 func ExtractDataFromHTML(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
 	// Make the HTTP request
 	reqLogger := logger.FromContext(ctx)
@@ -104,7 +105,7 @@ func ExtractDataFromHTML(ctx context.Context, attestationRequest attestation.Att
 	}
 
 	// Apply float precision if needed (only for "value" type)
-	if attestationRequest.HTMLResultType != nil && *attestationRequest.HTMLResultType == "value" && 
+	if attestationRequest.HTMLResultType != nil && *attestationRequest.HTMLResultType == "value" &&
 		attestationRequest.EncodingOptions.Value == "float" {
 		_, floatErr := strconv.ParseFloat(valueStr, 64)
 		if floatErr != nil {
