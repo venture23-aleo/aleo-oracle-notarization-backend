@@ -105,19 +105,41 @@ docker-build: generate-manifest-template
 	
 # Docker compose flags (can be overridden from command line)
 DOCKER_FLAGS ?= -d
+DOCKER_COMPOSE_FILE ?= docker-compose.yml
 DOCKER_SERVICES ?= $(APP)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker
+# ─────────────────────────────────────────────────────────────────────────────
 .PHONY: docker-run
 docker-run: docker-build
-	docker compose up $(DOCKER_SERVICES) $(DOCKER_FLAGS)
+	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) $(DOCKER_FLAGS)
 
 .PHONY: docker-run-fg
 docker-run-fg: docker-build
-	docker compose up $(DOCKER_SERVICES)
+	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES)
 
 .PHONY: docker-run-rebuild
 docker-run-rebuild: docker-build
-	docker compose up $(DOCKER_SERVICES) --build --force-recreate
+	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) --build --force-recreate
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker Management
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: docker-stop
+docker-stop:
+	@echo ">> Stopping all Docker containers..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) down
+
+.PHONY: docker-logs
+docker-logs:
+	@echo ">> Showing Docker logs..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) logs -f
+
+.PHONY: docker-status
+docker-status:
+	@echo ">> Docker container status:"
+	docker compose -f $(DOCKER_COMPOSE_FILE) ps
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Clean & Help
@@ -186,6 +208,11 @@ help:
 	@echo "  make docker-run DOCKER_FLAGS=\"--build\"           # With build flag"
 	@echo "  make docker-run DOCKER_FLAGS=\"--scale app=2\"     # With scaling"
 	@echo "  make docker-run DOCKER_SERVICES=\"app db\"         # Specific services"
+	@echo ""
+	@echo "Docker Management:"
+	@echo "  make docker-stop                                   # Stop all containers"
+	@echo "  make docker-logs                                   # Show logs"
+	@echo "  make docker-status                                 # Show container status"
 	@echo
 	@echo "SGX/Enclave Targets:"
 	@echo "  generate-manifest-template  Generate manifest template"

@@ -124,28 +124,72 @@ A `Makefile` is provided to simplify the most common development, build, and dep
 
 ### Common Make Targets
 
+#### Development Targets
 - `make build`         – Build the Go binary for your application.
 - `make run`           – Build and run the application locally.
 - `make test`          – Run unit tests.
+- `make fmt`           – Format code using go fmt.
+- `make vet`           – Static vetting of code.
+- `make lint`          – Static analysis using staticcheck.
+- `make clean`         – Remove built binaries.
+
+#### Docker Targets
 - `make docker-build`  – Build the Docker image (including manifest generation).
-- `make docker-run`    – Build the Docker image and run the container using Docker Compose.
+- `make docker-run`    – Build the Docker image and run the container using Docker Compose (detached mode).
+- `make docker-run-fg` – Build the Docker image and run the container in foreground mode.
+- `make docker-run-rebuild` – Build the Docker image and run the container with force rebuild.
+
+#### SGX/Enclave Targets
 - `make gen-key`         – Generate the enclave private key for SGX signing (Gramine tool).
 - `make gen-key-openssl` – Generate the enclave private key for SGX signing (OpenSSL).
-- `make clean`         – Remove built binaries.
+- `make generate-manifest-template` – Generate manifest template.
+
+#### Utility
 - `make help`          – Show a summary of available make targets.
+
+### Docker Variables
+
+The Makefile supports several variables that can be overridden from the command line:
+
+- `DOCKER_FLAGS` - Docker compose flags (default: `-d` for detached mode)
+- `DOCKER_SERVICES` - Services to run (default: `aleo-oracle-notarization-backend`)
+- `APP` - Application name (default: `aleo-oracle-notarization-backend`)
 
 ### Example Usage
 
+#### Basic Usage
 ```sh
 make build         # Compile the Go binary
 make run           # Build and run locally
 make test          # Run tests
 make docker-build  # Build Docker image (with manifest)
-make docker-run    # Build and run with Docker Compose
-make gen-key         # Generate the enclave private key for SGX signing (Gramine tool)
+make docker-run    # Build and run with Docker Compose (detached)
+make gen-key       # Generate the enclave private key for SGX signing (Gramine tool)
 make gen-key-openssl # Generate the enclave private key for SGX signing (OpenSSL)
 make clean         # Clean up binaries
 make help          # Show help
+```
+
+#### Advanced Docker Usage
+```sh
+# Run in foreground mode
+make docker-run DOCKER_FLAGS=""
+
+# Run with additional flags
+make docker-run DOCKER_FLAGS="-d --force-recreate"
+
+# Run with scaling
+make docker-run DOCKER_FLAGS="-d --scale app=2"
+
+# Run specific services
+make docker-run DOCKER_SERVICES="app db"
+
+# Run with environment variables
+make docker-run DOCKER_FLAGS="-d -e DEBUG=true"
+
+# Convenience targets
+make docker-run-fg        # Run in foreground
+make docker-run-rebuild   # Force rebuild and recreate
 ```
 
 > **Tip:** The Makefile will use variables from your `.env` file (such as `PORT` and `WHITELISTED_DOMAINS`) if present, so you can easily configure your build and run environment.

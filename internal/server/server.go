@@ -20,12 +20,6 @@ const (
 func NewServer() *http.Server {
 	// Get app config
 	appConfig := configs.GetAppConfig()
-	
-	// Initialize DDoS protection with config
-	middlewares.InitializeDDoSProtection(&appConfig)
-	middlewares.InitializeRateLimit(&appConfig)
-	middlewares.SetupWhitelistedIPs()
-
 	// Create a new serve mux.
 	mux := http.NewServeMux()
 
@@ -35,7 +29,6 @@ func NewServer() *http.Server {
 	// Create middleware stack
 	middlewareStack := []middlewares.Middleware{
 		middlewares.LoggingMiddleware,        // Log all requests with request ID
-		middlewares.DDoSProtectionMiddleware, // DDoS protection
 	}
 
 	// Apply middleware stack to mux
