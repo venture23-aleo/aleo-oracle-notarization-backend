@@ -10,6 +10,8 @@ mkdir -p "$(dirname "$MANIFEST_TEMPLATE")"
 cat > $MANIFEST_TEMPLATE <<EOF
 
 [loader.env]
+PORT="${PORT}"
+WHITELISTED_DOMAINS=${WHITELISTED_DOMAINS}
 
 [fs.root]
 type = "chroot"

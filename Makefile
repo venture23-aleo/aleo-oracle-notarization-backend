@@ -21,6 +21,17 @@ SGX_CONF_FILE="build/inputs/sgx_default_qcnl.conf"
 export COMPOSE_BAKE=true
 export APP := aleo-oracle-notarization-backend
 
+ifeq ($(PORT),)
+	PORT := 8000
+endif
+
+ifeq ($(WHITELISTED_DOMAINS),)
+	WHITELISTED_DOMAINS := ""
+endif
+
+export PORT
+export WHITELISTED_DOMAINS
+
 # Default target
 .PHONY: all
 all: fmt vet lint test build
