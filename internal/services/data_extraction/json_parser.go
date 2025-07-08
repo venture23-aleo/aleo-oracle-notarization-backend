@@ -66,9 +66,6 @@ func ExtractDataFromJSON(ctx context.Context, attestationRequest attestation.Att
 	// Marshal the response.
 	jsonBytes, marshalErr := json.Marshal(response)
 
-	// Convert the JSON bytes to a string.
-	jsonString := string(jsonBytes)
-
 	// Check if the error is not nil.
 	if marshalErr != nil {
 		reqLogger.Error("Error marshalling JSON: ", "error", marshalErr)
@@ -76,6 +73,9 @@ func ExtractDataFromJSON(ctx context.Context, attestationRequest attestation.Att
 			StatusCode: http.StatusInternalServerError,
 		}, appErrors.NewAppError(appErrors.ErrJSONEncoding)
 	}
+
+	// Convert the JSON bytes to a string.
+	jsonString := string(jsonBytes)
 
 	value := gjson.Get(jsonString, normalizeSelector(attestationRequest.Selector))
 	if !value.Exists() {
