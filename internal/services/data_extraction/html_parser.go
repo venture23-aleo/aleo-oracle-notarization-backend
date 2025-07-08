@@ -112,7 +112,7 @@ func ExtractDataFromHTML(ctx context.Context, attestationRequest attestation.Att
 			reqLogger.Error("Error parsing float value: ", "error", floatErr)
 			return ExtractDataResult{
 				StatusCode: resp.StatusCode,
-			}, appErrors.NewAppError(appErrors.ErrParsingHTMLContent)
+			}, appErrors.NewAppError(appErrors.ErrInvalidEncodingOption)
 		}
 		valueStr = applyFloatPrecision(valueStr, attestationRequest.EncodingOptions.Precision)
 	}
