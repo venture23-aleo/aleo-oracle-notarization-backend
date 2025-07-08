@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/tidwall/gjson"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
@@ -64,11 +63,10 @@ func ExtractDataFromJSON(ctx context.Context, attestationRequest attestation.Att
 		}, appErrors.NewAppError(appErrors.ErrJSONDecoding)
 	}
 
-
 	// Marshal the response.
 	jsonBytes, marshalErr := json.Marshal(response)
 
-		// Convert the JSON bytes to a string.
+	// Convert the JSON bytes to a string.
 	jsonString := string(jsonBytes)
 
 	// Check if the error is not nil.
@@ -101,11 +99,6 @@ func ExtractDataFromJSON(ctx context.Context, attestationRequest attestation.Att
 		valueStr = applyFloatPrecision(valueStr, attestationRequest.EncodingOptions.Precision)
 	}
 
-
-	
-
-
-
 	// Return the JSON string, value, and status code.
 	return ExtractDataResult{
 		ResponseBody:    jsonString,
@@ -113,13 +106,6 @@ func ExtractDataFromJSON(ctx context.Context, attestationRequest attestation.Att
 		StatusCode:      http.StatusOK,
 	}, nil
 }
-
-
-
-
-
-
-
 
 func normalizeSelector(selector string) string {
 	// Replace [n] with .n where n is a number
