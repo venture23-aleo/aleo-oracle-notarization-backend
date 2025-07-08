@@ -15,61 +15,6 @@ import (
 //go:embed config.json
 var configFS embed.FS
 
-// SecurityConfig holds security-related configuration
-type SecurityConfig struct {
-	WhitelistedDomains []string             `json:"whitelistedDomains"`
-	MaxRequestSize     string               `json:"maxRequestSize"`
-	DDoSProtection     DDoSProtectionConfig `json:"ddosProtection"`
-	WhitelistedIPs     []string             `json:"whitelistedIPs"`
-	BlockedIPs         []string             `json:"blockedIPs"`
-	RateLimit          RateLimitConfig      `json:"rateLimit"`
-}
-
-// DDoSProtectionConfig holds DDoS protection settings
-type DDoSProtectionConfig struct {
-	BurstProtection    BurstProtectionConfig    `json:"burstProtection"`
-	SuspiciousActivity SuspiciousActivityConfig `json:"suspiciousActivity"`
-	IPReputation       IPReputationConfig       `json:"ipReputation"`
-	CacheSettings      CacheSettingsConfig      `json:"cacheSettings"`
-}
-
-// BurstProtectionConfig holds burst protection settings
-type BurstProtectionConfig struct {
-	MaxBurstRequests   int `json:"maxBurstRequests"`
-	BurstWindowSeconds int `json:"burstWindowSeconds"`
-}
-
-// SuspiciousActivityConfig holds suspicious activity detection settings
-type SuspiciousActivityConfig struct {
-	MaxRequestsPerSecond         int `json:"maxRequestsPerSecond"`
-	SuspiciousThresholdPerMinute int `json:"suspiciousThresholdPerMinute"`
-}
-
-// IPReputationConfig holds IP reputation settings
-type IPReputationConfig struct {
-	BlacklistDuration string `json:"blacklistDuration"`
-}
-
-// CacheSettingsConfig holds cache-related settings
-type CacheSettingsConfig struct {
-	DDoSCacheDuration      string `json:"ddosCacheDuration"`
-	BlacklistCacheDuration string `json:"blacklistCacheDuration"`
-}
-
-type ServerConfig struct {
-	Port                 int    `json:"port"`
-	Host                 string `json:"host"`
-	ReadTimeout          string `json:"readTimeout"`
-	WriteTimeout         string `json:"writeTimeout"`
-	IdleTimeout          string `json:"idleTimeout"`
-	CacheCleanupInterval string `json:"cacheCleanupInterval"`
-}
-
-type RateLimitConfig struct {
-	MaxRequestsPerMinute int `json:"maxRequestsPerMinute"`
-	BurstSize            int `json:"burstSize"`
-}
-
 type SymbolExchanges map[string][]string
 
 type ExchangeConfig struct {
@@ -88,11 +33,9 @@ type PriceFeedConfig struct {
 
 // AppConfig holds application-wide configuration
 type AppConfig struct {
-	Port                 int             `json:"port"`
-	Security             SecurityConfig  `json:"security"`
-	PriceFeedConfig      PriceFeedConfig `json:"priceFeedConfig"`
-	WhitelistedDomains   []string        `json:"whitelistedDomains"`
-	CacheCleanupInterval string          `json:"cacheCleanupInterval"`
+	Port               int             `json:"port"`
+	PriceFeedConfig    PriceFeedConfig `json:"priceFeedConfig"`
+	WhitelistedDomains []string        `json:"whitelistedDomains"`
 }
 
 var (
