@@ -3,11 +3,11 @@ package attestation
 import (
 	"bytes"
 	"encoding/binary"
-	"log"
 	"os"
 	"sync"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
@@ -159,7 +159,7 @@ func (ar *AttestationRequest) MaskUnacceptedHeaders() {
 
 
 // wrapRawQuoteAsOpenEnclaveEvidence wraps the raw quote as Open Enclave evidence.
-func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) ([]byte, error) {
+func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) ([]byte) {
 
 	// Create the Open Enclave version.
 	oeVersion := make([]byte, 4)
@@ -183,7 +183,7 @@ func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) ([]byte, error) {
 	buf.Write(rawQuoteBuffer)
 
 	// Return the buffer as a byte slice.
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 // quoteLock is the lock for the quote.
@@ -210,7 +210,7 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 	err := os.WriteFile(constants.GRAMINE_PATHS.USER_REPORT_DATA_PATH, reportData, 0644)
 
 	if err != nil {
-		log.Print("[ERROR] Error while writting report data:", err)
+		logger.Error("Error while writting report data:", "error", err)
 		return nil, appErrors.NewAppError(appErrors.ErrWrittingReportData)
 	}
 
@@ -218,16 +218,12 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 	quote, err := os.ReadFile(constants.GRAMINE_PATHS.QUOTE_PATH)
 
 	if err != nil {
-		log.Print("Generate Quote err: ", err)
+		logger.Error("Error while reading quote: ", "error", err)
 		return nil, appErrors.NewAppError(appErrors.ErrReadingQuote)
 	}
 
 	// Wrap the raw quote as Open Enclave evidence.
-	finalQuote, err := wrapRawQuoteAsOpenEnclaveEvidence(quote)
-
-	if err != nil {
-		return nil, appErrors.NewAppError(appErrors.ErrWrappingQuote)
-	}
+	finalQuote := wrapRawQuoteAsOpenEnclaveEvidence(quote)
 
 	// Return the final quote.
 	return finalQuote, nil

@@ -1,11 +1,11 @@
 package middlewares
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
 // WhitelistedIPs contains IPs that bypass all protection
@@ -13,7 +13,7 @@ var whitelistedIPs = make(map[string]bool)
 
 func SetupWhitelistedIPs(){
 	appConfig := configs.GetAppConfig()
-	log.Println("Whitelisted IPs:", strings.Join(appConfig.Security.WhitelistedIPs, ","))
+	logger.Debug("Whitelisted IPs:", "whitelistedIPs", strings.Join(appConfig.Security.WhitelistedIPs, ","))
 	for _, ip := range appConfig.Security.WhitelistedIPs {
 		whitelistedIPs[ip] = true
 	}

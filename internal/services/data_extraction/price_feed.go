@@ -1,19 +1,22 @@
 package data_extraction
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 )
 
 // ExchangePrice represents a price from a single exchange
@@ -36,29 +39,33 @@ type PriceFeedResult struct {
 }
 
 type PriceFeedClient struct {
-	exchangeConfigs configs.ExchangeConfigs
+	exchangeConfigs configs.ExchangesConfig
 	symbolExchanges configs.SymbolExchanges
 }
 
 // NewPriceFeedClient creates a new PriceFeedClient with default configurations
 func NewPriceFeedClient() *PriceFeedClient {
+	exchangeConfigs := configs.GetExchangesConfigs()
+	symbolExchanges := configs.GetSymbolExchanges()
+	
 	return &PriceFeedClient{
-		exchangeConfigs: configs.GetExchangeConfigs(),
-		symbolExchanges: configs.GetSymbolExchanges(),
+		exchangeConfigs: exchangeConfigs,
+		symbolExchanges: symbolExchanges,
 	}
 }
 
 // FetchPriceFromExchange fetches price and volume data from a specific exchange
-func (c *PriceFeedClient) FetchPriceFromExchange(exchangeKey, symbol string) (*ExchangePrice, *appErrors.AppError) {
+func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKey, symbol string) (*ExchangePrice, *appErrors.AppError) {
+	reqLogger := logger.FromContext(ctx)
 	config, exists := c.exchangeConfigs[exchangeKey]
 	if !exists {
-		log.Printf("[ERROR] [FetchPriceFromExchange] Exchange not configured: %s", exchangeKey)
+		reqLogger.Error("Exchange not configured", "exchange", exchangeKey)
 		return nil, appErrors.NewAppError(appErrors.ErrExchangeNotConfigured)
 	}
 
 	endpoint, exists := config.Endpoints[symbol]
 	if !exists {
-		log.Printf("[ERROR] [FetchPriceFromExchange] Symbol not supported by exchange: %s", symbol)
+		reqLogger.Error("Symbol not supported by exchange", "symbol", symbol, "exchange", exchangeKey)
 		return nil, appErrors.NewAppError(appErrors.ErrSymbolNotSupportedByExchange)
 	}
 
@@ -70,28 +77,33 @@ func (c *PriceFeedClient) FetchPriceFromExchange(exchangeKey, symbol string) (*E
 		url = fmt.Sprintf("https://%s%s", config.BaseURL, endpoint)
 	}
 
-	httpClient := &http.Client{
-		Timeout: 10 * time.Second,
+	httpClient := utils.GetRetryableHTTPClient(1)
+	
+	// Create request with context
+	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		reqLogger.Error("Error creating HTTP request", "error", err, "exchange", exchangeKey, "symbol", symbol)
+		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeFetchFailed, err.Error())
 	}
 	
-	resp, err := httpClient.Get(url)
+	resp, err := httpClient.Do(req)
 
 	if err != nil {
-		log.Printf("[ERROR] [FetchPriceFromExchange] Error fetching price from exchange: %s", err.Error())
+		reqLogger.Error("Error fetching price from exchange", "error", err, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeFetchFailed, err.Error())
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("[ERROR] [FetchPriceFromExchange] Invalid status code: %d", resp.StatusCode)
+		reqLogger.Error("Invalid status code", "status_code", resp.StatusCode, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithResponseStatus(appErrors.ErrExchangeInvalidStatusCode, resp.StatusCode)
 	}
 
 	// Read the response body once
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("[ERROR] [FetchPriceFromExchange] Error reading response body: %s", err.Error())
+		reqLogger.Error("Error reading response body", "error", err, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseDecodeFailed, err.Error())
 	}
 
@@ -104,6 +116,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(exchangeKey, symbol string) (*E
 		if exchangeKey == "gate.io" {
 			var arrayData []interface{}
 			if err := json.Unmarshal(bodyBytes, &arrayData); err != nil {
+				reqLogger.Error("Error decoding response body", "error", err, "exchange", exchangeKey, "symbol", symbol)
 				return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseDecodeFailed, err.Error())
 			}
 			
@@ -112,15 +125,14 @@ func (c *PriceFeedClient) FetchPriceFromExchange(exchangeKey, symbol string) (*E
 				"": arrayData,
 			}
 		} else {
-			log.Printf("[ERROR] [FetchPriceFromExchange] Error decoding response body: %s", err.Error())
+			reqLogger.Error("Error decoding response body", "error", err, "exchange", exchangeKey, "symbol", symbol)
 			return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseDecodeFailed, err.Error())
 		}
 	}
 
-
 	price, volume, parseErr := c.parseExchangeResponse(exchangeKey, data)
 	if parseErr != nil {
-		log.Printf("[ERROR] [FetchPriceFromExchange] Error parsing exchange response: %s", parseErr.Error())
+		reqLogger.Error("Error parsing exchange response", "error", parseErr, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseParseFailed, parseErr.Error())
 	}
 
@@ -150,7 +162,7 @@ func (c *PriceFeedClient) parseExchangeResponse(exchangeKey string, data map[str
 	case "mexc":
 		return parseMEXCResponse(data)
 	default:
-		log.Printf("[ERROR] [parseExchangeResponse] Unsupported exchange: %s", exchangeKey)
+		logger.Error("Unsupported exchange: ", "exchangeKey", exchangeKey)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrUnsupportedExchange)
 	}
 }
@@ -159,25 +171,25 @@ func (c *PriceFeedClient) parseExchangeResponse(exchangeKey string, data map[str
 func parseBinanceResponse(data map[string]interface{}) (price, volume float64, err *appErrors.AppError) {
 	priceStr, ok := data["lastPrice"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseBinanceResponse] Invalid price format: %s", data["lastPrice"])
+		logger.Error("Invalid price format: ", "lastPrice", data["lastPrice"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
 	volumeStr, ok := data["volume"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseBinanceResponse] Invalid volume format: %s", data["volume"])
+		logger.Error("Invalid volume format: ", "volume", data["volume"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 
 	price, parseErr := strconv.ParseFloat(priceStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseBinanceResponse] Error parsing price: %s", parseErr.Error())
+		logger.Error("Error parsing price: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrPriceParseFailed)
 	}
 
 	volume, parseErr = strconv.ParseFloat(volumeStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseBinanceResponse] Error parsing volume: %s", parseErr.Error())
+		logger.Error("Error parsing volume: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrVolumeParseFailed)
 	}
 
@@ -187,43 +199,43 @@ func parseBinanceResponse(data map[string]interface{}) (price, volume float64, e
 func parseBybitResponse(data map[string]interface{}) (price, volume float64, err *appErrors.AppError) {
 	result, ok := data["result"].(map[string]interface{})
 	if !ok {
-		log.Printf("[ERROR] [parseBybitResponse] Invalid exchange response format: %s", data["result"])
+		logger.Error("Invalid exchange response format: ", "result", data["result"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidExchangeResponseFormat)
 	}
 
 	list, ok := result["list"].([]interface{})
 	if !ok || len(list) == 0 {
-		log.Printf("[ERROR] [parseBybitResponse] No data in response")
+		logger.Error("No data in response")
 		return 0, 0, appErrors.NewAppError(appErrors.ErrNoDataInResponse)
 	}
 
 	item, ok := list[0].(map[string]interface{})
 	if !ok {
-		log.Printf("[ERROR] [parseBybitResponse] Invalid item format: %s", list[0])
+		logger.Error("Invalid item format: ", "item", list[0])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidItemFormat)
 	}
 
 	priceStr, ok := item["lastPrice"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseBybitResponse] Invalid price format: %s", item["lastPrice"])
+		logger.Error("Invalid price format: ", "lastPrice", item["lastPrice"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
 	volumeStr, ok := item["volume24h"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseBybitResponse] Invalid volume format: %s", item["volume24h"])
+		logger.Error("Invalid volume format: ", "volume24h", item["volume24h"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 
 	price, parseErr := strconv.ParseFloat(priceStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseBybitResponse] Error parsing price: %s", parseErr.Error())
+		logger.Error("Error parsing price: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrPriceParseFailed)
 	}
 
 	volume, parseErr = strconv.ParseFloat(volumeStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseBybitResponse] Error parsing volume: %s", parseErr.Error())
+		logger.Error("Error parsing volume: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrVolumeParseFailed)
 	}
 
@@ -233,25 +245,25 @@ func parseBybitResponse(data map[string]interface{}) (price, volume float64, err
 func parseCoinbaseResponse(data map[string]interface{}) (price, volume float64, err *appErrors.AppError) {
 	priceStr, ok := data["price"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseCoinbaseResponse] Invalid price format: %s", data["price"])
+		logger.Error("Invalid price format: ", "price", data["price"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
 	volumeStr, ok := data["volume"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseCoinbaseResponse] Invalid volume format: %s", data["volume"])
+		logger.Error("Invalid volume format: ", "volume", data["volume"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 
 	price, parseErr := strconv.ParseFloat(priceStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseCoinbaseResponse] Error parsing price: %s", parseErr.Error())
+		logger.Error("Error parsing price: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrPriceParseFailed)
 	}
 
 	volume, parseErr = strconv.ParseFloat(volumeStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseCoinbaseResponse] Error parsing volume: %s", parseErr.Error())
+		logger.Error("Error parsing volume: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrVolumeParseFailed)
 	}
 
@@ -261,44 +273,44 @@ func parseCoinbaseResponse(data map[string]interface{}) (price, volume float64, 
 func parseCryptoComResponse(data map[string]interface{}) (price, volume float64, err *appErrors.AppError) {
 	result, ok := data["result"].(map[string]interface{})
 	if !ok {
-		log.Printf("[ERROR] [parseCryptoComResponse] Invalid exchange response format: %s", data["result"])
+		logger.Error("Invalid exchange response format: ", "result", data["result"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidExchangeResponseFormat)
 	}
 
 	dataArray, ok := result["data"].([]interface{})
 	if !ok || len(dataArray) == 0 {
-		log.Printf("[ERROR] [parseCryptoComResponse] No data in response")
+		logger.Error("No data in response")
 		return 0, 0, appErrors.NewAppError(appErrors.ErrNoDataInResponse)
 	}
 
 	dataMap, ok := dataArray[0].(map[string]interface{})
 	if !ok {
-		log.Printf("[ERROR] [parseCryptoComResponse] Invalid data format: %s", dataArray[0])
+		logger.Error("Invalid data format: ", "dataArray", dataArray[0])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidDataFormat)
 	}
 
 	// Crypto.com uses "k" for last price and "v" for volume
 	priceStr, ok := dataMap["k"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseCryptoComResponse] Invalid price format: %s", dataMap["k"])
+		logger.Error("Invalid price format: ", "k", dataMap["k"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
 	volumeStr, ok := dataMap["v"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseCryptoComResponse] Invalid volume format: %s", dataMap["v"])
+		logger.Error("Invalid volume format: ", "v", dataMap["v"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 
 	price, parseErr := strconv.ParseFloat(priceStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseCryptoComResponse] Error parsing price: %s", parseErr.Error())
+		logger.Error("Error parsing price: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrPriceParseFailed)
 	}
 
 	volume, parseErr = strconv.ParseFloat(volumeStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseCryptoComResponse] Error parsing volume: %s", parseErr.Error())
+		logger.Error("Error parsing volume: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrVolumeParseFailed)
 	}
 
@@ -308,38 +320,38 @@ func parseCryptoComResponse(data map[string]interface{}) (price, volume float64,
 func parseXTResponse(data map[string]interface{}) (price, volume float64, err *appErrors.AppError) {
 	result, ok := data["result"].([]interface{})
 	if !ok || len(result) == 0 {
-		log.Printf("[ERROR] [parseXTResponse] No data in response")
+		logger.Error("No data in response")
 		return 0, 0, appErrors.NewAppError(appErrors.ErrNoDataInResponse)
 	}
 
 	item, ok := result[0].(map[string]interface{})
 	if !ok {
-		log.Printf("[ERROR] [parseXTResponse] Invalid item format: %s", result[0])
+		logger.Error("Invalid item format: ", "result", result[0])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidItemFormat)
 	}
 
 	// XT API uses "c" for close price and "v" for volume
 	priceStr, ok := item["c"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseXTResponse] Invalid price format: %s", item["c"])
+		logger.Error("Invalid price format: ", "c", item["c"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
 	volumeStr, ok := item["v"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseXTResponse] Invalid volume format: %s", item["v"])
+		logger.Error("Invalid volume format: ", "v", item["v"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 
 	price, parseErr := strconv.ParseFloat(priceStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseXTResponse] Error parsing price: %s", parseErr.Error())
+		logger.Error("Error parsing price: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrPriceParseFailed)
 	}
 
 	volume, parseErr = strconv.ParseFloat(volumeStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseXTResponse] Error parsing volume: %s", parseErr.Error())
+		logger.Error("Error parsing volume: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrVolumeParseFailed)
 	}
 
@@ -349,37 +361,37 @@ func parseXTResponse(data map[string]interface{}) (price, volume float64, err *a
 func parseGateIOResponse(data map[string]interface{}) (price, volume float64, err *appErrors.AppError) {
 	list, ok := data[""].([]interface{})
 	if !ok || len(list) == 0 {
-		log.Printf("[ERROR] [parseGateIOResponse] No data in response")
+		logger.Error("No data in response")
 		return 0, 0, appErrors.NewAppError(appErrors.ErrNoDataInResponse)
 	}
 
 	item, ok := list[0].(map[string]interface{})
 	if !ok {
-		log.Printf("[ERROR] [parseGateIOResponse] Invalid item format: %s", list[0])
+		logger.Error("Invalid item format: ", "list", list[0])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidItemFormat)
 	}
 
 	priceStr, ok := item["last"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseGateIOResponse] Invalid price format: %s", item["last"])
+		logger.Error("Invalid price format: ", "last", item["last"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
 	volumeStr, ok := item["quote_volume"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseGateIOResponse] Invalid volume format: %s", item["quote_volume"])
+		logger.Error("Invalid volume format: ", "quote_volume", item["quote_volume"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 
 	price, parseErr := strconv.ParseFloat(priceStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseGateIOResponse] Error parsing price: %s", parseErr.Error())
+		logger.Error("Error parsing price: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppErrorWithDetails(appErrors.ErrPriceParseFailed, parseErr.Error())
 	}
 
 	volume, parseErr = strconv.ParseFloat(volumeStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseGateIOResponse] Error parsing volume: %s", parseErr.Error())
+		logger.Error("Error parsing volume: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppErrorWithDetails(appErrors.ErrVolumeParseFailed, parseErr.Error())
 	}
 
@@ -389,25 +401,25 @@ func parseGateIOResponse(data map[string]interface{}) (price, volume float64, er
 func parseMEXCResponse(data map[string]interface{}) (price, volume float64, err *appErrors.AppError) {
 	priceStr, ok := data["lastPrice"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseMEXCResponse] Invalid price format: %s", data["lastPrice"])
+		logger.Error("Invalid price format: ", "lastPrice", data["lastPrice"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
 	volumeStr, ok := data["volume"].(string)
 	if !ok {
-		log.Printf("[ERROR] [parseMEXCResponse] Invalid volume format: %s", data["volume"])
+		logger.Error("Invalid volume format: ", "volume", data["volume"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 
 	price, parseErr := strconv.ParseFloat(priceStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseMEXCResponse] Error parsing price: %s", parseErr.Error())
+		logger.Error("Error parsing price: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrPriceParseFailed)
 	}
 
 	volume, parseErr = strconv.ParseFloat(volumeStr, 64)
 	if parseErr != nil {
-		log.Printf("[ERROR] [parseMEXCResponse] Error parsing volume: %s", parseErr.Error())
+		logger.Error("Error parsing volume: ", "error", parseErr)
 		return 0, 0, appErrors.NewAppError(appErrors.ErrVolumeParseFailed)
 	}
 
@@ -448,10 +460,11 @@ type fetchResult struct {
 }
 
 // GetPriceFeed fetches and calculates the volume-weighted average price for a given symbol
-func (c *PriceFeedClient) GetPriceFeed(symbol string) (*PriceFeedResult, *appErrors.AppError) {
+func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*PriceFeedResult, *appErrors.AppError) {
+	reqLogger := logger.FromContext(ctx)
 	exchanges, exists := c.symbolExchanges[strings.ToUpper(symbol)]
 	if !exists {
-		log.Printf("[ERROR] [GetPriceFeed] Invalid symbol: %s", symbol)
+		reqLogger.Error("Invalid symbol", "symbol", symbol)
 		return nil, appErrors.NewAppError(appErrors.ErrInvalidSymbol)
 	}
 
@@ -465,7 +478,7 @@ func (c *PriceFeedClient) GetPriceFeed(symbol string) (*PriceFeedResult, *appErr
 	// Each goroutine fetches data independently and sends results through the channel
 	for _, exchange := range exchanges {
 		go func(ex string) {
-			price, err := c.FetchPriceFromExchange(ex, strings.ToUpper(symbol))
+			price, err := c.FetchPriceFromExchange(ctx, ex, strings.ToUpper(symbol))
 			results <- fetchResult{price: price, err: err, exchange: ex}
 		}(exchange)
 	}
@@ -477,7 +490,7 @@ func (c *PriceFeedClient) GetPriceFeed(symbol string) (*PriceFeedResult, *appErr
 		if result.err != nil {
 			// Log the error but continue processing other exchanges
 			// This ensures the system is resilient to individual exchange failures
-			log.Printf("[ERROR] [GetPriceFeed] Failed to fetch from %s: %v",result.exchange, result.err.Details)
+			reqLogger.Error("Failed to fetch token price", "exchange", result.exchange, "error", result.err.Details)
 			continue
 		}
 		if result.price != nil {
@@ -491,14 +504,14 @@ func (c *PriceFeedClient) GetPriceFeed(symbol string) (*PriceFeedResult, *appErr
 
 	// Ensure at least 2 exchanges responded successfully
 	if exchangeCount < 2 {
-		log.Printf("[ERROR] [GetPriceFeed] Insufficient exchange data: %d", exchangeCount)
+		reqLogger.Error("Insufficient exchange data", "exchangeCount", exchangeCount)
 		return nil, appErrors.NewAppError(appErrors.ErrInsufficientExchangeData)
 	}
 
 	return &PriceFeedResult{
 		Symbol:            strings.ToUpper(symbol),
-		VolumeWeightedAvg: fmt.Sprintf("%g", volumeWeightedAvg),
-		TotalVolume:       fmt.Sprintf("%g", totalVolume),
+		VolumeWeightedAvg: strconv.FormatFloat(volumeWeightedAvg, 'f', -1, 64),
+		TotalVolume:       strconv.FormatFloat(totalVolume, 'f', -1, 64),
 		ExchangeCount:     exchangeCount,
 		Timestamp:         time.Now().Unix(),
 		ExchangePrices:    exchangePrices,
@@ -509,9 +522,10 @@ func (c *PriceFeedClient) GetPriceFeed(symbol string) (*PriceFeedResult, *appErr
 
 // ExtractPriceFeedData handles price feed requests and always returns the volume-weighted average price (VWAP)
 // This ensures consistent and reliable price data for oracle attestations
-func ExtractPriceFeedData(attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
+func ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
+	reqLogger := logger.FromContext(ctx)
 	if attestationRequest.EncodingOptions.Value != "float" {
-		log.Printf("[ERROR] [ExtractPriceFeedData] Invalid encoding option: %s", attestationRequest.EncodingOptions.Value)
+		reqLogger.Error("Invalid encoding option", "encodingOption", attestationRequest.EncodingOptions.Value)
 		return ExtractDataResult{
 			StatusCode: http.StatusBadRequest,
 		}, appErrors.NewAppError(appErrors.ErrInvalidEncodingOption)
@@ -527,7 +541,7 @@ func ExtractPriceFeedData(attestationRequest attestation.AttestationRequest) (Ex
 	case constants.PriceFeedAleoUrl:
 		symbol = "ALEO"
 	default:
-		log.Printf("[ERROR] [ExtractPriceFeedData] Unsupported price feed URL: %s", attestationRequest.Url)
+		logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)
 		return ExtractDataResult{
 			StatusCode: http.StatusBadRequest,
 		}, appErrors.NewAppError(appErrors.ErrUnsupportedPriceFeedURL)
@@ -535,11 +549,18 @@ func ExtractPriceFeedData(attestationRequest attestation.AttestationRequest) (Ex
 
 	priceFeedClient := NewPriceFeedClient()
 
+	if priceFeedClient == nil {
+		reqLogger.Error("Failed to create price feed client")
+		return ExtractDataResult{
+			StatusCode: http.StatusInternalServerError,
+		}, appErrors.NewAppError(appErrors.ErrExchangeFetchFailed)
+	}
+
 	// Get the price feed data
-	result, appErr := priceFeedClient.GetPriceFeed(symbol)
+	result, appErr := priceFeedClient.GetPriceFeed(ctx, symbol)
 
 	if appErr != nil {
-		log.Printf("[ERROR] [ExtractPriceFeedData] Error getting price feed for %s: %v", symbol, appErr)
+		reqLogger.Error("Error getting price feed for ", "symbol", symbol, "error", appErr)
 		return ExtractDataResult{
 			StatusCode: http.StatusInternalServerError,
 		}, appErr
@@ -548,7 +569,7 @@ func ExtractPriceFeedData(attestationRequest attestation.AttestationRequest) (Ex
 	// Marshal the response to JSON
 	jsonBytes, err := json.Marshal(result)
 	if err != nil {
-		log.Printf("[ERROR] [ExtractPriceFeedData] Error marshalling price feed data: %v", err)
+		reqLogger.Error("Error marshalling price feed data", "error", err)
 		return ExtractDataResult{
 			StatusCode: http.StatusInternalServerError,
 		}, appErrors.NewAppError(appErrors.ErrJSONEncoding)

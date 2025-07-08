@@ -1,11 +1,11 @@
 package attestation
 
 import (
-	"log"
 
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
 // OracleData is the data of the oracle.
@@ -54,7 +54,7 @@ type OracleData struct {
 func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors.AppError) {
 	aleoContext, err := aleoContext.GetAleoContext()
 	if err != nil {
-		log.Printf("[ERROR] [PrepareOracleReport] Error getting Aleo context: %v", err)	
+		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err
 	}
 	
@@ -62,7 +62,7 @@ func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors
 	oracleReport, formatErr := aleoContext.GetSession().FormatMessage(quote, 10)
 
 	if formatErr != nil {
-		log.Printf("[ERROR] [PrepareOracleReport] Failed to format quote: %v", formatErr)
+		logger.Error("Failed to format quote: ", "error", formatErr)
 		return nil, appErrors.NewAppError(appErrors.ErrFormattingQuote)
 	}
 
@@ -73,7 +73,7 @@ func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors
 func PrepareOracleSignature(oracleReport []byte) (signature string, appError *appErrors.AppError) {
 	aleoContext, err := aleoContext.GetAleoContext()
 	if err != nil {
-		log.Printf("[ERROR] [PrepareOracleSignature] Error getting Aleo context: %v", err)
+		logger.Error("Error getting Aleo context: ", "error", err)
 		return "", err
 	}
 	
@@ -81,7 +81,7 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 	hashedMessage, hashErr := aleoContext.GetSession().HashMessage(oracleReport)
 
 	if hashErr != nil {
-		log.Printf("[ERROR] [PrepareOracleSignature] Failed to hash report: %v", hashErr)
+		logger.Error("Failed to hash report", "error", hashErr)
 		return "", appErrors.NewAppError(appErrors.ErrReportHashing)
 	}
 
@@ -90,7 +90,7 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 
 	// Check if the error is not nil.
 	if signErr != nil {
-		log.Printf("[ERROR] [PrepareOracleSignature] Sign failed: %v", signErr)
+		logger.Error("Error while generating signature: ", "error", signErr)
 		return "", appErrors.NewAppError(appErrors.ErrGeneratingSignature)
 	}
 
@@ -101,7 +101,7 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appErrors.AppError) {
 	aleoContext, err := aleoContext.GetAleoContext()
 	if err != nil {
-		log.Printf("[ERROR] [GenerateAttestationHash] Error getting Aleo context: %v", err)
+		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err
 	}
 	
@@ -109,7 +109,7 @@ func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appE
 
 	// Check if the error is not nil.
 	if hashError != nil {
-		log.Printf("[ERROR] [GenerateAttestationHash] Failed to hash message: %v", hashError)
+		logger.Error("Failed to hash message: ", "error", hashError)
 		return nil, appErrors.NewAppError(appErrors.ErrMessageHashing)
 	}
 
@@ -120,42 +120,42 @@ func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appE
 func BuildCompleteOracleData(quotePrepData *QuotePreparationData, quote []byte) (*OracleData, *appErrors.AppError) {
 	aleoContext, err := aleoContext.GetAleoContext()
 	if err != nil {
-		log.Printf("[ERROR] [BuildCompleteOracleData] Error getting Aleo context: %v", err)
+		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err
 	}
 	
 	encodedRequest, err := PrepareOracleEncodedRequest(quotePrepData.UserDataProof, quotePrepData.EncodedPositions)
 
 	if err != nil {
-		log.Printf("[ERROR] [BuildCompleteOracleData] Failed to prepare oracle encoded request: %v", err)
+		logger.Error("Failed to prepare oracle encoded request: ", "error", err)
 		return nil, err
 	}
 
 	requestHash, requestHashString, err := PrepareOracleRequestHash(encodedRequest)
 
 	if err != nil {
-		log.Printf("[ERROR] [BuildCompleteOracleData] Failed to prepare oracle request hash: %v", err)
+		logger.Error("Failed to prepare oracle request hash: ", "error", err)
 		return nil, err
 	}
 
 	timestampedHash, err := PrepareOracleTimestampedRequestHash(requestHash, quotePrepData.Timestamp)
 
 	if err != nil {
-		log.Printf("[ERROR] [BuildCompleteOracleData] Failed to prepare oracle timestamped request hash: %v", err)
+		logger.Error("Failed to prepare oracle timestamped request hash: ", "error", err)
 		return nil, err
 	}
 
 	oracleReport, err := PrepareOracleReport(quote)
 
 	if err != nil {
-		log.Printf("[ERROR] [BuildCompleteOracleData] Failed to prepare oracle report: %v", err)
+		logger.Error("Failed to prepare oracle report: ", "error", err)
 		return nil, err
 	}
 
 	signature, err := PrepareOracleSignature(oracleReport)
 
 	if err != nil {
-		log.Printf("[ERROR] [BuildCompleteOracleData] Failed to prepare oracle signature: %v", err)
+		logger.Error("Failed to prepare oracle signature: ", "error", err)
 		return nil, err
 	}
 

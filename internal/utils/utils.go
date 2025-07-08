@@ -8,7 +8,9 @@ import (
 	"math/big"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 )
@@ -64,8 +66,6 @@ func MaskUnacceptedHeaders(headers map[string]string) map[string]string {
 
 // Checks if a domain is in the list of whitelisted domains.
 func IsAcceptedDomain(endpoint string) bool {
-	// Check if the endpoint already has a protocol
-
 	if endpoint == constants.PriceFeedBtcUrl || endpoint == constants.PriceFeedEthUrl || endpoint == constants.PriceFeedAleoUrl {
 		return true
 	}
@@ -79,7 +79,6 @@ func IsAcceptedDomain(endpoint string) bool {
 	
 	parsedURL, err := url.Parse(urlToParse)
 	if err != nil {
-		fmt.Println("Error parsing URL:", err)
 		return false
 	}
 	for _, domainName := range configs.GetWhitelistedDomains() {
@@ -128,4 +127,12 @@ func SliceToU128(buf []byte) (*big.Int, error) {
 	}
 
 	return result, nil
+}
+
+func GetRetryableHTTPClient(maxRetries int) *retryablehttp.Client {
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 3 * time.Second
+	retryClient.RetryMax = maxRetries
+	return retryClient
 }

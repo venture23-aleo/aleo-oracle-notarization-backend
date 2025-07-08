@@ -3,13 +3,13 @@ package attestation
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math/big"
 
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 )
 
@@ -49,7 +49,7 @@ func PrepareOracleUserData(statusCode int, attestationData string, timestamp uin
 	userData, formatError := aleoContext.GetSession().FormatMessage(userDataProof, 8)
 
 	if formatError != nil {
-		log.Println("failed to format proof data:", formatError)
+		logger.Error("failed to format proof data", "error", formatError)
 		return nil, nil, nil, appErrors.NewAppError(appErrors.ErrFormattingProofData)
 	}
 
@@ -67,14 +67,14 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 	encodedRequestProof, err := PrepareEncodedRequestProof(userDataProof, *encodedPositions)
 
 	if err != nil {
-		log.Println("failed to prepare encoded request proof: ", err)
+		logger.Error("failed to prepare encoded request proof: ", "error", err)
 		return nil, err
 	}
 
 	// C0 - C7 Chunks - Format the encoded proof data.
 	encodedRequest, formatError := aleoContext.GetSession().FormatMessage(encodedRequestProof, 8)
 	if formatError != nil {
-		log.Println("failed to format encoded proof data:", formatError)
+		logger.Error("failed to format encoded proof data:", "error", formatError)
 		return nil, appErrors.NewAppError(appErrors.ErrFormattingEncodedProofData)
 	}
 
@@ -92,7 +92,7 @@ func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, reques
 	requestHash, hashError := aleoContext.GetSession().HashMessage(encodedRequest)
 
 	if hashError != nil {
-		log.Println("failed to create request hash:", hashError)
+		logger.Error("failed to create request hash:", "error", hashError)
 		return nil, "", appErrors.NewAppError(appErrors.ErrCreatingRequestHash)
 	}
 
@@ -100,7 +100,7 @@ func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, reques
 	requestHashString, hashError = aleoContext.GetSession().HashMessageToString(encodedRequest)
 
 	if hashError != nil {
-		log.Println("failed to create request hash:", hashError)
+		logger.Error("failed to create request hash:", "error", hashError)
 		return nil, "", appErrors.NewAppError(appErrors.ErrCreatingRequestHash)
 	}
 
@@ -131,7 +131,7 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 
 	// Check if the error is not nil.
 	if hashError != nil {
-		log.Println("failed to creat timestamped hash:", err)
+		logger.Error("Failed to create timestamped hash: ", "error", err)
 		return "", appErrors.NewAppError(appErrors.ErrCreatingTimestampedHash)
 	}
 
@@ -147,6 +147,7 @@ func PrepareDataForQuoteGeneration(statusCode int, attestationData string, times
 
 	attestationHash, err := GenerateAttestationHash(userData)
 	if err != nil {
+		logger.Error("Failed to generate attestation hash: ", "error", err)
 		return nil, err
 	}
 

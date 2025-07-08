@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"math/big"
 	"net/http"
 	"time"
@@ -12,48 +11,49 @@ import (
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	attestation "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 )
 
 // GenerateAttestedRandom handles the request to generate an attested random number
 func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
-	// Generate a short request ID
-	requestId := utils.GenerateShortRequestID()
+	// Get logger from context (request ID automatically included by middleware)
+	reqLogger := logger.FromContext(req.Context())
 
-	log.Printf("[INFO] [%s] Received attested random request: %s", requestId, req.URL.RawQuery)
+	reqLogger.Debug("Received attested random request", "query", req.URL.RawQuery)
 
 	// Get the max parameter from query string
 	maxStr := req.URL.Query().Get("max")
 	if maxStr == "" {
-		log.Printf("[ERROR] [%s] Missing max parameter", requestId)
-		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, requestId)
+		reqLogger.Error("Missing max parameter")
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
 
 	// Parse the max value as a big integer
 	max, ok := new(big.Int).SetString(maxStr, 10)
 	if !ok {
-		log.Printf("[ERROR] [%s] Invalid max parameter format: %s", requestId, maxStr)
-		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, requestId)
+		reqLogger.Error("Invalid max parameter format", "max", maxStr)
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
 
 	// Validate the max value: must be > 1 and ≤ 2^127
 	if max.Cmp(big.NewInt(1)) <= 0 {
-		log.Printf("[ERROR] [%s] max must be greater than 1: %s", requestId, maxStr)
-		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, requestId)
+		reqLogger.Error("Max must be greater than 1", "max", maxStr)
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
 
 	// Check if max > 2^127
 	maxAllowed := new(big.Int).Lsh(big.NewInt(1), 127) // 2^127
 	if max.Cmp(maxAllowed) > 0 {
-		log.Printf("[ERROR] [%s] max must be less than or equal to 2^127: %s", requestId, maxStr)
-		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, requestId)
+		reqLogger.Error("Max must be less than or equal to 2^127", "max", maxStr)
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
 
-	log.Printf("[INFO] [%s] Validated max parameter: %s", requestId, maxStr)
+	reqLogger.Debug("Validated max parameter", "max", maxStr)
 
 	attestationRequest := attestation.AttestationRequest{
 		Url: fmt.Sprintf("crypto/rand:%s", max.String()),
@@ -68,12 +68,12 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	// Generate a cryptographically secure random number in range [0, max)
 	randomNumber, err := rand.Int(rand.Reader, max)
 	if err != nil {
-		log.Printf("[ERROR] [%s] Error generating random number: %v", requestId, err)
-		utils.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrGeneratingAttestationHash, requestId)
+		reqLogger.Error("Error generating random number", "error", err)
+		utils.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrGeneratingAttestationHash, "")
 		return
 	}
 
-	log.Printf("[INFO] [%s] Generated random number: %s", requestId, randomNumber.String())
+	reqLogger.Debug("Generated random number", "number", randomNumber.String())
 
 	// Get the timestamp
 	timestamp := time.Now().Unix()
@@ -81,33 +81,33 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	statusCode := 200
 	attestationData := randomNumber.String()
 
-	log.Printf("[INFO] [%s] Preparing data for quote generation", requestId)
+	reqLogger.Debug("Preparing data for quote generation")
 	quotePrepData, appError := attestation.PrepareDataForQuoteGeneration(statusCode, attestationData, uint64(timestamp), attestationRequest)
 
 	// Check if the error is not nil.
 	if appError != nil {
-		log.Printf("[ERROR] [%s] Error preparing data for quote generation: %v", requestId, appError)
-		utils.WriteJsonError(w, http.StatusBadRequest, *appError , requestId)
+		reqLogger.Error("Error preparing data for quote generation", "error", appError)
+		utils.WriteJsonError(w, http.StatusBadRequest, *appError, "")
 		return
 	}
 
-	log.Printf("[INFO] [%s] Generating SGX quote", requestId)
+	reqLogger.Debug("Generating SGX quote")
 
 	// Generate the quote.
 	quote, appError := attestation.GenerateQuote(quotePrepData.AttestationHash)
 	if appError != nil {
-		log.Printf("[ERROR] [%s] Error generating quote: %v", requestId, appError)
-		utils.WriteJsonError(w, http.StatusInternalServerError, *appError, requestId)
+		reqLogger.Error("Error generating quote", "error", appError)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *appError, "")
 		return
 	}
 
-	log.Printf("[INFO] [%s] Building oracle data after quote", requestId)
+	reqLogger.Debug("Building oracle data after quote")
 
 	// Build the complete oracle data after the quote.
 	oracleData, appError := attestation.BuildCompleteOracleData(quotePrepData, quote)
 	if appError != nil {
-		log.Printf("[ERROR] [%s] Error preparing oracle data after quote: %v", requestId, appError)
-		utils.WriteJsonError(w, http.StatusInternalServerError, *appError, requestId)
+		reqLogger.Error("Error preparing oracle data after quote", "error", appError)
+		utils.WriteJsonError(w, http.StatusInternalServerError, *appError, "")
 		return
 	}
 
@@ -123,7 +123,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 		ResponseStatusCode:   statusCode,
 	}
 
-	log.Printf("[INFO] [%s] Successfully generated attested random response", requestId)
+	reqLogger.Debug("Successfully generated attested random response")
 	// Write the JSON success response
 	utils.WriteJsonSuccess(w, http.StatusOK, response)
 }
