@@ -25,10 +25,6 @@ ifeq ($(PORT),)
 	PORT := 8000
 endif
 
-ifeq ($(WHITELISTED_DOMAINS),)
-	WHITELISTED_DOMAINS := ""
-endif
-
 export PORT
 export WHITELISTED_DOMAINS
 
