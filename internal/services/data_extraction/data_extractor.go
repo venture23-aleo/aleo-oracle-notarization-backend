@@ -19,7 +19,7 @@ type ExtractDataResult struct {
 	ResponseBody    string
 	AttestationData string
 	StatusCode      int
-} 
+}
 
 // makeHTTPRequest creates and executes an HTTP request with common configuration
 func makeHTTPRequest(ctx context.Context, attestationRequest attestation.AttestationRequest) (*http.Response, *appErrors.AppError) {
@@ -101,11 +101,11 @@ func applyFloatPrecision(valueStr string, precision uint) string {
 func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
 	// Get logger from context (includes request ID)
 	reqLogger := logger.FromContext(ctx)
-	
+
 	// Check if the URL is a price feed request
-	if attestationRequest.Url == constants.PriceFeedBtcUrl || 
-	   attestationRequest.Url == constants.PriceFeedEthUrl || 
-	   attestationRequest.Url == constants.PriceFeedAleoUrl {
+	if attestationRequest.Url == constants.PriceFeedBtcUrl ||
+		attestationRequest.Url == constants.PriceFeedEthUrl ||
+		attestationRequest.Url == constants.PriceFeedAleoUrl {
 		reqLogger.Debug("Processing price feed request", "url", attestationRequest.Url)
 		return ExtractPriceFeedData(ctx, attestationRequest)
 	} else if attestationRequest.ResponseFormat == "html" {
@@ -121,4 +121,3 @@ func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestatio
 		}, appErrors.NewAppError(appErrors.ErrInvalidResponseFormat)
 	}
 }
-

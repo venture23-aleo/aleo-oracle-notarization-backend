@@ -38,7 +38,6 @@ func prepareAttestationData(attestationData string, encodingOptions *encoding.En
 	return attestationData
 }
 
-
 // PrepareProofData prepares the proof data.
 func PrepareProofData(statusCode int, attestationData string, timestamp int64, req AttestationRequest) ([]byte, *encoding.ProofPositionalInfo, *appErrors.AppError) {
 
@@ -69,8 +68,8 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	}
 
 	// Write the attestation data to the buffer.
-	attesatationDataPositionInfo, err := encoding.WriteWithPadding(recorder, attestationDataBuffer); 
-	
+	attesatationDataPositionInfo, err := encoding.WriteWithPadding(recorder, attestationDataBuffer)
+
 	if err != nil {
 		logger.Error("Failed to write attestation data to buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingAttestationData)
@@ -86,7 +85,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	// Write the status code to the buffer.
 	statusCodePositionInfo, err := encoding.WriteWithPadding(recorder, encoding.NumberToBytes(uint64(statusCode)))
-	
+
 	if err != nil {
 		logger.Error("Failed to write status code to buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingStatusCode)
@@ -94,7 +93,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	// Write the URL to the buffer.
 	urlPositionInfo, err := encoding.WriteWithPadding(recorder, []byte(req.Url))
-	
+
 	if err != nil {
 		logger.Error("Failed to write URL to buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingUrl)
@@ -102,7 +101,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	// Write the selector to the buffer.
 	selectorPositionInfo, err := encoding.WriteWithPadding(recorder, []byte(req.Selector))
-	
+
 	if err != nil {
 		logger.Error("Failed to write selector to buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingSelector)
@@ -117,7 +116,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	// Write the response format to the buffer.
 	responseFormatPositionInfo, err := encoding.WriteWithPadding(recorder, responseFormat)
-	
+
 	if err != nil {
 		logger.Error("Failed to write response format to buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingResponseFormat)
@@ -125,7 +124,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	// Write the request method to the buffer.
 	requestMethodPositionInfo, err := encoding.WriteWithPadding(recorder, []byte(req.RequestMethod))
-	
+
 	if err != nil {
 		logger.Error("Failed to write request method to buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingRequestMethod)
@@ -140,7 +139,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	// Write the encoding options to the buffer.
 	encodingOptionsPositionInfo, err := encoding.WriteWithPadding(recorder, encodingOptions)
-	
+
 	if err != nil {
 		logger.Error("Failed to write encoding options to buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingEncodingOptions)
@@ -151,7 +150,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	// Write the request headers to the buffer.
 	requestHeadersPositionInfo, err := encoding.WriteWithPadding(recorder, encodedHeaders)
-	
+
 	if err != nil {
 		logger.Error("Failed to write request headers to buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingRequestHeaders)
@@ -171,7 +170,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	// Write the optional fields to the buffer.
 	optionalFieldsPositionInfo, err := encoding.WriteWithPadding(recorder, encodedOptionalFields)
-	
+
 	if err != nil {
 		logger.Error("Failed to write optional fields buffer: ", "error", err)
 		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingOptionalFields)
@@ -254,21 +253,20 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	)
 
 	proofPositionalInfo := &encoding.ProofPositionalInfo{
-		Data: *attesatationDataPositionInfo,
-		Timestamp: *timestampPositionInfo,
-		StatusCode: *statusCodePositionInfo,
-		Method: *requestMethodPositionInfo,
-		ResponseFormat: *responseFormatPositionInfo,
-		Url: *urlPositionInfo,
-		Selector: *selectorPositionInfo,
+		Data:            *attesatationDataPositionInfo,
+		Timestamp:       *timestampPositionInfo,
+		StatusCode:      *statusCodePositionInfo,
+		Method:          *requestMethodPositionInfo,
+		ResponseFormat:  *responseFormatPositionInfo,
+		Url:             *urlPositionInfo,
+		Selector:        *selectorPositionInfo,
 		EncodingOptions: *encodingOptionsPositionInfo,
-		RequestHeaders: *requestHeadersPositionInfo,
-		OptionalFields: *optionalFieldsPositionInfo,
+		RequestHeaders:  *requestHeadersPositionInfo,
+		OptionalFields:  *optionalFieldsPositionInfo,
 	}
 
 	return result, proofPositionalInfo, nil
 }
-
 
 // PrepareEncodedRequestProof prepares the encoded request proof.
 func PrepareEncodedRequestProof(userData []byte, encodedPositions encoding.ProofPositionalInfo) ([]byte, *appErrors.AppError) {

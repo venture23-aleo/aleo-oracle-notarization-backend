@@ -56,11 +56,11 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	reqLogger.Debug("Validated max parameter", "max", maxStr)
 
 	attestationRequest := attestation.AttestationRequest{
-		Url: fmt.Sprintf("crypto/rand:%s", max.String()),
-		RequestMethod: "GET",
+		Url:            fmt.Sprintf("crypto/rand:%s", max.String()),
+		RequestMethod:  "GET",
 		ResponseFormat: "json",
 		EncodingOptions: encoding.EncodingOptions{
-			Value: "int",
+			Value:     "int",
 			Precision: 0,
 		},
 	}
@@ -127,4 +127,3 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	// Write the JSON success response
 	utils.WriteJsonSuccess(w, http.StatusOK, response)
 }
-

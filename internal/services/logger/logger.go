@@ -12,19 +12,19 @@ var Logger *slog.Logger
 
 func InitLogger() {
 	level := slog.LevelInfo // Default for production
-    
-    // Override based on environment
-    if os.Getenv("LOG_LEVEL") == "DEBUG" {
-        level = slog.LevelDebug
-    } else if os.Getenv("LOG_LEVEL") == "WARN" {
-        level = slog.LevelWarn
-    } else if os.Getenv("LOG_LEVEL") == "ERROR" {
-        level = slog.LevelError
-    }
-    
-    Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-        Level: level,
-    }))
+
+	// Override based on environment
+	if os.Getenv("LOG_LEVEL") == "DEBUG" {
+		level = slog.LevelDebug
+	} else if os.Getenv("LOG_LEVEL") == "WARN" {
+		level = slog.LevelWarn
+	} else if os.Getenv("LOG_LEVEL") == "ERROR" {
+		level = slog.LevelError
+	}
+
+	Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+	}))
 	// Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 }
 
@@ -37,12 +37,12 @@ func getFunctionName() string {
 	if !ok {
 		return "unknown"
 	}
-	
+
 	fn := runtime.FuncForPC(pc)
 	if fn == nil {
 		return "unknown"
 	}
-	
+
 	// Extract just the function name from the full path
 	fullName := fn.Name()
 	parts := strings.Split(fullName, ".")
@@ -111,11 +111,11 @@ func FromContext(ctx context.Context) *slog.Logger {
 	if Logger == nil {
 		return nil
 	}
-	
+
 	if requestID, ok := ctx.Value(RequestIDKey{}).(string); ok && requestID != "" {
 		return Logger.With("request_id", requestID)
 	}
-	
+
 	return Logger
 }
 

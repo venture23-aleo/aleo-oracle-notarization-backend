@@ -1,7 +1,6 @@
 package attestation
 
 import (
-
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
@@ -57,7 +56,7 @@ func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors
 		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err
 	}
-	
+
 	// C0 - C9 Chunks
 	oracleReport, formatErr := aleoContext.GetSession().FormatMessage(quote, 10)
 
@@ -76,7 +75,7 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 		logger.Error("Error getting Aleo context: ", "error", err)
 		return "", err
 	}
-	
+
 	// Create the hashed message.
 	hashedMessage, hashErr := aleoContext.GetSession().HashMessage(oracleReport)
 
@@ -104,7 +103,7 @@ func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appE
 		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err
 	}
-	
+
 	attestationHash, hashError := aleoContext.GetSession().HashMessage(userData)
 
 	// Check if the error is not nil.
@@ -123,7 +122,7 @@ func BuildCompleteOracleData(quotePrepData *QuotePreparationData, quote []byte) 
 		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err
 	}
-	
+
 	encodedRequest, err := PrepareOracleEncodedRequest(quotePrepData.UserDataProof, quotePrepData.EncodedPositions)
 
 	if err != nil {
@@ -171,4 +170,4 @@ func BuildCompleteOracleData(quotePrepData *QuotePreparationData, quote []byte) 
 	}
 
 	return oracleData, nil
-} 
+}

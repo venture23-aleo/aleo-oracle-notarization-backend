@@ -28,7 +28,7 @@ func PrepareOracleUserData(statusCode int, attestationData string, timestamp uin
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	
+
 	// Prepare the proof data.
 	userDataProof, encodedPositions, err = PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
 
@@ -62,7 +62,7 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Prepare the encoded request proof.
 	encodedRequestProof, err := PrepareEncodedRequestProof(userDataProof, *encodedPositions)
 
@@ -87,7 +87,7 @@ func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, reques
 	if err != nil {
 		return nil, "", err
 	}
-	
+
 	// Create the request hash - Hash the encoded request.
 	requestHash, hashError := aleoContext.GetSession().HashMessage(encodedRequest)
 
@@ -113,7 +113,7 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Create the timestamped hash input - Hash the encoded request with the timestamp.
 	timestampBytes := make([]byte, encoding.TARGET_ALIGNMENT)
 	binary.LittleEndian.PutUint64(timestampBytes, uint64(timestamp))
@@ -158,4 +158,4 @@ func PrepareDataForQuoteGeneration(statusCode int, attestationData string, times
 		AttestationHash:  attestationHash,
 		Timestamp:        timestamp,
 	}, nil
-} 
+}

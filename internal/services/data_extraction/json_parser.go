@@ -32,13 +32,14 @@ import (
 // - "results.data[2].metrics.total" - complex nested path with array access
 //
 // Example usage:
-//   request := services.AttestationRequest{
-//       Url: "https://api.example.com/price",
-//       Selector: "data.price",
-//       ResponseFormat: "json",
-//       EncodingOptions: encoding.EncodingOptions{Value: "float", Precision: 6}
-//   }
-//   result, err := ExtractDataFromJSON(request)
+//
+//	request := services.AttestationRequest{
+//	    Url: "https://api.example.com/price",
+//	    Selector: "data.price",
+//	    ResponseFormat: "json",
+//	    EncodingOptions: encoding.EncodingOptions{Value: "float", Precision: 6}
+//	}
+//	result, err := ExtractDataFromJSON(request)
 func ExtractDataFromJSON(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
 	// Make the HTTP request
 	reqLogger := logger.FromContext(ctx)
@@ -107,20 +108,21 @@ func ExtractDataFromJSON(ctx context.Context, attestationRequest attestation.Att
 }
 
 // getNestedValue extracts a value from a nested JSON structure using a flexible path selector.
-// 
+//
 // Supports:
 // - Dot notation: "data.price"
-// - Array indexing: "items[0].value" 
+// - Array indexing: "items[0].value"
 // - Mixed paths: "results.data[2].metrics.total"
 //
 // The path is parsed using regex to handle both object keys and array indices.
 // Returns the extracted value or an error if the path is invalid or the value doesn't exist.
 //
 // Examples:
-//   getNestedValue(data, "price")           // data["price"]
-//   getNestedValue(data, "items.[0].price") // data["items"][0]["price"]
-//   getNestedValue(data, "items[0]")        // data["items"][0]
-//   getNestedValue(data, "data.items[1].price") // data["data"]["items"][1]["price"]
+//
+//	getNestedValue(data, "price")           // data["price"]
+//	getNestedValue(data, "items.[0].price") // data["items"][0]["price"]
+//	getNestedValue(data, "items[0]")        // data["items"][0]
+//	getNestedValue(data, "data.items[1].price") // data["data"]["items"][1]["price"]
 func getNestedValue(m map[string]interface{}, path string) (interface{}, *appErrors.AppError) {
 	// Create the regular expression for parsing path components
 	// Matches: key[optional_index] where key is alphanumeric and index is numeric
