@@ -14,7 +14,7 @@ jobs:
       - name: setup ssh host
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_HOST_KEY" > ~/.ssh/id_rsa
+          echo "$SSH_HOST_KEY" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           chmod 700 ~/.ssh
           ssh-keyscan -H "${{ vars.SSH_HOST }}" >> ~/.ssh/known_hosts
