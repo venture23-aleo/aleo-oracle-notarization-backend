@@ -1,0 +1,34 @@
+name: Deploy Aleo Notarization Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: setup ssh host
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_HOST_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          chmod 700 ~/.ssh
+          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
+
+      - name: docker compose up
+        run: |
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.SSH_USER }}@${{ vars.SSH_HOST }} <<EOF
+          cd ${{ vars.DEPLOY_DIR }}
+          git fetch
+          git checkout ${{ github.ref_name }}
+          git pull
+          sudo docker compose down
+          # Remove all dangling (untagged) images to cleanup build artifacts
+          sudo docker image prune -af
+          sudo docker compose build
+          sudo docker compose up -d
+          EOF
