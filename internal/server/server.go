@@ -28,7 +28,7 @@ func NewServer() *http.Server {
 
 	// Create middleware stack
 	middlewareStack := []middlewares.Middleware{
-		middlewares.LoggingMiddleware, // Log all requests with request ID
+		middlewares.LoggingAndMetricsMiddleware, // Log all requests with request ID
 	}
 
 	// Apply middleware stack to mux

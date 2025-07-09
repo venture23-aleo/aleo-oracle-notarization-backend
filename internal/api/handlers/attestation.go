@@ -7,6 +7,7 @@ import (
 	"time"
 
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/data_extraction"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
@@ -15,6 +16,12 @@ import (
 
 // GenerateAttestationReport handles the request to generate an attestation report.
 func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
+	start := time.Now()
+	status := "failed"
+	defer func() {
+		duration := time.Since(start).Seconds()
+		metrics.RecordAttestationRequest("attestation", status, duration)
+	}()
 
 	// Close the request body.
 	defer req.Body.Close()
@@ -29,6 +36,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Validate Content-Type
 	if req.Header.Get("Content-Type") != "application/json" {
 		reqLogger.Error("Invalid Content-Type", "content_type", req.Header.Get("Content-Type"), "method", req.Method, "path", req.URL.Path)
+		metrics.RecordError("invalid_content_type", "attestation_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
@@ -39,18 +47,18 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Decode the request body.
 	if err := json.NewDecoder(req.Body).Decode(&attestationRequestWithDebug); err != nil {
 		reqLogger.Error("Failed to decode request body", "error", err)
+		metrics.RecordError("json_decode_failed", "attestation_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
 
 	attestationRequest := attestationRequestWithDebug.AttestationRequest
 
-	// Log request details for debugging
 	reqLogger.Debug("Processing attestation request", "url", attestationRequest.Url, "debug", attestationRequestWithDebug.DebugRequest)
 
-	// Validate the attestation request.
 	if err := attestationRequest.Validate(); err != nil {
 		reqLogger.Error("Attestation request validation failed", "error", err)
+		metrics.RecordError("validation_failed", "attestation_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, *err, "")
 		return
 	}
@@ -61,18 +69,23 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 
 	// Fetch the data from the attestation request.
 	reqLogger.Debug("Fetching data from target URL", "url", attestationRequest.Url)
+	extractStart := time.Now()
 	extractDataResult, err := data_extraction.ExtractDataFromTargetURL(ctx, attestationRequest)
+	extractDuration := time.Since(extractStart).Seconds()
 
 	// Check if the error is not nil.
 	if err != nil {
 		reqLogger.Error("Failed to extract data from target URL", "error", err)
+		metrics.RecordError("data_extraction_failed", "attestation_handler")
+		metrics.RecordDataExtraction(attestationRequest.ResponseFormat, "failed", extractDuration)
 		utils.WriteJsonError(w, http.StatusInternalServerError, *err, "")
 		return
 	}
 
 	reqLogger.Debug("Successfully extracted data", "status_code", extractDataResult.StatusCode, "data", extractDataResult.AttestationData)
+	metrics.RecordDataExtraction(attestationRequest.ResponseFormat, "success", extractDuration)
+	metrics.RecordAttestationDataSize("attestation", len(extractDataResult.AttestationData))
 
-	// Mask the unaccepted headers.
 	attestationRequest.MaskUnacceptedHeaders()
 
 	if attestationRequestWithDebug.DebugRequest {
@@ -100,6 +113,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Check if the error is not nil.
 	if err != nil {
 		reqLogger.Error("Failed to prepare data for quote generation", "error", err)
+		metrics.RecordError("quote_prep_failed", "attestation_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, *err, "")
 		return
 	}
@@ -108,14 +122,19 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 
 	// Generate the quote.
 	reqLogger.Debug("Generating SGX quote")
+	quoteStart := time.Now()
 	quote, err := attestation.GenerateQuote(quotePrepData.AttestationHash)
+	quoteDuration := time.Since(quoteStart).Seconds()
 
 	if err != nil {
 		reqLogger.Error("Failed to generate SGX quote", "error", err)
+		metrics.RecordSgxQuoteGeneration("failed", quoteDuration)
+		metrics.RecordError("quote_generation_failed", "attestation_handler")
 		utils.WriteJsonError(w, http.StatusInternalServerError, *err, "")
 		return
 	}
 
+	metrics.RecordSgxQuoteGeneration("success", quoteDuration)
 	reqLogger.Debug("SGX quote generated successfully")
 
 	// Prepare the oracle data after the quote.
@@ -124,6 +143,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		reqLogger.Error("Failed to build complete oracle data", "error", err)
+		metrics.RecordError("oracle_data_build_failed", "attestation_handler")
 		utils.WriteJsonError(w, http.StatusInternalServerError, *err, "")
 		return
 	}
@@ -144,6 +164,8 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 
 	// Log successful completion
 	reqLogger.Debug("Attestation report generated successfully")
+
+	status = "success"
 
 	// Write the JSON success response.
 	utils.WriteJsonSuccess(w, http.StatusOK, response)

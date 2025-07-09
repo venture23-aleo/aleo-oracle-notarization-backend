@@ -10,6 +10,7 @@ import (
 
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	attestation "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
@@ -17,6 +18,14 @@ import (
 
 // GenerateAttestedRandom handles the request to generate an attested random number
 func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
+	start := time.Now()
+	// Set the status to failed by default
+	status := "failed"
+	defer func() {
+		duration := time.Since(start).Seconds()
+		metrics.RecordRandomNumberGeneration(status, duration)
+	}()
+
 	// Get logger from context (request ID automatically included by middleware)
 	reqLogger := logger.FromContext(req.Context())
 
@@ -26,6 +35,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	maxStr := req.URL.Query().Get("max")
 	if maxStr == "" {
 		reqLogger.Error("Missing max parameter")
+		metrics.RecordError("missing_max_parameter", "random_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
@@ -34,6 +44,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	max, ok := new(big.Int).SetString(maxStr, 10)
 	if !ok {
 		reqLogger.Error("Invalid max parameter format", "max", maxStr)
+		metrics.RecordError("invalid_max_format", "random_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
@@ -41,6 +52,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	// Validate the max value: must be > 1 and ≤ 2^127
 	if max.Cmp(big.NewInt(1)) <= 0 {
 		reqLogger.Error("Max must be greater than 1", "max", maxStr)
+		metrics.RecordError("max_too_small", "random_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
@@ -49,6 +61,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	maxAllowed := new(big.Int).Lsh(big.NewInt(1), 127) // 2^127
 	if max.Cmp(maxAllowed) > 0 {
 		reqLogger.Error("Max must be less than or equal to 2^127", "max", maxStr)
+		metrics.RecordError("max_too_large", "random_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
 		return
 	}
@@ -69,6 +82,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	randomNumber, err := rand.Int(rand.Reader, max)
 	if err != nil {
 		reqLogger.Error("Error generating random number", "error", err)
+		metrics.RecordError("random_generation_failed", "random_handler")
 		utils.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrGeneratingAttestationHash, "")
 		return
 	}
@@ -87,6 +101,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	// Check if the error is not nil.
 	if appError != nil {
 		reqLogger.Error("Error preparing data for quote generation", "error", appError)
+		metrics.RecordError("quote_prep_failed", "random_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, *appError, "")
 		return
 	}
@@ -94,19 +109,26 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	reqLogger.Debug("Generating SGX quote")
 
 	// Generate the quote.
+	quoteStart := time.Now()
 	quote, appError := attestation.GenerateQuote(quotePrepData.AttestationHash)
+	quoteDuration := time.Since(quoteStart).Seconds()
+
 	if appError != nil {
 		reqLogger.Error("Error generating quote", "error", appError)
+		metrics.RecordSgxQuoteGeneration("failed", quoteDuration)
+		metrics.RecordError("quote_generation_failed", "random_handler")
 		utils.WriteJsonError(w, http.StatusInternalServerError, *appError, "")
 		return
 	}
 
+	metrics.RecordSgxQuoteGeneration("success", quoteDuration)
 	reqLogger.Debug("Building oracle data after quote")
 
 	// Build the complete oracle data after the quote.
 	oracleData, appError := attestation.BuildCompleteOracleData(quotePrepData, quote)
 	if appError != nil {
 		reqLogger.Error("Error preparing oracle data after quote", "error", appError)
+		metrics.RecordError("oracle_data_build_failed", "random_handler")
 		utils.WriteJsonError(w, http.StatusInternalServerError, *appError, "")
 		return
 	}
@@ -124,6 +146,10 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	}
 
 	reqLogger.Debug("Successfully generated attested random response")
+
+	// Set the status to success
+	status = "success"
+
 	// Write the JSON success response
 	utils.WriteJsonSuccess(w, http.StatusOK, response)
 }

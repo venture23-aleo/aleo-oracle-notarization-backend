@@ -1,0 +1,88 @@
+groups:
+  - name: aleo-oracle-alerts
+    rules:
+      # High Error Rate Alert
+      - alert: HighErrorRate
+        expr: rate(errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: aleo-oracle
+        annotations:
+          summary: "High error rate detected in Aleo Oracle Backend"
+          description: "Error rate is {{ $value }} errors per second over the last 5 minutes"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: memory_alloc_bytes / memory_sys_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: aleo-oracle
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+ 
+      # Service Down Alert
+      - alert: AleoOracleServiceDown
+        expr: up{job="aleo-oracle-backend"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: aleo-oracle
+        annotations:
+          summary: "Aleo Oracle Backend service is down"
+          description: "The Aleo Oracle Backend service has been down for more than 1 minute"
+      
+      # Exchange Count Alert
+      - alert: ExchangeCountAlert
+        expr: price_feed_exchange_count < 2
+        for: 1m
+        labels:
+          severity: critical
+          service: aleo-oracle
+        annotations:
+          summary: "Low exchange count detected"
+          description: "Price feed {{ $labels.feed }} has an exchange count of {{ $value }}."
+
+      - alert: HighExchangeApiErrorRate
+        expr: rate(exchange_api_errors_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: warning
+          service: aleo-oracle
+        annotations:
+          summary: "High exchange API error rate"
+          description: "Exchange {{ $labels.exchange }} returned error code {{ $labels.error_code }} with a rate of {{ $value | humanizePercentage }}"
+
+      - alert: TotalExchangeApiFailures
+        expr: sum by (exchange) (rate(exchange_api_errors_total[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          service: aleo-oracle
+        annotations:
+          summary: "High error rate for exchange {{ $labels.exchange }}"
+          description: "Total error rate exceeded threshold"  
+
+      # High Attestation Failure Rate
+      - alert: HighAttestationFailureRate
+        expr: rate(attestation_requests_total{status="failed"}[5m]) / rate(attestation_requests_total[5m]) > 0.2
+        for: 2m
+        labels:
+          severity: critical
+          service: aleo-oracle
+        annotations:
+          summary: "High attestation failure rate"
+          description: "Attestation failure rate is {{ $value | humanizePercentage }}"
+
+      # High Goroutine Count
+      - alert: HighGoroutineCount
+        expr: active_goroutines > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: aleo-oracle
+        annotations:
+          summary: "High goroutine count detected"
+          description: "Active goroutines: {{ $value }}"

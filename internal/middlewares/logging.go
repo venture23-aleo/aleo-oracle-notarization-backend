@@ -4,12 +4,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 )
 
-// LoggingMiddleware logs request details including method, path, duration, status code, and request ID
-func LoggingMiddleware(next http.Handler) http.Handler {
+// LoggingAndMetricsMiddleware combines logging and metrics collection in a single middleware
+// This reduces middleware overhead and ensures consistent timing measurements
+func LoggingAndMetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -40,8 +42,14 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		// Call the next handler
 		next.ServeHTTP(responseWriter, r)
 
-		// Log the request completion with duration and status
+		// Calculate duration once for both logging and metrics
 		duration := time.Since(start)
+		durationSeconds := duration.Seconds()
+
+		// Record Prometheus metrics
+		metrics.RecordHttpRequest(r.Method, r.URL.Path, responseWriter.statusCode, durationSeconds)
+
+		// Log the request completion with duration and status
 		reqLogger.Info("Request completed",
 			"method", r.Method,
 			"path", r.URL.Path,

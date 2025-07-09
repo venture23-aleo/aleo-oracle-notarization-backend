@@ -126,6 +126,23 @@ docker-run-fg: docker-build
 docker-run-rebuild: docker-build
 	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) --build --force-recreate
 
+.PHONY: setup-alertmanager
+setup-alertmanager:
+	@chmod +x scripts/setup-alertmanager.sh
+	@echo ">> Setting up Alertmanager..."
+	@scripts/setup-alertmanager.sh
+
+.PHONY: setup-prometheus
+setup-prometheus:
+	@chmod +x scripts/setup-prometheus.sh
+	@echo ">> Setting up Prometheus..."
+	@scripts/setup-prometheus.sh
+
+.PHONY: setup-monitoring
+setup-monitoring: setup-alertmanager setup-prometheus
+	@echo ">> Monitoring setup complete!"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Docker Management
 # ─────────────────────────────────────────────────────────────────────────────
@@ -216,6 +233,11 @@ help:
 	@echo "  make docker-stop                                   # Stop all containers"
 	@echo "  make docker-logs                                   # Show logs"
 	@echo "  make docker-status                                 # Show container status"
+	@echo
+	@echo "Monitoring Targets:"
+	@echo "  setup-monitoring            Setup Alertmanager and Prometheus"
+	@echo "  setup-alertmanager          Setup Alertmanager"
+	@echo "  setup-prometheus            Setup Prometheus"
 	@echo
 	@echo "SGX/Enclave Targets:"
 	@echo "  generate-manifest-template  Generate manifest template"
