@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/api/handlers"
 )
 
@@ -21,5 +22,9 @@ func RegisterRoutes(mux *http.ServeMux) {
 	// Register the whitelist route.
 	mux.HandleFunc("GET /whitelist", handlers.GetWhiteListedDomains)
 
+	// Register the Prometheus metrics endpoint.
+	mux.Handle("GET /metrics", promhttp.Handler())
+
+	// Register the health check route.
 	mux.HandleFunc("GET /", handlers.GetHealthCheck)
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/server"
 	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
@@ -29,10 +30,15 @@ func main() {
 		log.Fatalf("Failed to initialize Aleo context: %v", err)
 	}
 
-	// 4. Create server
+	// 4. Start system metrics collector
+	systemMetricsCollector := metrics.NewSystemMetricsCollector()
+	systemMetricsCollector.Start()
+	defer systemMetricsCollector.Stop()
+
+	// 5. Create HTTP server
 	srv := server.NewServer()
 
-	// 5. Start server
+	// 6. Start server
 	serverErr := make(chan error, 1)
 	go func() {
 		// Log the server is running on the bind address.
@@ -40,7 +46,7 @@ func main() {
 		serverErr <- srv.ListenAndServe()
 	}()
 
-	// 6. Listen for shutdown signals
+	// 7. Listen for shutdown signals
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
@@ -51,7 +57,7 @@ func main() {
 		logger.Error("Server error", "error", err)
 	}
 
-	// 7. Graceful shutdown
+	// 8. Graceful shutdown
 	logger.Info("Shutting down server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -59,7 +65,7 @@ func main() {
 		logger.Error("Server shutdown error", "error", err)
 	}
 
-	// 8. Shutdown Aleo context
+	// 9. Shutdown Aleo context
 	if err := aleoContext.ShutdownAleoContext(); err != nil {
 		logger.Error("Error shutting down Aleo context", "error", err)
 	} else {

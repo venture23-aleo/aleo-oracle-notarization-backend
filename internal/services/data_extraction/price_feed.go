@@ -14,6 +14,7 @@ import (
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
@@ -488,6 +489,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*Pri
 	for i := 0; i < len(exchanges); i++ {
 		result := <-results
 		if result.err != nil {
+			metrics.RecordExchangeApiError(result.exchange, strconv.Itoa(int(result.err.Code)))
 			// Log the error but continue processing other exchanges
 			// This ensures the system is resilient to individual exchange failures
 			reqLogger.Error("Failed to fetch token price", "exchange", result.exchange, "error", result.err.Details)
@@ -502,8 +504,11 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*Pri
 	// Calculate volume-weighted average
 	volumeWeightedAvg, totalVolume, exchangeCount := CalculateVolumeWeightedAverage(exchangePrices)
 
+	metrics.RecordPriceFeedExchangeCount(symbol, exchangeCount)
+
 	// Ensure at least 2 exchanges responded successfully
 	if exchangeCount < 2 {
+		metrics.RecordError("insufficient_exchange_data", "price_feed")
 		reqLogger.Error("Insufficient exchange data", "exchangeCount", exchangeCount)
 		return nil, appErrors.NewAppError(appErrors.ErrInsufficientExchangeData)
 	}
