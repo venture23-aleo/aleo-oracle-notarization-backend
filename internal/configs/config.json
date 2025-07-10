@@ -1,5 +1,6 @@
 {
     "port": 8000,
+    "metricsPort": 8001,
     "priceFeedConfig": {
         "exchanges": {
             "binance": {

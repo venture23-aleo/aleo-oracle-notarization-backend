@@ -22,9 +22,10 @@ func RegisterRoutes(mux *http.ServeMux) {
 	// Register the whitelist route.
 	mux.HandleFunc("GET /whitelist", handlers.GetWhiteListedDomains)
 
-	// Register the Prometheus metrics endpoint.
-	mux.Handle("GET /metrics", promhttp.Handler())
-
 	// Register the health check route.
 	mux.HandleFunc("GET /", handlers.GetHealthCheck)
+}
+
+func RegisterMetricsRoute(mux *http.ServeMux) {
+	mux.Handle("GET /metrics", promhttp.Handler())
 }

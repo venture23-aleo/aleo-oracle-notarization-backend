@@ -36,7 +36,7 @@ scrape_configs:
     
     # Add custom labels for better organization
     static_configs:
-      - targets: ["localhost:8000"]
+      - targets: ["localhost:8001"]
         labels:
           instance: "aleo-oracle-backend-1"
           environment: "production"
