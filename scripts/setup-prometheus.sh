@@ -56,8 +56,8 @@ ExecStart=${INSTALL_DIR}/prometheus \\
 WantedBy=multi-user.target
 EOF
 
-sudo cp ./scripts/inputs/prometheus.yml ${CONFIG_DIR}/prometheus.yml
-sudo cp ./scripts/inputs/alerts.yml ${CONFIG_DIR}/alerts.yml
+sudo cp $PWD/scripts/inputs/prometheus.yml ${CONFIG_DIR}/prometheus.yml
+sudo cp $PWD/scripts/inputs/alerts.yml ${CONFIG_DIR}/alerts.yml
 
 echo "🔄 Reloading systemd configuration..."
 sudo systemctl daemon-reload
