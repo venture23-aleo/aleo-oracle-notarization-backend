@@ -64,4 +64,4 @@ func (c *SystemMetricsCollector) updateMetrics() {
 		"memory_sys_mb", m.Sys/1024/1024,
 		"goroutines", runtime.NumGoroutine(),
 	)
-} 
+}

@@ -262,4 +262,4 @@ func RecordExchangeApiError(exchange string, errorCode string) {
 // RecordPriceFeedExchangeCount records price feed exchange count
 func RecordPriceFeedExchangeCount(feed string, count int) {
 	PriceFeedExchangeCount.WithLabelValues(feed).Set(float64(count))
-} 
+}

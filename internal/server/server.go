@@ -13,33 +13,42 @@ import (
 const (
 	IdleTimeout  = 30
 	ReadTimeout  = 5
-	WriteTimeout = 10
+	WriteTimeout = 20
 )
 
-// InitializeServer initializes the server.
-func NewServer() *http.Server {
+// NewServer initializes the notarization and metrics servers.
+func NewServer() (*http.Server, *http.Server) {
 	// Get app config
 	appConfig := configs.GetAppConfig()
 	// Create a new serve mux.
 	mux := http.NewServeMux()
 
-	// Register the routes.
+	// Create a new metrics mux.
+	metricsMux := http.NewServeMux()
+
+	// Register the notarization routes.
 	api.RegisterRoutes(mux)
+
+	// Register the metrics route.
+	api.RegisterMetricsRoute(metricsMux)
 
 	// Create middleware stack
 	middlewareStack := []middlewares.Middleware{
 		middlewares.LoggingAndMetricsMiddleware, // Log all requests with request ID
 	}
 
-	// Apply middleware stack to mux
+	// Apply middleware stack to the mux.
 	handler := middlewares.Chain(mux, middlewareStack...)
 
+	// Get the port and metrics port.
 	port := appConfig.Port
+	metricsPort := appConfig.MetricsPort
 
-	// Create the bind address.
+	// Create the bind addresses.
 	bindAddr := fmt.Sprintf(":%d", port)
+	metricsBindAddr := fmt.Sprintf(":%d", metricsPort)
 
-	// Create the server.
+	// Create the notarization server.
 	server := &http.Server{
 		IdleTimeout:       time.Second * IdleTimeout,
 		ReadHeaderTimeout: time.Second * ReadTimeout,
@@ -48,5 +57,14 @@ func NewServer() *http.Server {
 		Handler:           handler, // Use the middleware stack
 	}
 
-	return server
+	// Create the metrics server.
+	metricsServer := &http.Server{
+		IdleTimeout:       time.Second * IdleTimeout,
+		ReadHeaderTimeout: time.Second * ReadTimeout,
+		WriteTimeout:      time.Second * WriteTimeout,
+		Addr:              metricsBindAddr,
+		Handler:           metricsMux, // Use the middleware stack
+	}
+
+	return server, metricsServer
 }

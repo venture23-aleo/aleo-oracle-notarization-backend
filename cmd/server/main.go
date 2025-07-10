@@ -36,14 +36,21 @@ func main() {
 	defer systemMetricsCollector.Stop()
 
 	// 5. Create HTTP server
-	srv := server.NewServer()
+	notarizationServer, metricsServer := server.NewServer()
 
-	// 6. Start server
-	serverErr := make(chan error, 1)
+	// Create a channel to listen for server errors
+	serverErr := make(chan error, 2)
+
+	// 6. Start notarization server
 	go func() {
-		// Log the server is running on the bind address.
-		logger.Info("Server started", "address", srv.Addr)
-		serverErr <- srv.ListenAndServe()
+		logger.Info("Notarization server started", "address", notarizationServer.Addr)
+		serverErr <- notarizationServer.ListenAndServe()
+	}()
+
+	// 7. Start metrics server
+	go func() {
+		logger.Info("Metrics server started", "address", metricsServer.Addr)
+		serverErr <- metricsServer.ListenAndServe()
 	}()
 
 	// 7. Listen for shutdown signals
@@ -61,8 +68,13 @@ func main() {
 	logger.Info("Shutting down server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("Server shutdown error", "error", err)
+
+	// 9. Shutdown servers
+	if err := notarizationServer.Shutdown(ctx); err != nil {
+		logger.Error("Notarization server shutdown error", "error", err)
+	}
+	if err := metricsServer.Shutdown(ctx); err != nil {
+		logger.Error("Metrics server shutdown error", "error", err)
 	}
 
 	// 9. Shutdown Aleo context

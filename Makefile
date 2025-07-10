@@ -32,6 +32,12 @@ ifeq ($(PORT),)
 	PORT := 8000
 endif
 
+ifeq ($(METRICS_PORT),)
+	METRICS_PORT := 8001
+endif
+
+export METRICS_PORT
+
 export PORT
 export WHITELISTED_DOMAINS
 

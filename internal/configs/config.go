@@ -34,6 +34,7 @@ type PriceFeedConfig struct {
 // AppConfig holds application-wide configuration
 type AppConfig struct {
 	Port               int             `json:"port"`
+	MetricsPort        int             `json:"metricsPort"`
 	PriceFeedConfig    PriceFeedConfig `json:"priceFeedConfig"`
 	WhitelistedDomains []string        `json:"whitelistedDomains"`
 }
@@ -157,6 +158,15 @@ func ValidateConfigs() error {
 			return fmt.Errorf("failed to parse PORT environment variable: %w", err)
 		}
 		appConfig.Port = port
+	}
+
+	if os.Getenv("METRICS_PORT") != "" {
+		metricsPort, err := strconv.Atoi(os.Getenv("METRICS_PORT"))
+		logger.Info("METRICS_PORT", "METRICS_PORT", metricsPort)
+		if err != nil {
+			return fmt.Errorf("failed to parse METRICS_PORT environment variable: %w", err)
+		}
+		appConfig.MetricsPort = metricsPort
 	}
 
 	if os.Getenv("WHITELISTED_DOMAINS") != "" {
