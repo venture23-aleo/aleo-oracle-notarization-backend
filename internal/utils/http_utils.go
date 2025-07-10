@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
 // WriteJsonSuccess writes a JSON success response with optional message and data
@@ -38,6 +39,7 @@ func WriteJsonError(w http.ResponseWriter, statusCode int, appError appErrors.Ap
 
 func GetRetryableHTTPClient(maxRetries int) *retryablehttp.Client {
 	retryClient := retryablehttp.NewClient()
+	retryClient.Logger = logger.Logger
 	retryClient.RetryWaitMin = 2 * time.Second
 	retryClient.RetryWaitMax = 3 * time.Second
 	retryClient.RetryMax = maxRetries
