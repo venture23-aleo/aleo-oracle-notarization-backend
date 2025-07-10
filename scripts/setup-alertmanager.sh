@@ -18,7 +18,7 @@ sudo useradd -s /sbin/nologin --system -g ${ALERT_USER} ${ALERT_USER} || true
 sudo mkdir -p ${CONFIG_DIR} ${DATA_DIR}
 sudo chown -R ${ALERT_USER}:${ALERT_USER} ${CONFIG_DIR} ${DATA_DIR}
 
-sudo cp ./scripts/inputs/alertmanager.yml ${CONFIG_DIR}/alertmanager.yml
+sudo cp $PWD/scripts/inputs/alertmanager.yml ${CONFIG_DIR}/alertmanager.yml
 
 # Download and extract Alertmanager
 cd /tmp
