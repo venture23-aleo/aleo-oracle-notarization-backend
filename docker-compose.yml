@@ -11,8 +11,8 @@ services:
         APP: ${APP}
     platform: linux/amd64
     ports:
-      - ${PORT}:${PORT}
-      - ${METRICS_PORT}:${METRICS_PORT}
+      - 8000:8000
+      - 8001:8001
     devices:
       - /dev/sgx_enclave:/dev/sgx_enclave
       - /dev/sgx_provision:/dev/sgx_provision

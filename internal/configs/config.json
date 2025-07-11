@@ -106,6 +106,7 @@
             ]
         }
     },
+    "logLevel": "INFO",
     "whitelistedDomains": [
         "iapi.kraken.com",
         "pro-api.coinmarketcap.com",

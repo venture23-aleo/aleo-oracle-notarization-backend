@@ -26,7 +26,7 @@ jobs:
           git checkout ${{ github.ref_name }}
           git pull
           # Update env
-          echo -e "APP=${{ vars.APP }}\nPORT=${{ vars.PORT }}\nMETRICS_PORT=${{ vars.METRICS_PORT }}\nTCB_STATUS=${{ vars.TCB_STATUS }}" > .env
+          echo -e "APP=${{ vars.APP }}" > .env
           sudo docker compose down
           # Remove all dangling (untagged) images to cleanup build artifacts
           sudo docker image prune -af
