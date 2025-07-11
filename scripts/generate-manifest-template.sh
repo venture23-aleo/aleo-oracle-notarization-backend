@@ -45,8 +45,6 @@ isvsvn = 1
 max_threads = 16
 enclave_size = "2G"
 remote_attestation = "dcap"
-sgx.stack_size = "1M"
-sgx.sigstack_size = "128K"
 
 [libos]
 entrypoint = "/$APP"
