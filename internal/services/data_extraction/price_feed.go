@@ -331,16 +331,16 @@ func parseXTResponse(data map[string]interface{}) (price, volume float64, err *a
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidItemFormat)
 	}
 
-	// XT API uses "c" for close price and "v" for volume
+	// XT API uses "c" for close price and "q" for base volume
 	priceStr, ok := item["c"].(string)
 	if !ok {
 		logger.Error("Invalid price format: ", "c", item["c"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidPriceFormat)
 	}
 
-	volumeStr, ok := item["v"].(string)
+	volumeStr, ok := item["q"].(string)
 	if !ok {
-		logger.Error("Invalid volume format: ", "v", item["v"])
+		logger.Error("Invalid volume format: ", "q", item["q"])
 		return 0, 0, appErrors.NewAppError(appErrors.ErrInvalidVolumeFormat)
 	}
 
