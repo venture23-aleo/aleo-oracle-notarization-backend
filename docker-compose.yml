@@ -16,7 +16,7 @@ services:
     devices:
       - /dev/sgx_enclave:/dev/sgx_enclave
       - /dev/sgx_provision:/dev/sgx_provision
-
+      
 secrets:
   gramine-private-key:
     file: ./secrets/enclave-key.pem

@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
@@ -208,6 +209,7 @@ func createSgxInfoFromReportData(reportData *SGXReportData) SgxInfo {
 		SecurityVersion: binary.LittleEndian.Uint16(reportData.SecurityVersion),
 		Debug:           reportData.Debug,
 		Aleo:            aleoInfo,
+		TCBStatus:       uint(configs.GetAppConfig().TCBStatus),
 	}
 
 	return sgxInfo

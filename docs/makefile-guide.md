@@ -23,6 +23,7 @@ A `Makefile` is provided to simplify the most common development, build, and dep
 - `make gen-key`         – Generate the enclave private key for SGX signing (Gramine tool).
 - `make gen-key-openssl` – Generate the enclave private key for SGX signing (OpenSSL).
 - `make generate-manifest-template` – Generate manifest template.
+- `make get-enclave-info` – Get enclave info to verify the enclave properties
 
 ### Utility
 - `make help`          – Show a summary of available make targets.

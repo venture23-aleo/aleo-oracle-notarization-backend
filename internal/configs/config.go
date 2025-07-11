@@ -37,6 +37,7 @@ type AppConfig struct {
 	MetricsPort        int             `json:"metricsPort"`
 	PriceFeedConfig    PriceFeedConfig `json:"priceFeedConfig"`
 	WhitelistedDomains []string        `json:"whitelistedDomains"`
+	TCBStatus          uint             `json:"tcbStatus"`
 }
 
 var (
@@ -172,6 +173,15 @@ func ValidateConfigs() error {
 	if os.Getenv("WHITELISTED_DOMAINS") != "" {
 		whitelistedDomains := strings.Split(os.Getenv("WHITELISTED_DOMAINS"), ",")
 		appConfig.WhitelistedDomains = whitelistedDomains
+	}
+
+	if os.Getenv("TCB_STATUS") != "" {
+		tcbStatus, err := strconv.Atoi(os.Getenv("TCB_STATUS"))
+		logger.Info("TCB_STATUS", "TCB_STATUS", tcbStatus)
+		if err != nil {
+			return fmt.Errorf("failed to parse TCB_STATUS environment variable: %w", err)
+		}
+		appConfig.TCBStatus = uint(tcbStatus)
 	}
 
 	logger.Info("Configuration validation passed", "exchange_count", len(exchangeConfigs), "symbol_count", len(symbolExchanges), "exchanges", strings.Join(exchangeKeys, ","), "symbols", strings.Join(symbolKeys, ","))
