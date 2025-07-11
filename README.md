@@ -43,11 +43,12 @@ For detailed documentation, see the [`docs/`](docs/) folder:
 
 The application contains config.json `internal/configs/config.json` files with default values. Overriding the default values will change the enclave measurement hash (MRENCLAVE).
 
-**PORT** - The port for the application.
-**WHITELISTED_DOMAINS** - The domains that are whitelisted for the attestation.
-**TCB_STATUS** - The status of the enclave's Trusted Computing Base (TCB) level.  This value is determined during remote attestation by submitting the generated SGX quote to a verifier. It reflects a dynamic evaluation based on the platform’s CPU microcode, firmware version, and patch level.
-**METRICS_PORT** - The port for the metrics server.
-**PRICE_FEED_CONFIG** - The configuration for the price feed.
+- **PORT** - The port for the application.
+- **WHITELISTED_DOMAINS** - The domains that are whitelisted for the attestation.
+- **TCB_STATUS** - The status of the enclave's Trusted Computing Base (TCB) level.  This value is determined during remote attestation by submitting the generated SGX quote to a verifier. It reflects a dynamic evaluation based on the platform’s CPU microcode, firmware version, and patch level.
+- **METRICS_PORT** - The port for the metrics server.
+- **PRICE_FEED_CONFIG** - The configuration for the price feed.
+- **LOG_LEVEL** - The level of logging for the application.
 
 ## 🛡️ Security
 
@@ -57,7 +58,16 @@ This application runs inside an Intel SGX enclave for enhanced security. The enc
 - **Data confidentiality** - Protects sensitive data from the host system
 - **Attestation** - Proves the application is running in a genuine enclave
 
-For security best practices and hardening guidelines, see [Security Documentation](docs/security_enhancements.md).
+## 🔄 Reproducibility
+
+To reproduce the enclave measurement hash (MRENCLAVE), you can run the following commands:
+
+```sh
+make gen-key
+make get-enclave-info
+``` 
+
+It will generate/update a `enclave_info.json` file in the root of the project. You can use this file to verify the enclave measurement hash (MRENCLAVE) of the running enclave. Ensure that the Intel SGX driver is loaded and the device files `sgx_enclave` and `sgx_provision` are accessible.  
 
 ## 🤝 Contributing
 
