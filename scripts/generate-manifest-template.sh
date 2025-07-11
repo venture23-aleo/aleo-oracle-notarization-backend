@@ -10,10 +10,6 @@ mkdir -p "$(dirname "$MANIFEST_TEMPLATE")"
 cat > $MANIFEST_TEMPLATE <<EOF
 
 [loader.env]
-PORT="${PORT}"
-WHITELISTED_DOMAINS="${WHITELISTED_DOMAINS}"
-METRICS_PORT="${METRICS_PORT}"
-TCB_STATUS="${TCB_STATUS}"
 
 [fs.root]
 type = "chroot"
@@ -49,6 +45,8 @@ isvsvn = 1
 max_threads = 16
 enclave_size = "2G"
 remote_attestation = "dcap"
+sgx.stack_size = "1M"
+sgx.sigstack_size = "128K"
 
 [libos]
 entrypoint = "/$APP"

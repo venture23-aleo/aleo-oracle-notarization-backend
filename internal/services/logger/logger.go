@@ -10,22 +10,23 @@ import (
 
 var Logger *slog.Logger
 
-func InitLogger() {
-	level := slog.LevelInfo // Default for production
-
-	// Override based on environment
-	if os.Getenv("LOG_LEVEL") == "DEBUG" {
-		level = slog.LevelDebug
-	} else if os.Getenv("LOG_LEVEL") == "WARN" {
-		level = slog.LevelWarn
-	} else if os.Getenv("LOG_LEVEL") == "ERROR" {
-		level = slog.LevelError
+func InitLogger(logLevel string) {
+	level := slog.LevelInfo
+	if logLevel != "" {
+		switch logLevel {
+		case "DEBUG":
+			level = slog.LevelDebug
+		case "WARN":
+			level = slog.LevelWarn
+		case "ERROR":
+			level = slog.LevelError
 	}
 
 	Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: level,
 	}))
 	// Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+}
 }
 
 // RequestIDKey is the context key for request ID

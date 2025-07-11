@@ -4,8 +4,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -37,7 +35,8 @@ type AppConfig struct {
 	MetricsPort        int             `json:"metricsPort"`
 	PriceFeedConfig    PriceFeedConfig `json:"priceFeedConfig"`
 	WhitelistedDomains []string        `json:"whitelistedDomains"`
-	TCBStatus          uint             `json:"tcbStatus"`
+	TCBStatus          uint            `json:"tcbStatus"`
+	LogLevel           string          `json:"logLevel"`
 }
 
 var (
@@ -97,7 +96,7 @@ func ValidateConfigs() error {
 	var errors []string
 
 	// Load and validate app config
-	appConf, err := GetAppConfigWithError()
+	_, err := GetAppConfigWithError()
 	if err != nil {
 		errors = append(errors, fmt.Sprintf("Failed to load app config: %v", err))
 	} else if appConfig.WhitelistedDomains == nil {
@@ -106,8 +105,8 @@ func ValidateConfigs() error {
 
 	var exchangeKeys []string
 	var symbolKeys []string
-	exchangeConfigs := appConf.PriceFeedConfig.Exchanges
-	symbolExchanges := appConf.PriceFeedConfig.SymbolExchanges
+	exchangeConfigs := appConfig.PriceFeedConfig.Exchanges
+	symbolExchanges := appConfig.PriceFeedConfig.SymbolExchanges
 
 	if len(exchangeConfigs) == 0 {
 		errors = append(errors, "No exchange configurations found")
@@ -150,38 +149,6 @@ func ValidateConfigs() error {
 	// Return combined error if any validation failed
 	if len(errors) > 0 {
 		return fmt.Errorf("configuration validation failed:\n%s", strings.Join(errors, "\n"))
-	}
-
-	if os.Getenv("PORT") != "" {
-		port, err := strconv.Atoi(os.Getenv("PORT"))
-		logger.Info("PORT", "PORT", port)
-		if err != nil {
-			return fmt.Errorf("failed to parse PORT environment variable: %w", err)
-		}
-		appConfig.Port = port
-	}
-
-	if os.Getenv("METRICS_PORT") != "" {
-		metricsPort, err := strconv.Atoi(os.Getenv("METRICS_PORT"))
-		logger.Info("METRICS_PORT", "METRICS_PORT", metricsPort)
-		if err != nil {
-			return fmt.Errorf("failed to parse METRICS_PORT environment variable: %w", err)
-		}
-		appConfig.MetricsPort = metricsPort
-	}
-
-	if os.Getenv("WHITELISTED_DOMAINS") != "" {
-		whitelistedDomains := strings.Split(os.Getenv("WHITELISTED_DOMAINS"), ",")
-		appConfig.WhitelistedDomains = whitelistedDomains
-	}
-
-	if os.Getenv("TCB_STATUS") != "" {
-		tcbStatus, err := strconv.Atoi(os.Getenv("TCB_STATUS"))
-		logger.Info("TCB_STATUS", "TCB_STATUS", tcbStatus)
-		if err != nil {
-			return fmt.Errorf("failed to parse TCB_STATUS environment variable: %w", err)
-		}
-		appConfig.TCBStatus = uint(tcbStatus)
 	}
 
 	logger.Info("Configuration validation passed", "exchange_count", len(exchangeConfigs), "symbol_count", len(symbolExchanges), "exchanges", strings.Join(exchangeKeys, ","), "symbols", strings.Join(symbolKeys, ","))

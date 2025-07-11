@@ -7,6 +7,8 @@ ifeq ($(wildcard .env),)
     $(shell touch .env)
 endif
 
+export APP := aleo-oracle-notarization-backend
+
 include .env
 export
 
@@ -26,20 +28,6 @@ MANIFEST_TEMPLATE="build/inputs/${APP}.manifest.template"
 SGX_CONF_FILE="build/inputs/sgx_default_qcnl.conf"
 
 export COMPOSE_BAKE=true
-export APP := aleo-oracle-notarization-backend
-
-ifeq ($(PORT),)
-	PORT := 8000
-endif
-
-ifeq ($(METRICS_PORT),)
-	METRICS_PORT := 8001
-endif
-
-export METRICS_PORT
-
-export PORT
-export WHITELISTED_DOMAINS
 
 # Default target
 .PHONY: all

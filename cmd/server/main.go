@@ -17,7 +17,11 @@ import (
 
 func main() {
 	// 1. Initialize logger
-	logger.InitLogger()
+	appConfig, err := configs.GetAppConfigWithError()
+	if err != nil {
+		log.Fatalf("Failed to get app config: %v", err)
+	}
+	logger.InitLogger(appConfig.LogLevel)
 
 	// 2. Validate configuration at startup
 	logger.Debug("Validating configuration...")

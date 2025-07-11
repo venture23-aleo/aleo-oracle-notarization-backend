@@ -41,19 +41,13 @@ For detailed documentation, see the [`docs/`](docs/) folder:
 
 ## 🔧 Configuration
 
-The application contains config.json files with default values. If you want to override the default values, you can create a `.env` file with your settings:
-
-```env
-PORT=8000
-WHITELISTED_DOMAINS=https://api.coingecko.com,https://api.binance.com
-TCB_STATUS=5
-METRICS_PORT=8001
-```
+The application contains config.json `internal/configs/config.json` files with default values. Overriding the default values will change the enclave measurement hash (MRENCLAVE).
 
 **PORT** - The port for the application.
 **WHITELISTED_DOMAINS** - The domains that are whitelisted for the attestation.
 **TCB_STATUS** - The status of the enclave's Trusted Computing Base (TCB) level.  This value is determined during remote attestation by submitting the generated SGX quote to a verifier. It reflects a dynamic evaluation based on the platform’s CPU microcode, firmware version, and patch level.
 **METRICS_PORT** - The port for the metrics server.
+**PRICE_FEED_CONFIG** - The configuration for the price feed.
 
 ## 🛡️ Security
 
