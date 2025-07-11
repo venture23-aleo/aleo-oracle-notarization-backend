@@ -1,0 +1,14 @@
+{
+    "mr_signer": "916c411ae40a542d7c241b28a38de610818ff653dd57641496694faffb1c7d22",
+    "mr_enclave": "29a3f764c9956d94f142d2f9f86afbf9fac80106c9c4486a801152d7220ad274",
+    "isv_prod_id": 1,
+    "isv_svn": 1,
+    "attribute_flags": "0x4",
+    "attribute_xfrms": "0x3",
+    "misc_select": "0x0",
+    "attribute_flags_mask": "0xffffffffffffffff",
+    "attribute_xfrm_mask": "0xfffffffffff9ff1b",
+    "misc_mask": "0xffffffff",
+    "date": "2025-07-11",
+    "debug_enclave": false
+}

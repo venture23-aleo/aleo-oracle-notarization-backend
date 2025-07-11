@@ -105,21 +105,25 @@ generate-manifest-template:
 	@scripts/generate-manifest-template.sh $(APP) $(MANIFEST_TEMPLATE) $(LD_LIBRARY_PATH)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Get enclave info
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: get-enclave-info
+get-enclave-info: docker-build
+	docker compose run --volume ./enclave_info.json/:/app/enclave_info.json --entrypoint /bin/bash --rm $(APP) -c "gramine-sgx-sigstruct-view /app/${APP}.sig -v --output-format json > /app/enclave_info.json"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Docker
 # ─────────────────────────────────────────────────────────────────────────────
-.PHONY: docker-build
-docker-build: generate-manifest-template
-	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose build $(APP)
-	docker tag $(APP):latest $(APP):$(COMMIT)
-	
 # Docker compose flags (can be overridden from command line)
 DOCKER_FLAGS ?= -d
 DOCKER_COMPOSE_FILE ?= docker-compose.yml
 DOCKER_SERVICES ?= $(APP)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Docker
-# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: docker-build
+docker-build: generate-manifest-template
+	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose build $(APP)
+	docker tag $(APP):latest $(APP):$(COMMIT)
+
 .PHONY: docker-run
 docker-run: docker-build
 	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) $(DOCKER_FLAGS)
@@ -247,6 +251,7 @@ help:
 	@echo
 	@echo "SGX/Enclave Targets:"
 	@echo "  generate-manifest-template  Generate manifest template"
+	@echo "  get-enclave-info            Get enclave info"
 	@echo "  gen-key                     Generate enclave private key (Gramine tool)"
 	@echo "  gen-key-openssl             Generate enclave private key (OpenSSL)"
 	@echo

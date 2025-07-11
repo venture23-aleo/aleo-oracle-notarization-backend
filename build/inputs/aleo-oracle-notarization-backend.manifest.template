@@ -2,6 +2,8 @@
 [loader.env]
 PORT="8000"
 WHITELISTED_DOMAINS=""
+METRICS_PORT="8001"
+TCB_STATUS=""
 
 [fs.root]
 type = "chroot"

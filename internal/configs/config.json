@@ -1,6 +1,7 @@
 {
     "port": 8000,
     "metricsPort": 8001,
+    "tcbStatus": 5,
     "priceFeedConfig": {
         "exchanges": {
             "binance": {

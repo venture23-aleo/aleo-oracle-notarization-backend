@@ -40,8 +40,7 @@ RUN chmod +x entrypoint.sh
 
 RUN --mount=type=secret,id=gramine-private-key,target=/tmp/private-key.pem \
     gramine-manifest ${APP}.manifest.template ${APP}.manifest && \
-    gramine-sgx-sign --manifest ${APP}.manifest --key /tmp/private-key.pem --date 0000-00-00 --output ${APP}.manifest.sgx
-
+    gramine-sgx-sign --manifest ${APP}.manifest --key /tmp/private-key.pem --output ${APP}.manifest.sgx
 ENV APP=${APP}
 
 ENTRYPOINT ["./entrypoint.sh"]
