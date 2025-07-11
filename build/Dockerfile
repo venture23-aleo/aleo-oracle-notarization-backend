@@ -30,17 +30,24 @@ WORKDIR /app
 
 COPY --from=builder /app/${APP} .
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libsgx-dcap-default-qpl && rm -rf /var/lib/apt/lists/*
+# RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libsgx-dcap-default-qpl && rm -rf /var/lib/apt/lists/*
 
 # Copy configuration files
+# COPY build/inputs/static_hosts build/inputs/static_resolv.conf build/inputs/entrypoint.sh build/inputs/${APP}.manifest.template ./
+
+COPY build/inputs/* ./
+
+RUN DEBIAN_FRONTEND=noninteractive dpkg -i /app/libsgx-dcap-default-qpl_1.23.100.0-jammy1_amd64.deb
+
 COPY build/inputs/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
-COPY build/inputs/static_hosts build/inputs/static_resolv.conf build/inputs/entrypoint.sh build/inputs/${APP}.manifest.template ./
+
 
 RUN chmod +x entrypoint.sh
 
 RUN --mount=type=secret,id=gramine-private-key,target=/tmp/private-key.pem \
     gramine-manifest ${APP}.manifest.template ${APP}.manifest && \
     gramine-sgx-sign --manifest ${APP}.manifest --key /tmp/private-key.pem --output ${APP}.manifest.sgx
+
 ENV APP=${APP}
 
 ENTRYPOINT ["./entrypoint.sh"]

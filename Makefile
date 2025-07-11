@@ -109,7 +109,7 @@ generate-manifest-template:
 # ─────────────────────────────────────────────────────────────────────────────
 .PHONY: get-enclave-info
 get-enclave-info: docker-build
-	docker compose run --volume ./enclave_info.json/:/app/enclave_info.json --entrypoint /bin/bash --rm $(APP) -c "gramine-sgx-sigstruct-view /app/${APP}.sig -v --output-format json > /app/enclave_info.json"
+	docker compose run --volume "$(shell pwd)/enclave_info.json/:/app/enclave_info.json" --entrypoint /bin/bash --rm $(APP) -c "gramine-sgx-sigstruct-view /app/${APP}.sig -v --output-format json > /app/enclave_info.json"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Docker
