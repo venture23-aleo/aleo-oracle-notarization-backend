@@ -8,7 +8,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
@@ -73,7 +72,6 @@ type SgxInfo struct {
 	SignerID        string      `json:"signerId"`        // The signer ID for the enclave. For SGX enclaves, this is the MRSIGNER value.
 	ProductID       string      `json:"productId"`       // The Product ID for the enclave. For SGX enclaves, this is the ISVPRODID value.
 	Aleo            SgxAleoInfo `json:"aleo"`            // Some of the SGX report values encoded for Aleo.
-	TCBStatus       uint        `json:"tcbStatus"`       // The status of the enclave's TCB level.
 }
 
 // EnclaveInfoResponse is the information about the enclave.
@@ -209,7 +207,6 @@ func createSgxInfoFromReportData(reportData *SGXReportData) SgxInfo {
 		SecurityVersion: binary.LittleEndian.Uint16(reportData.SecurityVersion),
 		Debug:           reportData.Debug,
 		Aleo:            aleoInfo,
-		TCBStatus:       configs.GetAppConfig().TCBStatus,
 	}
 
 	return sgxInfo
