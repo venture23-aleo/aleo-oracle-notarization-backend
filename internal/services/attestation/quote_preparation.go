@@ -37,12 +37,12 @@ func PrepareOracleUserData(statusCode int, attestationData string, timestamp uin
 	}
 
 	switch attestationRequest.Url {
-	case constants.PriceFeedAleoUrl:
-		userDataProof[0] = 8
-	case constants.PriceFeedBtcUrl:
-		userDataProof[0] = 12
-	case constants.PriceFeedEthUrl:
-		userDataProof[0] = 11
+	case constants.PRICE_FEED_ALEO_URL:
+		userDataProof[0] = constants.ALEO_TOKEN_ID
+	case constants.PRICE_FEED_BTC_URL:
+		userDataProof[0] = constants.BTC_TOKEN_ID
+	case constants.PRICE_FEED_ETH_URL:
+		userDataProof[0] = constants.ETH_TOKEN_ID
 	}
 
 	// C0 - C7 Chunks - Format the proof data.
@@ -124,18 +124,18 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 	timestampedHashInputChunk2 := new(big.Int).SetBytes(utils.ReverseBytes(timestampedHashInput[16:32]))
 
 	// Create the timestamped format message - Format the timestamped hash input.
-	timesampedFormatMessage := fmt.Sprintf("{ request_hash: %su128, attestation_timestamp: %su128 }", timestampedHashInputChunk1, timestampedHashInputChunk2)
+	timestampedFormatMessage := fmt.Sprintf("{ request_hash: %su128, attestation_timestamp: %su128 }", timestampedHashInputChunk1, timestampedHashInputChunk2)
 
-	// Create the timestamped hash - Hash the timestamped format message.
-	timestampedHash, hashError := aleoContext.GetSession().HashMessageToString([]byte(timesampedFormatMessage))
+	// Create the timestamped request hash - Hash the timestamped format message.
+	timestampedRequestHash, hashError := aleoContext.GetSession().HashMessageToString([]byte(timestampedFormatMessage))
 
 	// Check if the error is not nil.
 	if hashError != nil {
-		logger.Error("Failed to create timestamped hash: ", "error", err)
-		return "", appErrors.NewAppError(appErrors.ErrCreatingTimestampedHash)
+		logger.Error("Failed to create timestamped request hash: ", "error", err)
+		return "", appErrors.NewAppError(appErrors.ErrCreatingTimestampedRequestHash)
 	}
 
-	return timestampedHash, nil
+	return timestampedRequestHash, nil
 }
 
 // PrepareDataForQuoteGeneration prepares all the data needed for quote generation

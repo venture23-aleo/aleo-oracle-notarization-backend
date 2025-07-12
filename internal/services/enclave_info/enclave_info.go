@@ -8,8 +8,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 
@@ -126,8 +126,8 @@ func loadSgxInfo() (SgxInfo, *appErrors.AppError) {
 // getSgxReport gets the SGX report.
 func getSgxReport() ([]byte, *appErrors.AppError) {
 
-	attestation.GetQuoteLock().Lock()
-	defer attestation.GetQuoteLock().Unlock()
+	common.GetQuoteLock().Lock()
+	defer common.GetQuoteLock().Unlock()
 
 	// Read the target info from target info path
 	targetInfo, err := os.ReadFile(constants.GRAMINE_PATHS.MY_TARGET_INFO_PATH)

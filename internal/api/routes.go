@@ -23,6 +23,8 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /whitelist", handlers.GetWhiteListedDomains)
 
 	// Register the health check route.
+	mux.HandleFunc("GET /health", handlers.GetHealthCheck)
+
 	mux.HandleFunc("GET /", handlers.GetHealthCheck)
 }
 
