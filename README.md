@@ -45,10 +45,11 @@ The application contains config.json `internal/configs/config.json` files with d
 
 - **PORT** - The port for the application.
 - **WHITELISTED_DOMAINS** - The domains that are whitelisted for the attestation.
-- **TCB_STATUS** - The status of the enclave's Trusted Computing Base (TCB) level.  This value is determined during remote attestation by submitting the generated SGX quote to a verifier. It reflects a dynamic evaluation based on the platform’s CPU microcode, firmware version, and patch level.
+- **TCB_STATUS** - The status of the enclave's Trusted Computing Base (TCB) level.  This value is optional and determined during remote attestation by submitting the generated SGX quote to a verifier. It reflects a dynamic evaluation based on the platform’s CPU microcode, firmware version, and patch level. If not provided, the TCB status will be set to 5.
 - **METRICS_PORT** - The port for the metrics server.
 - **PRICE_FEED_CONFIG** - The configuration for the price feed.
 - **LOG_LEVEL** - The level of logging for the application.
+- **VERIFIER_ENDPOINT** - The endpoint for the verifier. This is used to get the TCB status of the enclave.
 
 ## 🛡️ Security
 

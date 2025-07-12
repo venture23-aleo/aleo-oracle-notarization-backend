@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
@@ -37,6 +38,7 @@ type AppConfig struct {
 	WhitelistedDomains []string        `json:"whitelistedDomains"`
 	TCBStatus          uint            `json:"tcbStatus"`
 	LogLevel           string          `json:"logLevel"`
+	VerifierEndpoint   string          `json:"verifierEndpoint"`
 }
 
 var (
@@ -96,9 +98,9 @@ func ValidateConfigs() error {
 	var errors []string
 
 	// Load and validate app config
-	_, err := GetAppConfigWithError()
-	if err != nil {
-		errors = append(errors, fmt.Sprintf("Failed to load app config: %v", err))
+	_, configErr := GetAppConfigWithError()
+	if configErr != nil {
+		errors = append(errors, fmt.Sprintf("Failed to load app config: %v", configErr))
 	} else if appConfig.WhitelistedDomains == nil {
 		errors = append(errors, "No whitelisted domains found in app config")
 	}
@@ -144,6 +146,16 @@ func ValidateConfigs() error {
 			}
 		}
 		symbolKeys = append(symbolKeys, symbol)
+	}
+
+	// Get TCB Status - make this optional
+	tcbStatus, tcbErr := attestation.GetTCBStatus(appConfig.VerifierEndpoint)
+	if tcbErr != nil {
+		logger.Warn("Failed to get TCB status - continuing without TCB validation", "error", tcbErr, "verifier_endpoint", appConfig.VerifierEndpoint)
+		// Don't add this to errors since it's optional
+	} else {
+		appConfig.TCBStatus = tcbStatus
+		logger.Info("TCB status retrieved successfully", "tcb_status", tcbStatus)
 	}
 
 	// Return combined error if any validation failed

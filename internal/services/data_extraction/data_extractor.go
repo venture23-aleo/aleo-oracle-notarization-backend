@@ -84,11 +84,10 @@ func makeHTTPRequest(ctx context.Context, attestationRequest attestation.Attesta
 	// Set the status code.
 	statusCode = resp.StatusCode
 
-	// Check if the status code is an error code.
-	if resp.StatusCode >= 400 && resp.StatusCode < 600 {
-		reqLogger.Error("Error while fetching data", "status_code", resp.StatusCode, "url", url)
+	if statusCode != http.StatusOK {
+		reqLogger.Error("Error while fetching data", "status_code", statusCode, "url", url)
 		metrics.RecordError("http_error_response", "data_extractor")
-		return resp, appErrors.NewAppErrorWithResponseStatus(appErrors.ErrFetchingData, resp.StatusCode)
+		return resp, appErrors.NewAppErrorWithResponseStatus(appErrors.ErrFetchingData, statusCode)
 	}
 
 	return resp, nil

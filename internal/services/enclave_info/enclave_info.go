@@ -209,7 +209,7 @@ func createSgxInfoFromReportData(reportData *SGXReportData) SgxInfo {
 		SecurityVersion: binary.LittleEndian.Uint16(reportData.SecurityVersion),
 		Debug:           reportData.Debug,
 		Aleo:            aleoInfo,
-		TCBStatus:       uint(configs.GetAppConfig().TCBStatus),
+		TCBStatus:       configs.GetAppConfig().TCBStatus,
 	}
 
 	return sgxInfo

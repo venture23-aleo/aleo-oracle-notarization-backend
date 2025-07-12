@@ -141,5 +141,6 @@
         "xt.com",
         "api.gateio.ws",
         "api.mexc.com"
-    ]
+    ],
+    "verifierEndpoint": "https://aleorclvrfy.venture23.xyz/"
 }

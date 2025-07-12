@@ -65,6 +65,7 @@ var (
 	ErrFormattingQuote            = AppError{3011, "attestation error: failed to format quote", "", 0, ""}
 	ErrReportHashing              = AppError{3012, "attestation error: failed to hash the oracle report", "", 0, ""}
 	ErrGeneratingSignature        = AppError{3013, "attestation error: failed to generate signature", "", 0, ""}
+	ErrDecodingQuote              = AppError{3014, "attestation error: failed to decode quote", "", 0, ""}
 
 	// =============================================================================
 	// DATA EXTRACTION ERRORS (4000-4999)

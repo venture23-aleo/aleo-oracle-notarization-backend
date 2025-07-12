@@ -4,13 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
-	"net/url"
 	"strings"
-
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 )
 
 // getPadding gets the padding for the array.
@@ -37,54 +32,6 @@ func PadStringToLength(str string, paddingChar byte, targetLength int) string {
 
 	// Pad the string to the target length.
 	return str + strings.Repeat(string(paddingChar), targetLength-len(str))
-}
-
-// Checks if a header name is in the list of allowed headers.
-func IsAcceptedHeader(header string) bool {
-	for _, h := range constants.ALLOWED_HEADERS {
-		if strings.EqualFold(h, header) {
-			return true
-		}
-	}
-	return false
-}
-
-// Masks unaccepted headers by replacing their values with "******"
-func MaskUnacceptedHeaders(headers map[string]string) map[string]string {
-	finalHeaders := make(map[string]string)
-	for headerName, headerValue := range headers {
-		if !IsAcceptedHeader(headerName) {
-			finalHeaders[headerName] = "******"
-		} else {
-			finalHeaders[headerName] = headerValue
-		}
-	}
-	return finalHeaders
-}
-
-// Checks if a domain is in the list of whitelisted domains.
-func IsAcceptedDomain(endpoint string) bool {
-	if endpoint == constants.PriceFeedBtcUrl || endpoint == constants.PriceFeedEthUrl || endpoint == constants.PriceFeedAleoUrl {
-		return true
-	}
-
-	var urlToParse string
-	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
-		urlToParse = endpoint
-	} else {
-		urlToParse = fmt.Sprintf("https://%s", endpoint)
-	}
-
-	parsedURL, err := url.Parse(urlToParse)
-	if err != nil {
-		return false
-	}
-	for _, domainName := range configs.GetWhitelistedDomains() {
-		if domainName == parsedURL.Hostname() {
-			return true
-		}
-	}
-	return false
 }
 
 // Reverses the bytes of a byte slice.
