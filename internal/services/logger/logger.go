@@ -20,13 +20,12 @@ func InitLogger(logLevel string) {
 			level = slog.LevelWarn
 		case "ERROR":
 			level = slog.LevelError
+		}
 	}
-
 	Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: level,
 	}))
 	// Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-}
 }
 
 // RequestIDKey is the context key for request ID

@@ -2,15 +2,23 @@ package attestation
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"sync"
+	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
 
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 )
@@ -73,8 +81,18 @@ type DebugAttestationResponse struct {
 	AttestationData string `json:"attestationData"`
 }
 
+type QuoteDecodeResponse struct {
+	Data            string `json:"data"`
+	SecurityVersion uint   `json:"securityVersion"`
+	Debug           bool   `json:"debug"`
+	UniqueID        string `json:"uniqueId"`
+	SignerID        string `json:"signerId"`
+	ProductID       string `json:"productId"`
+	TCBStatus       uint   `json:"tcbStatus"`
+}
+
 // Validate validates the attestation request.
-func (ar *AttestationRequest) Validate() *appErrors.AppError {
+func (ar *AttestationRequest) Validate(whitelistedDomains []string) *appErrors.AppError {
 
 	// Check if the URL is empty.
 	if ar.Url == "" {
@@ -136,7 +154,7 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 	}
 
 	// Check if the domain is accepted.
-	if !utils.IsAcceptedDomain(ar.Url) {
+	if !isAcceptedDomain(ar.Url, whitelistedDomains) {
 		return appErrors.NewAppError(appErrors.ErrUnacceptedDomain)
 	}
 
@@ -147,13 +165,48 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 func (ar *AttestationRequest) MaskUnacceptedHeaders() {
 	finalHeaders := make(map[string]string)
 	for headerName, headerValue := range ar.RequestHeaders {
-		if !utils.IsAcceptedHeader(headerName) {
+		if !isAcceptedHeader(headerName) {
 			finalHeaders[headerName] = "******"
 		} else {
 			finalHeaders[headerName] = headerValue
 		}
 	}
 	ar.RequestHeaders = finalHeaders
+}
+
+// isAcceptedHeader checks if a header name is in the list of allowed headers.
+func isAcceptedHeader(header string) bool {
+	for _, h := range constants.ALLOWED_HEADERS {
+		if strings.EqualFold(h, header) {
+			return true
+		}
+	}
+	return false
+}
+
+// isAcceptedDomain checks if a domain is in the list of whitelisted domains.
+func isAcceptedDomain(endpoint string, whitelistedDomains []string) bool {
+	if endpoint == constants.PriceFeedBtcUrl || endpoint == constants.PriceFeedEthUrl || endpoint == constants.PriceFeedAleoUrl {
+		return true
+	}
+
+	var urlToParse string
+	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
+		urlToParse = endpoint
+	} else {
+		urlToParse = "https://" + endpoint
+	}
+
+	parsedURL, err := url.Parse(urlToParse)
+	if err != nil {
+		return false
+	}
+	for _, domainName := range whitelistedDomains {
+		if domainName == parsedURL.Hostname() {
+			return true
+		}
+	}
+	return false
 }
 
 // wrapRawQuoteAsOpenEnclaveEvidence wraps the raw quote as Open Enclave evidence.
@@ -225,4 +278,87 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 
 	// Return the final quote.
 	return finalQuote, nil
+}
+
+func DecodeQuote(verifierEndpoint string, quote []byte) (QuoteDecodeResponse, *appErrors.AppError) {
+
+	// Create the client.
+	retryClient := retryablehttp.NewClient()
+	retryClient.Logger = logger.Logger
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 3 * time.Second
+	retryClient.RetryMax = 3
+
+	// Create the request body as JSON
+	requestBody := map[string]string{
+		"quote": base64.StdEncoding.EncodeToString(quote),
+	}
+
+	// Marshal the request body to JSON
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		logger.Error("Error while marshaling request body: ", "error", err)
+		return QuoteDecodeResponse{}, appErrors.NewAppError(appErrors.ErrDecodingQuote)
+	}
+
+	fullURL := fmt.Sprintf("%s/decode_quote", verifierEndpoint)
+	logger.Debug("Sending quote decode request", "url", fullURL, "quote_length", len(quote))
+
+	result, err := retryClient.Post(fullURL, "application/json", bytes.NewReader(jsonBody))
+
+	if err != nil {
+		logger.Error("Error while making HTTP request: ", "error", err, "url", fullURL)
+		return QuoteDecodeResponse{}, appErrors.NewAppError(appErrors.ErrDecodingQuote)
+	}
+
+	defer result.Body.Close()
+
+	// Log response status
+	logger.Debug("Received response", "status_code", result.StatusCode, "url", fullURL)
+
+	// Check if response status is not successful
+	if result.StatusCode != http.StatusOK {
+		// Read the error response body
+		errorBody, _ := io.ReadAll(result.Body)
+		logger.Error("HTTP request failed", "status_code", result.StatusCode, "error_body", string(errorBody), "url", fullURL)
+		return QuoteDecodeResponse{}, appErrors.NewAppError(appErrors.ErrDecodingQuote)
+	}
+
+	// Read the response body
+	responseBody, err := io.ReadAll(result.Body)
+	if err != nil {
+		logger.Error("Error while reading response body: ", "error", err, "url", fullURL)
+		return QuoteDecodeResponse{}, appErrors.NewAppError(appErrors.ErrDecodingQuote)
+	}
+
+	// Check if response body is empty
+	if len(responseBody) == 0 {
+		logger.Error("Empty response body received", "url", fullURL)
+		return QuoteDecodeResponse{}, appErrors.NewAppError(appErrors.ErrDecodingQuote)
+	}
+
+	quoteDecodeResponse := QuoteDecodeResponse{}
+
+	err = json.Unmarshal(responseBody, &quoteDecodeResponse)
+	if err != nil {
+		logger.Error("Error while unmarshaling response: ", "error", err, "response_body", string(responseBody), "url", fullURL)
+		return QuoteDecodeResponse{}, appErrors.NewAppError(appErrors.ErrDecodingQuote)
+	}
+
+	return quoteDecodeResponse, nil
+}
+
+func GetTCBStatus(verifierEndpoint string) (uint, *appErrors.AppError) {
+
+	quote, err := GenerateQuote(nil)
+	if err != nil {
+		return 0, appErrors.NewAppError(appErrors.ErrGeneratingQuote)
+	}
+
+	quoteDecodeResponse, err := DecodeQuote(verifierEndpoint, quote)
+	if err != nil {
+		return 0, appErrors.NewAppError(appErrors.ErrDecodingQuote)
+	}
+
+	return quoteDecodeResponse.TCBStatus, nil
 }
