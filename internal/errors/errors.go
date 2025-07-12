@@ -52,20 +52,20 @@ var (
 	// =============================================================================
 	// ATTESTATION ERRORS (3000-3999)
 	// =============================================================================
-	ErrPreparingOracleData        = AppError{3001, "attestation error: failed to prepare oracle data", "", 0, ""}
-	ErrMessageHashing             = AppError{3002, "attestation error: failed to prepare hash message for oracle data", "", 0, ""}
-	ErrPreparingProofData         = AppError{3003, "attestation error: failed to prepare proof data", "", 0, ""}
-	ErrFormattingProofData        = AppError{3004, "attestation error: failed to format proof data", "", 0, ""}
-	ErrGeneratingAttestationHash  = AppError{3005, "attestation error: failed to generate to attestation hash", "", 0, ""}
-	ErrPreparingEncodedProof      = AppError{3006, "attestation error: failed to prepare encoded request proof", "", 0, ""}
-	ErrFormattingEncodedProofData = AppError{3007, "attestation error: failed to format encoded proof data", "", 0, ""}
-	ErrUserDataTooShort           = AppError{3008, "attestation error: userData too short for expected zeroing", "", 0, ""}
-	ErrCreatingRequestHash        = AppError{3009, "attestation error: failed to create request hash", "", 0, ""}
-	ErrCreatingTimestampedHash    = AppError{3010, "attestation error: failed to create timestamped hash", "", 0, ""}
-	ErrFormattingQuote            = AppError{3011, "attestation error: failed to format quote", "", 0, ""}
-	ErrReportHashing              = AppError{3012, "attestation error: failed to hash the oracle report", "", 0, ""}
-	ErrGeneratingSignature        = AppError{3013, "attestation error: failed to generate signature", "", 0, ""}
-	ErrDecodingQuote              = AppError{3014, "attestation error: failed to decode quote", "", 0, ""}
+	ErrPreparingOracleData            = AppError{3001, "attestation error: failed to prepare oracle data", "", 0, ""}
+	ErrMessageHashing                 = AppError{3002, "attestation error: failed to prepare hash message for oracle data", "", 0, ""}
+	ErrPreparingProofData             = AppError{3003, "attestation error: failed to prepare proof data", "", 0, ""}
+	ErrFormattingProofData            = AppError{3004, "attestation error: failed to format proof data", "", 0, ""}
+	ErrGeneratingAttestationHash      = AppError{3005, "attestation error: failed to generate to attestation hash", "", 0, ""}
+	ErrPreparingEncodedProof          = AppError{3006, "attestation error: failed to prepare encoded request proof", "", 0, ""}
+	ErrFormattingEncodedProofData     = AppError{3007, "attestation error: failed to format encoded proof data", "", 0, ""}
+	ErrUserDataTooShort               = AppError{3008, "attestation error: userData too short for expected zeroing", "", 0, ""}
+	ErrCreatingRequestHash            = AppError{3009, "attestation error: failed to create request hash", "", 0, ""}
+	ErrCreatingTimestampedRequestHash = AppError{3010, "attestation error: failed to create timestamped request hash", "", 0, ""}
+	ErrFormattingQuote                = AppError{3011, "attestation error: failed to format quote", "", 0, ""}
+	ErrReportHashing                  = AppError{3012, "attestation error: failed to hash the oracle report", "", 0, ""}
+	ErrGeneratingSignature            = AppError{3013, "attestation error: failed to generate signature", "", 0, ""}
+	ErrDecodingQuote                  = AppError{3014, "attestation error: failed to decode quote", "", 0, ""}
 
 	// =============================================================================
 	// DATA EXTRACTION ERRORS (4000-4999)
@@ -83,6 +83,7 @@ var (
 	ErrExpectedArray           = AppError{4011, "data extraction error: expected array at key", "", 0, ""}
 	ErrIndexOutOfBound         = AppError{4012, "data extraction error: index out of bounds", "", 0, ""}
 	ErrUnsupportedPriceFeedURL = AppError{4013, "data extraction error: unsupported price feed URL", "", 0, ""}
+	ErrAttestationDataTooLarge = AppError{4014, "data extraction error: attestation data too large", "", 0, ""}
 
 	// =============================================================================
 	// ENCODING ERRORS (5000-5999)

@@ -3,11 +3,13 @@ package data_extraction
 import (
 	"context"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
+	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
@@ -135,9 +137,9 @@ func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestatio
 	reqLogger := logger.FromContext(ctx)
 
 	// Check if the URL is a price feed request
-	if attestationRequest.Url == constants.PriceFeedBtcUrl ||
-		attestationRequest.Url == constants.PriceFeedEthUrl ||
-		attestationRequest.Url == constants.PriceFeedAleoUrl {
+	if attestationRequest.Url == constants.PRICE_FEED_BTC_URL ||
+		attestationRequest.Url == constants.PRICE_FEED_ETH_URL ||
+		attestationRequest.Url == constants.PRICE_FEED_ALEO_URL {
 		reqLogger.Debug("Processing price feed request", "url", attestationRequest.Url)
 		asset := extractAssetFromPriceFeedURL(attestationRequest.Url)
 
@@ -169,22 +171,38 @@ func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestatio
 		// Return an error for invalid response format
 		reqLogger.Error("Invalid response format", "format", attestationRequest.ResponseFormat)
 		metrics.RecordError("invalid_response_format", "data_extractor")
-		return ExtractDataResult{
-			StatusCode: http.StatusNotFound,
-		}, appErrors.NewAppError(appErrors.ErrInvalidResponseFormat)
+		return ExtractDataResult{}, appErrors.NewAppError(appErrors.ErrInvalidResponseFormat)
 	}
 }
 
 // extractAssetFromPriceFeedURL extracts the asset name from price feed URL
 func extractAssetFromPriceFeedURL(url string) string {
 	switch url {
-	case constants.PriceFeedBtcUrl:
+	case constants.PRICE_FEED_BTC_URL:
 		return "btc"
-	case constants.PriceFeedEthUrl:
+	case constants.PRICE_FEED_ETH_URL:
 		return "eth"
-	case constants.PriceFeedAleoUrl:
+	case constants.PRICE_FEED_ALEO_URL:
 		return "aleo"
 	default:
 		return "unknown"
 	}
+}
+
+func (e *ExtractDataResult) ValidateAttestationData(encodingOptions string) *appErrors.AppError {
+	switch encodingOptions {
+	case encoding.ENCODING_OPTION_FLOAT:
+		if len(e.AttestationData) > math.MaxUint8 {
+			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
+		}
+	case encoding.ENCODING_OPTION_INT:
+		if len(e.AttestationData) > math.MaxUint8 {
+			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
+		}
+	case encoding.ENCODING_OPTION_STRING:
+		if len(e.AttestationData) > constants.ATTESTATION_DATA_SIZE_LIMIT {
+			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
+		}
+	}
+	return nil
 }

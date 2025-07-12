@@ -73,12 +73,16 @@ var ALLOWED_HEADERS = []string{
 	"Sec-GPC",
 }
 
-// PriceFeedBtcUrl, PriceFeedEthUrl, and PriceFeedAleoUrl are the URLs for the price feeds.
+// PRICE_FEED_BTC_URL, PRICE_FEED_ETH_URL, and PRICE_FEED_ALEO_URL are the URLs for the price feeds.
+// BTC_TOKEN_ID, ETH_TOKEN_ID, and ALEO_TOKEN_ID are the token IDs for the price feeds.
+// ATTESTATION_DATA_SIZE_LIMIT is the size limit for the string attestation data.
 const (
-	PriceFeedBtcUrl  = "price_feed: btc"
-	PriceFeedEthUrl  = "price_feed: eth"
-	PriceFeedAleoUrl = "price_feed: aleo"
-
-	// AttestationDataSizeLimit is the size limit for the attestation data.
-	AttestationDataSizeLimit = 1024 * 3
+	PRICE_FEED_BTC_URL  = "price_feed: btc"
+	PRICE_FEED_ETH_URL  = "price_feed: eth"
+	PRICE_FEED_ALEO_URL = "price_feed: aleo"
+	BTC_TOKEN_ID        = 12
+	ETH_TOKEN_ID        = 11
+	ALEO_TOKEN_ID       = 8
+	// ATTESTATION_DATA_SIZE_LIMIT is the size limit for the attestation data.
+	ATTESTATION_DATA_SIZE_LIMIT = 1024 * 3
 )

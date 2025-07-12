@@ -3,9 +3,10 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
-	"math/big"
 	"strings"
+
+	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
 // getPadding gets the padding for the array.
@@ -28,10 +29,13 @@ func GetPadding(arr []byte, alignment int) []byte {
 }
 
 // padStringToLength pads the string to the target length.
-func PadStringToLength(str string, paddingChar byte, targetLength int) string {
-
+func PadStringToLength(str string, paddingChar byte, targetLength int) (string, *appErrors.AppError) {
+	if len(str) > targetLength {
+		logger.Error("PadStringToLength: string length is greater than target length", "string length", len(str), "target length", targetLength)
+		return "", appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
+	}
 	// Pad the string to the target length.
-	return str + strings.Repeat(string(paddingChar), targetLength-len(str))
+	return str + strings.Repeat(string(paddingChar), targetLength-len(str)), nil
 }
 
 // Reverses the bytes of a byte slice.
@@ -53,23 +57,3 @@ func GenerateShortRequestID() string {
 	return hex.EncodeToString(b) // e.g., "f4e3d2a1b3c0d9e8"
 }
 
-// SliceToU128 converts a byte slice to a big integer.
-func SliceToU128(buf []byte) (*big.Int, error) {
-
-	// Check if the buffer is 16 bytes.
-	if len(buf) != 16 {
-		return nil, errors.New("cannot convert slice to u128: invalid size")
-	}
-
-	// Create the result.
-	result := big.NewInt(0)
-
-	// Convert the buffer to a big integer.
-	for idx, b := range buf {
-		bigByte := big.NewInt(int64(b))
-		bigByte.Lsh(bigByte, 8*uint(idx))
-		result.Add(result, bigByte)
-	}
-
-	return result, nil
-}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 
@@ -169,7 +170,7 @@ func isAcceptedHeader(header string) bool {
 
 // isAcceptedDomain checks if a domain is in the list of whitelisted domains.
 func isAcceptedDomain(endpoint string, whitelistedDomains []string) bool {
-	if endpoint == constants.PriceFeedBtcUrl || endpoint == constants.PriceFeedEthUrl || endpoint == constants.PriceFeedAleoUrl {
+	if endpoint == constants.PRICE_FEED_BTC_URL || endpoint == constants.PRICE_FEED_ETH_URL || endpoint == constants.PRICE_FEED_ALEO_URL {
 		return true
 	}
 
@@ -195,16 +196,24 @@ func isAcceptedDomain(endpoint string, whitelistedDomains []string) bool {
 // wrapRawQuoteAsOpenEnclaveEvidence wraps the raw quote as Open Enclave evidence.
 func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) []byte {
 
+	const (
+		OE_VERSION     = 1
+		OE_VERSION_LEN = 4
+		OE_TYPE        = 2
+		OE_TYPE_LEN    = 4
+		OE_QUOTE_LEN   = 8
+	)
+
 	// Create the Open Enclave version.
-	oeVersion := make([]byte, 4)
-	binary.LittleEndian.PutUint32(oeVersion, 1)
+	oeVersion := make([]byte, OE_VERSION_LEN)
+	binary.LittleEndian.PutUint32(oeVersion, OE_VERSION)
 
 	// Create the Open Enclave type.
-	oeType := make([]byte, 4)
-	binary.LittleEndian.PutUint32(oeType, 2)
+	oeType := make([]byte, OE_TYPE_LEN)
+	binary.LittleEndian.PutUint32(oeType, OE_TYPE)
 
 	// Create the quote length.
-	quoteLength := make([]byte, 8)
+	quoteLength := make([]byte, OE_QUOTE_LEN)
 	binary.LittleEndian.PutUint32(quoteLength, uint32(len(rawQuoteBuffer)))
 
 	// Create the buffer.
@@ -231,8 +240,8 @@ func GetQuoteLock() *sync.Mutex {
 func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 
 	// Lock the quote.
-	quoteLock.Lock()
-	defer quoteLock.Unlock()
+	common.GetQuoteLock().Lock()
+	defer common.GetQuoteLock().Unlock()
 
 	// Create the report data.
 	reportData := make([]byte, 64)

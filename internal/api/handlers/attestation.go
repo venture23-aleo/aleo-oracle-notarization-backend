@@ -83,6 +83,13 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if err := extractDataResult.ValidateAttestationData(attestationRequest.EncodingOptions.Value); err != nil {
+		reqLogger.Error("Invalid attestation data", "error", err)
+		metrics.RecordError("invalid_attestation_data", "attestation_handler")
+		utils.WriteJsonError(w, http.StatusBadRequest, *err, "")
+		return
+	}
+
 	reqLogger.Debug("Successfully extracted data", "status_code", extractDataResult.StatusCode, "data", extractDataResult.AttestationData)
 	metrics.RecordDataExtraction(attestationRequest.ResponseFormat, "success", extractDuration)
 	metrics.RecordAttestationDataSize("attestation", len(extractDataResult.AttestationData))

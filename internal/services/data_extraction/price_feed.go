@@ -538,11 +538,11 @@ func ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.At
 	// Extract symbol from the price feed URL
 	var symbol string
 	switch attestationRequest.Url {
-	case constants.PriceFeedBtcUrl:
+	case constants.PRICE_FEED_BTC_URL:
 		symbol = "BTC"
-	case constants.PriceFeedEthUrl:
+	case constants.PRICE_FEED_ETH_URL:
 		symbol = "ETH"
-	case constants.PriceFeedAleoUrl:
+	case constants.PRICE_FEED_ALEO_URL:
 		symbol = "ALEO"
 	default:
 		logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)

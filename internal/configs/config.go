@@ -145,7 +145,6 @@ func ValidateConfigs() error {
 		symbolKeys = append(symbolKeys, symbol)
 	}
 
-
 	// Return combined error if any validation failed
 	if len(errors) > 0 {
 		return fmt.Errorf("configuration validation failed:\n%s", strings.Join(errors, "\n"))

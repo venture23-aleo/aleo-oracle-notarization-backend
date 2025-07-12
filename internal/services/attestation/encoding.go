@@ -15,13 +15,13 @@ import (
 )
 
 // prepareAttestationData prepares the attestation data.
-func prepareAttestationData(attestationData string, encodingOptions *encoding.EncodingOptions) string {
+func prepareAttestationData(attestationData string, encodingOptions *encoding.EncodingOptions) (string, *appErrors.AppError) {
 
 	// Check the encoding option.
 	switch encodingOptions.Value {
 	case encoding.ENCODING_OPTION_STRING:
-		// Pad the string to the target length.
-		return utils.PadStringToLength(attestationData, 0x00, constants.AttestationDataSizeLimit)
+		return utils.PadStringToLength(attestationData, 0x00, constants.ATTESTATION_DATA_SIZE_LIMIT)
+
 	case encoding.ENCODING_OPTION_FLOAT:
 		// Check if the attestation data contains a dot.
 		if strings.Contains(attestationData, ".") {
@@ -32,21 +32,32 @@ func prepareAttestationData(attestationData string, encodingOptions *encoding.En
 		}
 	case encoding.ENCODING_OPTION_INT:
 		// For integers we prepend zeroes instead of appending, that allows strconv to parse it no matter how many zeroes there are
-		return utils.PadStringToLength("", '0', math.MaxUint8-len(attestationData)) + attestationData
+		padString, err := utils.PadStringToLength("", '0', math.MaxUint8-len(attestationData))
+		if err != nil {
+			return "", err
+		}
+		return padString + attestationData, nil
+	default:
+		return "", appErrors.NewAppError(appErrors.ErrInvalidEncodingOption)
 	}
-
-	return attestationData
 }
 
 // PrepareProofData prepares the proof data.
 func PrepareProofData(statusCode int, attestationData string, timestamp int64, req AttestationRequest) ([]byte, *encoding.ProofPositionalInfo, *appErrors.AppError) {
 
 	// Prepare the attestation data.
-	preppedAttestationData := attestationData
+	var preppedAttestationData string
 
 	// Check if the URL is a price feed.
-	if req.Url != constants.PriceFeedBtcUrl && req.Url != constants.PriceFeedEthUrl && req.Url != constants.PriceFeedAleoUrl {
-		preppedAttestationData = prepareAttestationData(attestationData, &req.EncodingOptions)
+	if req.Url != constants.PRICE_FEED_BTC_URL && req.Url != constants.PRICE_FEED_ETH_URL && req.Url != constants.PRICE_FEED_ALEO_URL {
+		var preppedAttestationDataError *appErrors.AppError
+		preppedAttestationData, preppedAttestationDataError = prepareAttestationData(attestationData, &req.EncodingOptions)
+		if preppedAttestationDataError != nil {
+			logger.Error("Failed to prepare attestation data: ", "error", preppedAttestationDataError)
+			return nil, nil, preppedAttestationDataError
+		}
+	} else {
+		preppedAttestationData = attestationData
 	}
 
 	// Create the buffer.
@@ -275,8 +286,10 @@ func PrepareEncodedRequestProof(userData []byte, encodedPositions encoding.Proof
 	attestationDataLen := encodedPositions.Data.Len
 	timestampLen := encodedPositions.Timestamp.Len
 
+	metaHeaderLen := 2 * encoding.TARGET_ALIGNMENT
+
 	// Calculate the end offset.
-	endOffset := 32 + (attestationDataLen+timestampLen)*16
+	endOffset := metaHeaderLen + (attestationDataLen+timestampLen)*encoding.TARGET_ALIGNMENT
 
 	// Check if the user data is too short.
 	if endOffset > len(userData) {
@@ -284,7 +297,7 @@ func PrepareEncodedRequestProof(userData []byte, encodedPositions encoding.Proof
 		return nil, appErrors.NewAppError(appErrors.ErrUserDataTooShort)
 	}
 
-	clear(userData[32:endOffset])
+	clear(userData[metaHeaderLen:endOffset])
 
 	return userData, nil
 }
