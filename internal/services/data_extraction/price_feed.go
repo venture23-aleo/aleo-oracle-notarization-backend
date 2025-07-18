@@ -22,32 +22,33 @@ import (
 
 // ExchangePrice represents a price from a single exchange
 type ExchangePrice struct {
-	Exchange string  `json:"exchange"`
-	Price    float64 `json:"price"`
-	Volume   float64 `json:"volume"`
-	Symbol   string  `json:"symbol"`
+	Exchange string  `json:"exchange"` // Exchange name.
+	Price    float64 `json:"price"`    // Price.
+	Volume   float64 `json:"volume"`   // Volume.
+	Symbol   string  `json:"symbol"`   // Symbol.
 }
 
 // PriceFeedResult represents the result of a price feed calculation
 type PriceFeedResult struct {
-	Symbol            string          `json:"symbol"`
-	VolumeWeightedAvg string          `json:"volumeWeightedAvg"`
-	TotalVolume       string          `json:"totalVolume"`
-	ExchangeCount     int             `json:"exchangeCount"`
-	Timestamp         int64           `json:"timestamp"`
-	ExchangePrices    []ExchangePrice `json:"exchangePrices"`
-	Success           bool            `json:"success"`
+	Symbol            string          `json:"symbol"` // Symbol.
+	VolumeWeightedAvg string          `json:"volumeWeightedAvg"` // Volume-weighted average price.
+	TotalVolume       string          `json:"totalVolume"` // Total volume.
+	ExchangeCount     int             `json:"exchangeCount"` // Number of exchanges.
+	Timestamp         int64           `json:"timestamp"` // Timestamp.
+	ExchangePrices    []ExchangePrice `json:"exchangePrices"` // Exchange prices.
+	Success           bool            `json:"success"` // Success.
 }
 
+// PriceFeedClient is the client for the price feed.
 type PriceFeedClient struct {
-	exchangeConfigs configs.ExchangesConfig
-	symbolExchanges configs.SymbolExchanges
+	exchangeConfigs configs.ExchangesConfig // Exchange configurations.
+	symbolExchanges configs.SymbolExchanges // Symbol exchanges.
 }
 
 // NewPriceFeedClient creates a new PriceFeedClient with default configurations
 func NewPriceFeedClient() *PriceFeedClient {
-	exchangeConfigs := configs.GetExchangesConfigs()
-	symbolExchanges := configs.GetSymbolExchanges()
+	exchangeConfigs := configs.GetExchangesConfigs() // Get exchange configurations.
+	symbolExchanges := configs.GetSymbolExchanges() // Get symbol exchanges.
 
 	return &PriceFeedClient{
 		exchangeConfigs: exchangeConfigs,
@@ -55,22 +56,47 @@ func NewPriceFeedClient() *PriceFeedClient {
 	}
 }
 
-// FetchPriceFromExchange fetches price and volume data from a specific exchange
+// FetchPriceFromExchange fetches price and volume data from a specific exchange.
+//
+// This function performs the following steps sequentially:
+// 	1. Retrieves the exchange configuration for the given exchangeKey.
+// 	2. Retrieves the endpoint for the given symbol from the exchange configuration.
+// 	3. Constructs the full URL for the API request, handling cases where the BaseURL may or may not include the protocol.
+// 	4. Creates a retryable HTTP client for robust network requests.
+// 	5. Builds an HTTP GET request with the provided context.
+// 	6. Executes the HTTP request and handles any network errors.
+// 	7. Checks the HTTP response status code for success.
+// 	8. Reads the response body from the exchange API.
+// 	9. Attempts to decode the response body as a JSON object. If decoding fails and the exchange is "gate.io", attempts to decode as a JSON array and adapts the data structure accordingly.
+// 	10. Parses the price and volume from the decoded response using the appropriate exchange-specific parser.
+// 	11. Returns an ExchangePrice struct with the parsed data, or an error if any step fails.
+//	
+// Parameters:
+//   - ctx: The context for request cancellation and logging.
+//   - exchangeKey: The key identifying the exchange (e.g., "binance").
+//   - symbol: The trading symbol (e.g., "BTC").
+//
+// Returns:
+//   - *ExchangePrice: The parsed price and volume data from the exchange.
+//   - *appErrors.AppError: An application error if any step fails, otherwise nil.
 func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKey, symbol string) (*ExchangePrice, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
+
+	// Step 1: Get exchange configuration.
 	config, exists := c.exchangeConfigs[exchangeKey]
 	if !exists {
 		reqLogger.Error("Exchange not configured", "exchange", exchangeKey)
 		return nil, appErrors.NewAppError(appErrors.ErrExchangeNotConfigured)
 	}
 
+	// Step 2: Get endpoint for the symbol.
 	endpoint, exists := config.Endpoints[symbol]
 	if !exists {
 		reqLogger.Error("Symbol not supported by exchange", "symbol", symbol, "exchange", exchangeKey)
 		return nil, appErrors.NewAppError(appErrors.ErrSymbolNotSupportedByExchange)
 	}
 
-	// Handle BaseURL that might already include protocol
+	// Step 3: Construct the full URL, handling protocol presence.
 	var url string
 	if strings.HasPrefix(config.BaseURL, "http://") || strings.HasPrefix(config.BaseURL, "https://") {
 		url = fmt.Sprintf("%s%s", config.BaseURL, endpoint)
@@ -78,50 +104,48 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 		url = fmt.Sprintf("https://%s%s", config.BaseURL, endpoint)
 	}
 
+	// Step 4: Create retryable HTTP client.
 	httpClient := utils.GetRetryableHTTPClient(1)
 
-	// Create request with context
+	// Step 5: Create request with context.
 	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		reqLogger.Error("Error creating HTTP request", "error", err, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeFetchFailed, err.Error())
 	}
 
+	// Step 6: Execute the HTTP request.
 	resp, err := httpClient.Do(req)
-
 	if err != nil {
 		reqLogger.Error("Error fetching price from exchange", "error", err, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeFetchFailed, err.Error())
 	}
-
 	defer resp.Body.Close()
 
+	// Step 7: Check for valid HTTP status code.
 	if resp.StatusCode != http.StatusOK {
 		reqLogger.Error("Invalid status code", "status_code", resp.StatusCode, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithResponseStatus(appErrors.ErrExchangeInvalidStatusCode, resp.StatusCode)
 	}
 
-	// Read the response body once
+	// Step 8: Read the response body.
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		reqLogger.Error("Error reading response body", "error", err, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseDecodeFailed, err.Error())
 	}
 
-	// Handle different response types (object vs array)
+	// Step 9: Attempt to decode the response as a JSON object.
 	var data map[string]interface{}
-
-	// Try to decode as object first
 	if err := json.Unmarshal(bodyBytes, &data); err != nil {
-		// If object decoding fails and it's Gate.io, try array decoding
+		// If object decoding fails and it's Gate.io, try array decoding.
 		if exchangeKey == "gate.io" {
 			var arrayData []interface{}
 			if err := json.Unmarshal(bodyBytes, &arrayData); err != nil {
 				reqLogger.Error("Error decoding response body", "error", err, "exchange", exchangeKey, "symbol", symbol)
 				return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseDecodeFailed, err.Error())
 			}
-
-			// Convert array to expected format for Gate.io parsing
+			// Convert array to expected format for Gate.io parsing.
 			data = map[string]interface{}{
 				"": arrayData,
 			}
@@ -131,12 +155,14 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 		}
 	}
 
+	// Step 10: Parse price and volume from the decoded response.
 	price, volume, parseErr := c.parseExchangeResponse(exchangeKey, data)
 	if parseErr != nil {
 		reqLogger.Error("Error parsing exchange response", "error", parseErr, "exchange", exchangeKey, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseParseFailed, parseErr.Error())
 	}
 
+	// Step 11: Return the parsed ExchangePrice.
 	return &ExchangePrice{
 		Exchange: config.Name,
 		Price:    price,
@@ -528,6 +554,8 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*Pri
 // This ensures consistent and reliable price data for oracle attestations
 func ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
+
+	// Check if the encoding option is valid.
 	if attestationRequest.EncodingOptions.Value != "float" {
 		reqLogger.Error("Invalid encoding option", "encodingOption", attestationRequest.EncodingOptions.Value)
 		return ExtractDataResult{

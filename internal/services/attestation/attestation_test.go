@@ -226,9 +226,7 @@ func TestValidateAttestationRequestPayload(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			// Use a mock whitelisted domains list for testing
-			mockWhitelistedDomains := []string{"example.com", "test.com"}
-			err := testCase.attestationRequest.Validate(mockWhitelistedDomains)
+			err := testCase.attestationRequest.Validate()
 			if err != nil && err.Code != testCase.expectedPayload.Code {
 				t.Fatalf("Expected error code %d, got %d", testCase.expectedPayload.Code, err.Code)
 			}

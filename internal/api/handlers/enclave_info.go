@@ -15,6 +15,7 @@ func GetEnclaveInfo(w http.ResponseWriter, req *http.Request) {
 	// Get logger from context (request ID automatically included by middleware)
 	reqLogger := logger.FromContext(req.Context())
 
+	// Get SGX enclave info
 	sgxInfo, err := enclaveInfo.GetSgxInfo()
 	if err != nil {
 		reqLogger.Error("Failed to get SGX enclave info", "error", err)
@@ -22,6 +23,7 @@ func GetEnclaveInfo(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Get Aleo context
 	aleoContext, ctxErr := aleoContext.GetAleoContext()
 	if ctxErr != nil {
 		reqLogger.Error("Failed to get Aleo context", "error", ctxErr)

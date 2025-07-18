@@ -36,7 +36,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	if maxStr == "" {
 		reqLogger.Error("Missing max parameter")
 		metrics.RecordError("missing_max_parameter", "random_handler")
-		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrMissingMaxParameter, "")
 		return
 	}
 
@@ -45,7 +45,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	if !ok {
 		reqLogger.Error("Invalid max parameter format", "max", maxStr)
 		metrics.RecordError("invalid_max_format", "random_handler")
-		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidMaxValueFormat, "")
 		return
 	}
 
@@ -53,7 +53,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	if max.Cmp(big.NewInt(1)) <= 0 {
 		reqLogger.Error("Max must be greater than 1", "max", maxStr)
 		metrics.RecordError("max_too_small", "random_handler")
-		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidMaxValue, "")
 		return
 	}
 
@@ -62,7 +62,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	if max.Cmp(maxAllowed) > 0 {
 		reqLogger.Error("Max must be less than or equal to 2^127", "max", maxStr)
 		metrics.RecordError("max_too_large", "random_handler")
-		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidRequestData, "")
+		utils.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidMaxValueRange, "")
 		return
 	}
 
@@ -83,7 +83,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		reqLogger.Error("Error generating random number", "error", err)
 		metrics.RecordError("random_generation_failed", "random_handler")
-		utils.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrGeneratingAttestationHash, "")
+		utils.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrGeneratingRandomNumber, "")
 		return
 	}
 

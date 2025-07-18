@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
@@ -57,7 +56,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 
 	reqLogger.Debug("Processing attestation request", "url", attestationRequest.Url, "debug", attestationRequestWithDebug.DebugRequest)
 
-	if err := attestationRequest.Validate(configs.GetWhitelistedDomains()); err != nil {
+	if err := attestationRequest.Validate(); err != nil {
 		reqLogger.Error("Attestation request validation failed", "error", err)
 		metrics.RecordError("validation_failed", "attestation_handler")
 		utils.WriteJsonError(w, http.StatusBadRequest, *err, "")
