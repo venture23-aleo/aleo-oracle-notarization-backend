@@ -10,35 +10,39 @@ import (
 )
 
 type AleoPublicContext interface {
-	GetSession() aleo.Session
-	GetPublicKey() string
-	Sign(message []byte) (string, error)
+	GetSession() aleo.Session // Get the Aleo session.
+	GetPublicKey() string     // Get the Aleo public key.
+	Sign(message []byte) (string, error) // Sign a message.
 }
 
 type AleoContext struct {
-	Session    aleo.Session
-	privateKey string
-	PublicKey  string
-	Close      func()
+	Session    aleo.Session // The Aleo session.
+	privateKey string        // The Aleo private key.
+	PublicKey  string        // The Aleo public key.
+	Close      func()        // The Aleo close function.
 }
 
+// GetSession returns the Aleo session.
 func (a *AleoContext) GetSession() aleo.Session {
 	return a.Session
 }
 
+// GetPublicKey returns the Aleo public key.
 func (a *AleoContext) GetPublicKey() string {
 	return a.PublicKey
 }
 
+// Sign signs a message.
 func (a *AleoContext) Sign(message []byte) (string, error) {
 	return a.Session.Sign(a.privateKey, message)
 }
 
+// String returns a string representation of the Aleo context.
 func (a *AleoContext) String() string {
 	return fmt.Sprintf("AleoContext{Session: <hidden>, PublicKey: %s}", a.PublicKey)
 }
 
-// NewAleoContext creates a new Aleo context with a session and a private key.
+// newAleoContext creates a new Aleo context with a session and a private key.
 func newAleoContext() (*AleoContext, error) {
 	// Create a new wrapper.
 	wrapper, closeFn, err := aleo.NewWrapper()
@@ -66,15 +70,15 @@ func newAleoContext() (*AleoContext, error) {
 	}, nil
 }
 
-// AleoContextManager manages the singleton Aleo context
+// AleoContextManager manages the singleton Aleo context.
 type AleoContextManager struct {
-	context     AleoPublicContext
-	once        sync.Once
-	mu          sync.RWMutex
-	initialized bool
+	context     AleoPublicContext // The Aleo context.
+	once        sync.Once         // Once for lazy initialization.
+	mu          sync.RWMutex      // Mutex for thread safety.
+	initialized bool // Whether the Aleo context has been initialized.
 }
 
-// Global singleton instance
+// Global singleton instance.
 var aleoManager = &AleoContextManager{}
 
 // GetAleoContext returns the singleton Aleo context, initializing it if needed

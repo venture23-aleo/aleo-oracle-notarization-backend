@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 // TestSGXReportData_Extraction tests the extraction of data from SGX report
 func TestSGXReportData_Extraction(t *testing.T) {
 	// Create a mock SGX report with known values
-	report := createMockSGXReport(t, true, []byte("mrenclave12345678901234567890123"),
+	report := createMockSGXReport(true, []byte("mrenclave12345678901234567890123"),
 		[]byte("mrsigner123456789012345678901234"),
 		[]byte{0x12, 0x34}, []byte{0x56, 0x78})
 
@@ -43,7 +43,7 @@ func TestSGXReportData_Extraction(t *testing.T) {
 // TestSGXReportData_NonDebug tests extraction from non-debug report
 func TestSGXReportData_NonDebug(t *testing.T) {
 	// Create a mock SGX report with debug flag off
-	report := createMockSGXReport(t, false, []byte("mrenclave12345678901234567890123456"),
+	report := createMockSGXReport(false, []byte("mrenclave12345678901234567890123456"),
 		[]byte("mrsigner12345678901234567890123456"),
 		[]byte{0x12, 0x34}, []byte{0x56, 0x78})
 
@@ -249,7 +249,7 @@ func TestEnclaveInfoResponse_JSONMarshaling(t *testing.T) {
 }
 
 // Helper function to create a mock SGX report
-func createMockSGXReport(t *testing.T, debug bool, mrenclave, mrsigner, productID, securityVersion []byte) []byte {
+func createMockSGXReport(debug bool, mrenclave, mrsigner, productID, securityVersion []byte) []byte {
 	// Create a report with minimum required size
 	report := make([]byte, REPORT_DATA_OFFSET+REPORT_DATA_SIZE)
 

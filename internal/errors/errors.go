@@ -37,6 +37,12 @@ var (
 	ErrUnacceptedDomain         = AppError{1012, "validation error: attestation target is not whitelisted", "", 0, ""}
 	ErrInvalidRequestData       = AppError{1013, "validation error: failed to decode a request, invalid request structure", "", 0, ""}
 	ErrInvalidEncodingPrecision = AppError{1014, "validation error: invalid encoding precision", "", 0, ""}
+	ErrMissingMaxParameter      = AppError{1015, "validation error: max parameter is required", "", 0, ""}
+	ErrInvalidMaxParameter      = AppError{1016, "validation error: max parameter is invalid", "", 0, ""}
+	ErrInvalidMaxValue          = AppError{1017, "validation error: max value is invalid", "", 0, ""}
+	ErrInvalidMaxValueFormat    = AppError{1018, "validation error: max value format is invalid", "", 0, ""}
+	ErrInvalidMaxValueRange     = AppError{1019, "validation error: max value range is invalid", "", 0, ""}
+	ErrGeneratingRandomNumber   = AppError{1020, "validation error: failed to generate random number", "", 0, ""}
 
 	// =============================================================================
 	// ENCLAVE ERRORS (2000-2999)

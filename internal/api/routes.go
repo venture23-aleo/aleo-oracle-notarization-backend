@@ -25,7 +25,8 @@ func RegisterRoutes(mux *http.ServeMux) {
 	// Register the health check route.
 	mux.HandleFunc("GET /health", handlers.GetHealthCheck)
 
-	mux.HandleFunc("GET /", handlers.GetHealthCheck)
+	// Register the root route.
+	mux.HandleFunc("GET /", handlers.GetRoot)
 }
 
 func RegisterMetricsRoute(mux *http.ServeMux) {

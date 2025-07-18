@@ -20,9 +20,9 @@ import (
 
 // ExtractDataResult represents the result of data extraction
 type ExtractDataResult struct {
-	ResponseBody    string
-	AttestationData string
-	StatusCode      int
+	ResponseBody    string // The response body.
+	AttestationData string // The attestation data.
+	StatusCode      int    // The status code.
 }
 
 // makeHTTPRequest creates and executes an HTTP request with common configuration
@@ -130,6 +130,40 @@ func applyFloatPrecision(valueStr string, precision uint) string {
 	}
 }
 
+
+// extractAssetFromPriceFeedURL extracts the asset name from price feed URL
+func extractAssetFromPriceFeedURL(url string) string {
+	switch url {
+	case constants.PRICE_FEED_BTC_URL:
+		return "btc"
+	case constants.PRICE_FEED_ETH_URL:
+		return "eth"
+	case constants.PRICE_FEED_ALEO_URL:
+		return "aleo"
+	default:
+		return "unknown"
+	}
+}
+
+// ValidateAttestationData validates the attestation data based on the encoding options.
+func (e *ExtractDataResult) ValidateAttestationData(encodingOptions string) *appErrors.AppError {
+	switch encodingOptions {
+	case encoding.ENCODING_OPTION_FLOAT:
+		if len(e.AttestationData) > math.MaxUint8 {
+			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
+		}
+	case encoding.ENCODING_OPTION_INT:
+		if len(e.AttestationData) > math.MaxUint8 {
+			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
+		}
+	case encoding.ENCODING_OPTION_STRING:
+		if len(e.AttestationData) > constants.ATTESTATION_DATA_SIZE_LIMIT {
+			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
+		}
+	}
+	return nil
+}
+
 // ExtractDataFromTargetURL fetches the data from the attestation request target URL.
 // This is the main entry point that routes to specific extractors based on the request type.
 func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
@@ -161,7 +195,7 @@ func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestatio
 		return result, err
 	} else if attestationRequest.ResponseFormat == "html" {
 		// Process HTML request
-		reqLogger.Info("Processing HTML request", "url", attestationRequest.Url)
+		reqLogger.Debug("Processing HTML request", "url", attestationRequest.Url)
 		return ExtractDataFromHTML(ctx, attestationRequest)
 	} else if attestationRequest.ResponseFormat == "json" {
 		// Process JSON request
@@ -173,36 +207,4 @@ func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestatio
 		metrics.RecordError("invalid_response_format", "data_extractor")
 		return ExtractDataResult{}, appErrors.NewAppError(appErrors.ErrInvalidResponseFormat)
 	}
-}
-
-// extractAssetFromPriceFeedURL extracts the asset name from price feed URL
-func extractAssetFromPriceFeedURL(url string) string {
-	switch url {
-	case constants.PRICE_FEED_BTC_URL:
-		return "btc"
-	case constants.PRICE_FEED_ETH_URL:
-		return "eth"
-	case constants.PRICE_FEED_ALEO_URL:
-		return "aleo"
-	default:
-		return "unknown"
-	}
-}
-
-func (e *ExtractDataResult) ValidateAttestationData(encodingOptions string) *appErrors.AppError {
-	switch encodingOptions {
-	case encoding.ENCODING_OPTION_FLOAT:
-		if len(e.AttestationData) > math.MaxUint8 {
-			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
-		}
-	case encoding.ENCODING_OPTION_INT:
-		if len(e.AttestationData) > math.MaxUint8 {
-			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
-		}
-	case encoding.ENCODING_OPTION_STRING:
-		if len(e.AttestationData) > constants.ATTESTATION_DATA_SIZE_LIMIT {
-			return appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge)
-		}
-	}
-	return nil
 }

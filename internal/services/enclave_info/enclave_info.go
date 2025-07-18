@@ -83,18 +83,18 @@ type EnclaveInfoResponse struct {
 
 // SGXReportData contains the extracted data from the SGX report
 type SGXReportData struct {
-	Debug           bool
-	MREnclave       []byte
-	MRSigner        []byte
-	ProductID       []byte
-	SecurityVersion []byte
+	Debug           bool // Debug flag in the SGX report.
+	MREnclave       []byte // MRENCLAVE in the SGX report.
+	MRSigner        []byte // MRSIGNER in the SGX report.
+	ProductID       []byte // ISVPRODID in the SGX report.
+	SecurityVersion []byte // ISVSVN in the SGX report.
 }
 
 // Global singleton instances with lazy initialization
 var (
-	sgxInfoOnce sync.Once
-	sgxInfo     SgxInfo
-	sgxInfoErr  *appErrors.AppError
+	sgxInfoOnce sync.Once // Once for lazy initialization.
+	sgxInfo     SgxInfo   // SGX info.
+	sgxInfoErr  *appErrors.AppError // SGX info error.
 )
 
 // GetSgxInfo gets the SGX info for the instance.
