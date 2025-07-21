@@ -39,7 +39,7 @@ This guide covers how to run the Aleo Oracle Notarization Backend natively on yo
 - `gramine-sgx` - Gramine SGX runtime
 - `gramine-direct` - Gramine direct runtime (for non-SGX systems)
 
-## 1. Install Gramine and Intel SGX Drivers
+## 1. Install Gramine and Intel SGX related packages
 
 ### Ubuntu/Debian
 ```bash
@@ -55,11 +55,19 @@ echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/intel-sgx-deb.asc] https://dow
 
 # Install Gramine
 sudo apt-get update
-sudo apt-get install -y gramine
+sudo apt-get install -y gramine libsgx-dcap-default-qpl  libsgx-dcap-ql 
+
+sudo cp ./native/inputs/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
+
+# Enable and start AESMD
+sudo systemctl enable aesmd
+sudo systemctl start aesmd
 
 # Verify installation
 gramine-sgx --version
 ```
+
+Please refer to [setup-gramine-sgx.sh](../native/setup-gramine-sgx.sh) for more details.
 
 ### Other Distributions
 Refer to the [Gramine installation guide](https://gramine.readthedocs.io/en/stable/installation.html) for your specific distribution.
@@ -96,7 +104,7 @@ This creates `secrets/enclave-key.pem` which will be used to sign the Gramine ma
 ### Quick Start
 ```bash
 # Build and run in one command
-./native/run-enclave.sh
+./native/run-native.sh
 ```
 
 ### Step-by-Step Process
@@ -231,7 +239,7 @@ Enable verbose logging for debugging:
 
 ```bash
 # Run with debug output
-VERBOSE=true LOG_LEVEL=debug ./native/run-enclave.sh
+VERBOSE=true LOG_LEVEL=debug ./native/run-native.sh
 ```
 
 ## 7. Reproducibility and Version Consistency
