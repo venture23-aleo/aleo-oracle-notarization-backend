@@ -33,14 +33,13 @@ COPY --from=builder /app/${APP} .
 # RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libsgx-dcap-default-qpl && rm -rf /var/lib/apt/lists/*
 
 # Copy configuration files
-# COPY build/inputs/static_hosts build/inputs/static_resolv.conf build/inputs/entrypoint.sh build/inputs/${APP}.manifest.template ./
+# COPY docker/inputs/static_hosts docker/inputs/static_resolv.conf docker/inputs/entrypoint.sh docker/inputs/${APP}.manifest.template ./
 
-COPY build/inputs/* ./
+COPY docker/inputs/* ./
 
 RUN DEBIAN_FRONTEND=noninteractive dpkg -i /app/libsgx-dcap-default-qpl_1.23.100.0-jammy1_amd64.deb
 
-COPY build/inputs/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
-
+COPY docker/inputs/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
 
 RUN chmod +x entrypoint.sh
 
