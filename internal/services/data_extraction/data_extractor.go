@@ -130,7 +130,6 @@ func applyFloatPrecision(valueStr string, precision uint) string {
 	}
 }
 
-
 // extractAssetFromPriceFeedURL extracts the asset name from price feed URL
 func extractAssetFromPriceFeedURL(url string) string {
 	switch url {

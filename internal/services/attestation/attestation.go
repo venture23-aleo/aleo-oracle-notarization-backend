@@ -21,12 +21,12 @@ import (
 type AttestationRequest struct {
 	Url string `json:"url"` // The URL to fetch data from.
 
-	RequestMethod  string  `json:"requestMethod" validate:"required"` // The request method.
-	Selector       string  `json:"selector,omitempty" validate:"required"` // The selector.
-	ResponseFormat string  `json:"responseFormat" validate:"required"` // The response format.
+	RequestMethod  string  `json:"requestMethod" validate:"required"`            // The request method.
+	Selector       string  `json:"selector,omitempty" validate:"required"`       // The selector.
+	ResponseFormat string  `json:"responseFormat" validate:"required"`           // The response format.
 	HTMLResultType *string `json:"htmlResultType,omitempty" validate:"required"` // The HTML result type.
 
-	RequestBody        *string `json:"requestBody,omitempty"` // The request body.
+	RequestBody        *string `json:"requestBody,omitempty"`                            // The request body.
 	RequestContentType *string `json:"requestContentType,omitempty" validate:"required"` // The request content type.
 
 	RequestHeaders map[string]string `json:"requestHeaders,omitempty"` // The request headers.
@@ -214,11 +214,11 @@ func isAcceptedDomain(endpoint string) bool {
 func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) []byte {
 
 	const (
-		OE_VERSION     = 1  // Open Enclave evidence version
-		OE_VERSION_LEN = 4  // Length of version field in bytes
-		OE_TYPE        = 2  // Open Enclave evidence type (2 = SGX ECDSA)
-		OE_TYPE_LEN    = 4  // Length of type field in bytes
-		OE_QUOTE_LEN   = 8  // Length of quote length field in bytes
+		OE_VERSION     = 1 // Open Enclave evidence version
+		OE_VERSION_LEN = 4 // Length of version field in bytes
+		OE_TYPE        = 2 // Open Enclave evidence type (2 = SGX ECDSA)
+		OE_TYPE_LEN    = 4 // Length of type field in bytes
+		OE_QUOTE_LEN   = 8 // Length of quote length field in bytes
 	)
 
 	// Create the Open Enclave version header (4 bytes, little-endian)
@@ -235,10 +235,10 @@ func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) []byte {
 
 	// Assemble the Open Enclave evidence buffer
 	var buf bytes.Buffer
-	buf.Write(oeVersion)         // Write version header
-	buf.Write(oeType)            // Write type header
-	buf.Write(quoteLength)       // Write quote length header
-	buf.Write(rawQuoteBuffer)    // Write the raw quote
+	buf.Write(oeVersion)      // Write version header
+	buf.Write(oeType)         // Write type header
+	buf.Write(quoteLength)    // Write quote length header
+	buf.Write(rawQuoteBuffer) // Write the raw quote
 
 	// Return the complete Open Enclave evidence as a byte slice
 	return buf.Bytes()

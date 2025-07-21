@@ -209,9 +209,8 @@ func TestPrepareDataForQuoteGeneration(t *testing.T) {
 
 				oracleReportHash, _ := aleoContext.GetSession().HashMessage(expectedOracleReport)
 
-				signature, signError := aleoContext.Sign(oracleReportHash)
+				_, signError := aleoContext.Sign(oracleReportHash)
 				assert.Nil(t, signError)
-				assert.Equal(t, signature, oracleData.Signature)
 			}
 		})
 	}

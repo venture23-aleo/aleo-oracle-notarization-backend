@@ -30,13 +30,13 @@ type ExchangePrice struct {
 
 // PriceFeedResult represents the result of a price feed calculation
 type PriceFeedResult struct {
-	Symbol            string          `json:"symbol"` // Symbol.
+	Symbol            string          `json:"symbol"`            // Symbol.
 	VolumeWeightedAvg string          `json:"volumeWeightedAvg"` // Volume-weighted average price.
-	TotalVolume       string          `json:"totalVolume"` // Total volume.
-	ExchangeCount     int             `json:"exchangeCount"` // Number of exchanges.
-	Timestamp         int64           `json:"timestamp"` // Timestamp.
-	ExchangePrices    []ExchangePrice `json:"exchangePrices"` // Exchange prices.
-	Success           bool            `json:"success"` // Success.
+	TotalVolume       string          `json:"totalVolume"`       // Total volume.
+	ExchangeCount     int             `json:"exchangeCount"`     // Number of exchanges.
+	Timestamp         int64           `json:"timestamp"`         // Timestamp.
+	ExchangePrices    []ExchangePrice `json:"exchangePrices"`    // Exchange prices.
+	Success           bool            `json:"success"`           // Success.
 }
 
 // PriceFeedClient is the client for the price feed.
@@ -48,7 +48,7 @@ type PriceFeedClient struct {
 // NewPriceFeedClient creates a new PriceFeedClient with default configurations
 func NewPriceFeedClient() *PriceFeedClient {
 	exchangeConfigs := configs.GetExchangesConfigs() // Get exchange configurations.
-	symbolExchanges := configs.GetSymbolExchanges() // Get symbol exchanges.
+	symbolExchanges := configs.GetSymbolExchanges()  // Get symbol exchanges.
 
 	return &PriceFeedClient{
 		exchangeConfigs: exchangeConfigs,
@@ -59,18 +59,18 @@ func NewPriceFeedClient() *PriceFeedClient {
 // FetchPriceFromExchange fetches price and volume data from a specific exchange.
 //
 // This function performs the following steps sequentially:
-// 	1. Retrieves the exchange configuration for the given exchangeKey.
-// 	2. Retrieves the endpoint for the given symbol from the exchange configuration.
-// 	3. Constructs the full URL for the API request, handling cases where the BaseURL may or may not include the protocol.
-// 	4. Creates a retryable HTTP client for robust network requests.
-// 	5. Builds an HTTP GET request with the provided context.
-// 	6. Executes the HTTP request and handles any network errors.
-// 	7. Checks the HTTP response status code for success.
-// 	8. Reads the response body from the exchange API.
-// 	9. Attempts to decode the response body as a JSON object. If decoding fails and the exchange is "gate.io", attempts to decode as a JSON array and adapts the data structure accordingly.
-// 	10. Parses the price and volume from the decoded response using the appropriate exchange-specific parser.
-// 	11. Returns an ExchangePrice struct with the parsed data, or an error if any step fails.
-//	
+//  1. Retrieves the exchange configuration for the given exchangeKey.
+//  2. Retrieves the endpoint for the given symbol from the exchange configuration.
+//  3. Constructs the full URL for the API request, handling cases where the BaseURL may or may not include the protocol.
+//  4. Creates a retryable HTTP client for robust network requests.
+//  5. Builds an HTTP GET request with the provided context.
+//  6. Executes the HTTP request and handles any network errors.
+//  7. Checks the HTTP response status code for success.
+//  8. Reads the response body from the exchange API.
+//  9. Attempts to decode the response body as a JSON object. If decoding fails and the exchange is "gate.io", attempts to decode as a JSON array and adapts the data structure accordingly.
+//  10. Parses the price and volume from the decoded response using the appropriate exchange-specific parser.
+//  11. Returns an ExchangePrice struct with the parsed data, or an error if any step fails.
+//
 // Parameters:
 //   - ctx: The context for request cancellation and logging.
 //   - exchangeKey: The key identifying the exchange (e.g., "binance").
