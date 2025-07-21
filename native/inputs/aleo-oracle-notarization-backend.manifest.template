@@ -1,0 +1,39 @@
+[loader.env]
+
+[fs.root]
+type = "chroot"
+uri = "file:/"
+
+[fs]
+mounts = [
+  { uri = "file:{{ gramine.runtimedir() }}", path = "/lib" },
+  { uri = "file:/lib/x86_64-linux-gnu/", path = "/lib/x86_64-linux-gnu/" },
+  { uri = "file:./native/outputs/aleo-oracle-notarization-backend", path = "/aleo-oracle-notarization-backend" },
+  { uri = "file:/etc/ssl/", path = "/etc/ssl/" },
+  { uri = "file:/usr/lib/ssl/", path = "/usr/lib/ssl/" },
+  { uri = "file:/etc/resolv.conf", path = "/etc/resolv.conf" },
+  { uri = "file:/etc/hosts", path = "/etc/hosts" },
+  { uri = "file:./native/inputs/sgx_default_qcnl.conf", path = "/etc/sgx_default_qcnl.conf" }
+]
+
+[sgx]
+debug = false
+edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+trusted_files= [
+  "file:{{ gramine.runtimedir() }}/",
+  "file:/lib/x86_64-linux-gnu/",
+  "file:./native/outputs/aleo-oracle-notarization-backend",
+  "file:./native/inputs/sgx_default_qcnl.conf",
+  "file:/etc/resolv.conf",
+  "file:/etc/hosts",
+  "file:/etc/ssl/",
+  "file:/usr/lib/ssl/"
+]
+isvprodid = 1
+isvsvn = 1
+max_threads = 16
+enclave_size = "2G"
+remote_attestation = "dcap"
+
+[libos]
+entrypoint = "/aleo-oracle-notarization-backend"

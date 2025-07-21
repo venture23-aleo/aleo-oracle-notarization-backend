@@ -4,7 +4,7 @@ services:
     container_name: notarization-backend
     build: 
       context: .
-      dockerfile: ./build/Dockerfile
+      dockerfile: ./docker/Dockerfile
       secrets:
         - gramine-private-key
       args:
