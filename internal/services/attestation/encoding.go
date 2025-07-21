@@ -20,6 +20,7 @@ import (
 //   - For string encoding, it pads the string to the ATTESTATION_DATA_SIZE_LIMIT using null bytes.
 //   - For float encoding, it ensures the string contains a decimal point and pads with '0' to MaxUint8 length.
 //   - For integer encoding, it prepends '0' characters to the string to reach MaxUint8 length, allowing for consistent parsing.
+//
 // If an invalid encoding option is provided, it returns an error.
 //
 // Parameters:
@@ -257,7 +258,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	}
 
 	optionalFieldsLen := len(encodedOptionalFields)
-	logger.Debug("optionalFieldsLen","optionalFieldsLen",optionalFieldsLen)
+	logger.Debug("optionalFieldsLen", "optionalFieldsLen", optionalFieldsLen)
 
 	// Check if the optional fields length is too long.
 	if optionalFieldsLen > math.MaxUint16 {
@@ -297,15 +298,15 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 //
 // This function is used to canonicalize the userData buffer for proof generation by zeroing out the
 // attestation data and timestamp fields. This ensures that the resulting encoded request is deterministic
-// and does not leak any sensitive or variable information in these fields. 
+// and does not leak any sensitive or variable information in these fields.
 //
 // The function performs the following steps sequentially:
-//   1. Retrieves the lengths of the attestation data and timestamp fields from the encodedPositions struct.
-//   2. Calculates the length of the meta header (always 2 * encoding.TARGET_ALIGNMENT).
-//   3. Computes the end offset in the userData buffer that covers both the attestation data and timestamp fields.
-//   4. Checks if the userData buffer is large enough to accommodate the zeroing operation.
-//   5. Zeroes out the relevant section of the userData buffer using the built-in clear function.
-//   6. Returns the modified userData buffer and nil error on success, or an error if the buffer is too short.
+//  1. Retrieves the lengths of the attestation data and timestamp fields from the encodedPositions struct.
+//  2. Calculates the length of the meta header (always 2 * encoding.TARGET_ALIGNMENT).
+//  3. Computes the end offset in the userData buffer that covers both the attestation data and timestamp fields.
+//  4. Checks if the userData buffer is large enough to accommodate the zeroing operation.
+//  5. Zeroes out the relevant section of the userData buffer using the built-in clear function.
+//  6. Returns the modified userData buffer and nil error on success, or an error if the buffer is too short.
 //
 // Parameters:
 //   - userData ([]byte): The original user data buffer to be canonicalized. This buffer will be modified in place.

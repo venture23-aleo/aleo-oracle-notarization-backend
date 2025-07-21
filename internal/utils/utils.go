@@ -56,4 +56,3 @@ func GenerateShortRequestID() string {
 	}
 	return hex.EncodeToString(b) // e.g., "f4e3d2a1b3c0d9e8"
 }
-

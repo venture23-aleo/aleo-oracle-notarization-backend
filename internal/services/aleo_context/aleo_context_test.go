@@ -17,6 +17,7 @@ func TestMain(m *testing.M) {
 	// os.Exit(m.Run())
 	m.Run()
 }
+
 func TestAleoContext_InitAleoContext(t *testing.T) {
 	assert.False(t, IsAleoContextInitialized())
 	InitAleoContext()

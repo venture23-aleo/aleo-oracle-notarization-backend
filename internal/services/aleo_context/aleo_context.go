@@ -10,16 +10,16 @@ import (
 )
 
 type AleoPublicContext interface {
-	GetSession() aleo.Session // Get the Aleo session.
-	GetPublicKey() string     // Get the Aleo public key.
+	GetSession() aleo.Session            // Get the Aleo session.
+	GetPublicKey() string                // Get the Aleo public key.
 	Sign(message []byte) (string, error) // Sign a message.
 }
 
 type AleoContext struct {
 	Session    aleo.Session // The Aleo session.
-	privateKey string        // The Aleo private key.
-	PublicKey  string        // The Aleo public key.
-	Close      func()        // The Aleo close function.
+	privateKey string       // The Aleo private key.
+	PublicKey  string       // The Aleo public key.
+	Close      func()       // The Aleo close function.
 }
 
 // GetSession returns the Aleo session.
@@ -75,7 +75,7 @@ type AleoContextManager struct {
 	context     AleoPublicContext // The Aleo context.
 	once        sync.Once         // Once for lazy initialization.
 	mu          sync.RWMutex      // Mutex for thread safety.
-	initialized bool // Whether the Aleo context has been initialized.
+	initialized bool              // Whether the Aleo context has been initialized.
 }
 
 // Global singleton instance.

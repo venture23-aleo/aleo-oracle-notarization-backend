@@ -8,7 +8,7 @@ import (
 
 // RootResponse is the response for the root endpoint.
 type RootResponse struct {
-	Service  string            `json:"service"`
+	Service string `json:"service"`
 }
 
 // GetRoot handles the request to get service information.
@@ -22,4 +22,4 @@ func GetRoot(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJsonSuccess(w, http.StatusOK, RootResponse{
 		Service: "Aleo Oracle Notarization Backend",
 	})
-} 
+}

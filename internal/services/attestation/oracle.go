@@ -49,10 +49,10 @@ type OracleData struct {
 // This function takes a byte slice representing the quote and processes it to generate
 // the oracle report in a specific format. The process involves the following steps:
 //
-// 1. Retrieve the Aleo context required for formatting the message. If this fails, an error is logged and returned.
-// 2. Use the Aleo session to format the quote into 10 chunks (C0 - C9) using the FormatMessage method.
-//    If formatting fails, an error is logged and a formatting error is returned.
-// 3. If successful, the formatted oracle report is returned.
+//  1. Retrieve the Aleo context required for formatting the message. If this fails, an error is logged and returned.
+//  2. Use the Aleo session to format the quote into 10 chunks (C0 - C9) using the FormatMessage method.
+//     If formatting fails, an error is logged and a formatting error is returned.
+//  3. If successful, the formatted oracle report is returned.
 //
 // Parameters:
 //   - quote ([]byte): The input quote to be formatted.
@@ -83,11 +83,14 @@ func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors
 //
 // This function performs the following steps sequentially:
 // 1. Retrieves the Aleo context, which provides cryptographic utilities and session management.
-//    - If the context cannot be retrieved, it logs the error and returns it as an application error.
+//   - If the context cannot be retrieved, it logs the error and returns it as an application error.
+//
 // 2. Hashes the oracle report using the Aleo session's HashMessage method.
-//    - If hashing fails, it logs the error and returns a report hashing application error.
+//   - If hashing fails, it logs the error and returns a report hashing application error.
+//
 // 3. Signs the hashed message using the Aleo context's Sign method to produce a Schnorr signature.
-//    - If signing fails, it logs the error and returns a signature generation application error.
+//   - If signing fails, it logs the error and returns a signature generation application error.
+//
 // 4. Returns the generated signature as a string if all steps succeed.
 //
 // Parameters:
@@ -126,9 +129,11 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 //
 // This function performs the following steps sequentially:
 // 1. Retrieves the Aleo context, which provides cryptographic utilities and session management.
-//    - If the context cannot be retrieved, it logs the error and returns it as an application error.
+//   - If the context cannot be retrieved, it logs the error and returns it as an application error.
+//
 // 2. Hashes the user data using the Aleo session's HashMessage method.
-//    - If hashing fails, it logs the error and returns a message hashing application error.
+//   - If hashing fails, it logs the error and returns a message hashing application error.
+//
 // 3. Returns the generated attestation hash if all steps succeed.
 //
 // Parameters:
@@ -174,9 +179,9 @@ func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appE
 //
 // Parameters:
 //   - quotePrepData: *QuotePreparationData
-//       Contains the user data, proof, encoded positions, and timestamp required for attestation.
+//     Contains the user data, proof, encoded positions, and timestamp required for attestation.
 //   - quote: []byte
-//       The attestation quote (evidence) to be included in the report.
+//     The attestation quote (evidence) to be included in the report.
 //
 // Returns:
 //   - *OracleData: The fully constructed oracle data ready for contract submission.
