@@ -1,4 +1,6 @@
-# Setup & Installation Guide
+# Docker Setup & Installation Guide
+
+This guide covers how to run the Aleo Oracle Notarization Backend using Docker containers with SGX support.
 
 ## Prerequisites
 
@@ -78,4 +80,8 @@ This project is designed to support reproducible builds, ensuring that the same 
   - The build does not depend on host-specific files or settings, except for the required SGX devices and the enclave key, which are explicitly managed.
 
 - **Consistent Enclave Identity (MRENCLAVE):**
-  - Because the build process is reproducible and all configuration, code, and dependencies are fixed, the enclave measurement (MRENCLAVE) will remain the same for identical builds. This ensures that the enclave identity is consistent across deployments, which is critical for attestation and trust in SGX-based systems. 
+  - Because the build process is reproducible and all configuration, code, and dependencies are fixed, the enclave measurement (MRENCLAVE) will remain the same for identical builds. This ensures that the enclave identity is consistent across deployments, which is critical for attestation and trust in SGX-based systems.
+
+## Alternative: Native Setup
+
+If you prefer to run the application natively without Docker, see the [Native Setup Guide](native-setup-guide.md) for instructions on using Gramine directly. 

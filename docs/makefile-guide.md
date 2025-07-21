@@ -13,6 +13,11 @@ A `Makefile` is provided to simplify the most common development, build, and dep
 - `make lint`          – Static analysis using staticcheck.
 - `make clean`         – Remove built binaries.
 
+### Native Targets
+- `make native-build`      – Build the native binary for Gramine.
+- `make native-run`        – Build and run the application natively with Gramine.
+- `make native-clean`      – Clean native build artifacts.
+
 ### Docker Targets
 - `make docker-build`  – Build the Docker image (including manifest generation).
 - `make docker-run`    – Build the Docker image and run the container using Docker Compose (detached mode).
@@ -43,12 +48,26 @@ The Makefile supports several variables that can be overridden from the command 
 make build         # Compile the Go binary
 make run           # Build and run locally
 make test          # Run tests
+make native-build  # Build native binary for Gramine
+make native-run    # Build and run natively with Gramine
 make docker-build  # Build Docker image (with manifest)
 make docker-run    # Build and run with Docker Compose (detached)
 make gen-key       # Generate the enclave private key for SGX signing (Gramine tool)
 make gen-key-openssl # Generate the enclave private key for SGX signing (OpenSSL)
 make clean         # Clean up binaries
 make help          # Show help
+```
+
+### Advanced Native Usage
+```sh
+# Clean native build artifacts
+make native-clean
+
+# Build only (without running)
+make native-build
+
+# Run native application with Gramine
+make native-run
 ```
 
 ### Advanced Docker Usage

@@ -24,8 +24,7 @@ export COMMIT := $(shell git rev-parse HEAD)
 # LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT)"
 GOCMD := go
 LD_LIBRARY_PATH="/lib/x86_64-linux-gnu/"
-MANIFEST_TEMPLATE="build/inputs/${APP}.manifest.template"
-SGX_CONF_FILE="build/inputs/sgx_default_qcnl.conf"
+DOCKER_MANIFEST_TEMPLATE="docker/inputs/${APP}.manifest.template"
 
 export COMPOSE_BAKE=true
 
@@ -90,7 +89,7 @@ lint:
 .PHONY: generate-manifest-template
 generate-manifest-template:
 	chmod +x scripts/generate-manifest-template.sh
-	@scripts/generate-manifest-template.sh $(APP) $(MANIFEST_TEMPLATE) $(LD_LIBRARY_PATH)
+	@scripts/generate-manifest-template.sh $(APP) $(DOCKER_MANIFEST_TEMPLATE) $(LD_LIBRARY_PATH)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Get enclave info
@@ -98,6 +97,25 @@ generate-manifest-template:
 .PHONY: get-enclave-info
 get-enclave-info: docker-build
 	docker compose run --volume "$(shell pwd)/enclave_info.json/:/app/enclave_info.json" --entrypoint /bin/bash --rm $(APP) -c "gramine-sgx-sigstruct-view /app/${APP}.sig -v --output-format json > /app/enclave_info.json"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Native Build and Run
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: native-build
+native-build:
+	@echo ">> Building native binary..."
+	$(GOCMD) build -o native/outputs/$(APP) ./cmd/server
+
+.PHONY: native-run
+native-run: native-build
+	@echo ">> Running native application with Gramine..."
+	@chmod +x native/run-native.sh
+	./native/run-native.sh
+
+.PHONY: native-clean
+native-clean:
+	@echo ">> Cleaning native build artifacts..."
+	rm -rf native/outputs/*
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Docker
@@ -208,6 +226,11 @@ help:
 	@echo "  vet             Static vetting"
 	@echo "  lint            Static analysis (staticcheck)"
 	@echo "  clean           Remove binaries"
+	@echo
+	@echo "Native Targets:"
+	@echo "  native-build    Build native binary"
+	@echo "  native-run      Build and run native application with Gramine"
+	@echo "  native-clean    Clean native build artifacts"
 	@echo
 	@echo "Docker Targets:"
 	@echo "  docker-build    Build Docker image"

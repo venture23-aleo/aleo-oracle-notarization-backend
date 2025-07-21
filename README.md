@@ -37,7 +37,10 @@ For detailed documentation, see the [`docs/`](docs/) folder:
 
 - **[Architecture & Working Flow](docs/architecture.md)** - Technical implementation details
 - **[Setup & Installation Guide](docs/setup-guide.md)** - Complete setup instructions
+- **[Native Setup Guide](docs/native-setup-guide.md)** - Complete native setup instructions
 - **[Makefile Guide](docs/makefile-guide.md)** - All available commands and usage
+- **[API Documentation](docs/api-documentation.md)** - Complete API reference with endpoints, examples, and usage guidelines
+- **[Error Codes Reference](docs/error-codes.md)** - Complete reference for all error codes, troubleshooting, and usage examples
 
 ## 🔧 Configuration
 
