@@ -13,20 +13,20 @@ import (
 //go:embed config.json
 var configFS embed.FS
 
-type SymbolExchanges map[string][]string
+type CoinExchanges map[string][]string
 
 type ExchangeConfig struct {
-	Name      string            `json:"name"`
-	BaseURL   string            `json:"baseURL"`
-	Symbols   map[string]string `json:"symbols"`
-	Endpoints map[string]string `json:"endpoints"`
+	Name      string              `json:"name"`
+	BaseURL   string              `json:"baseURL"`
+	Symbols   map[string][]string `json:"symbols"`
+	EndpointTemplate string       `json:"endpointTemplate"`
 }
 
 type ExchangesConfig map[string]ExchangeConfig
 
 type PriceFeedConfig struct {
-	Exchanges       ExchangesConfig `json:"exchanges"`
-	SymbolExchanges SymbolExchanges `json:"symbolExchanges"`
+	Exchanges    ExchangesConfig `json:"exchanges"`
+	CoinExchanges CoinExchanges  `json:"coinExchanges"`
 }
 
 // AppConfig holds application-wide configuration
@@ -84,9 +84,9 @@ func GetExchangesConfigs() ExchangesConfig {
 	return appConfig.PriceFeedConfig.Exchanges
 }
 
-func GetSymbolExchanges() SymbolExchanges {
+func GetCoinExchanges() CoinExchanges {
 	appConfig := GetAppConfig()
-	return appConfig.PriceFeedConfig.SymbolExchanges
+	return appConfig.PriceFeedConfig.CoinExchanges
 }
 
 // ValidateConfigs validates that all configurations loaded correctly
@@ -105,7 +105,7 @@ func ValidateConfigs() error {
 	var exchangeKeys []string
 	var symbolKeys []string
 	exchangeConfigs := appConfig.PriceFeedConfig.Exchanges
-	symbolExchanges := appConfig.PriceFeedConfig.SymbolExchanges
+	symbolExchanges := appConfig.PriceFeedConfig.CoinExchanges
 
 	if len(exchangeConfigs) == 0 {
 		errors = append(errors, "No exchange configurations found")
@@ -125,8 +125,8 @@ func ValidateConfigs() error {
 		if len(config.Symbols) == 0 {
 			errors = append(errors, fmt.Sprintf("Exchange %s: no symbols configured", exchangeKey))
 		}
-		if len(config.Endpoints) == 0 {
-			errors = append(errors, fmt.Sprintf("Exchange %s: no endpoints configured", exchangeKey))
+		if config.EndpointTemplate == "" {
+			errors = append(errors, fmt.Sprintf("Exchange %s: no endpointTemplate configured", exchangeKey))
 		}
 		exchangeKeys = append(exchangeKeys, exchangeKey)
 	}

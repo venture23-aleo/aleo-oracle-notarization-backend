@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestAppError_Error tests the Error() method of AppError
@@ -82,7 +81,7 @@ func TestAppError_JSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := json.Marshal(tt.appError)
-			require.Nil(t, err, "Failed to marshal AppError")
+			assert.Nil(t, err)
 			assert.Equal(t, tt.expected, string(data), "JSON marshaling should match expected value")
 		})
 	}
@@ -234,8 +233,8 @@ func TestPredefinedErrors(t *testing.T) {
 		ErrWrittingEncodingOptions,
 		ErrWrittingRequestHeaders,
 		ErrWrittingOptionalFields,
-		ErrMissingSymbol,
-		ErrInvalidSymbol,
+		ErrMissingCoin,
+		ErrInvalidCoin,
 		ErrPriceFeedFailed,
 		ErrExchangeNotConfigured,
 		ErrSymbolNotSupportedByExchange,

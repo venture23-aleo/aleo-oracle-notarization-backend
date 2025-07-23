@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 )
@@ -94,146 +95,89 @@ func TestPriceFeedClient_BTCPrice(t *testing.T) {
 		"binance": {
 			Name:    "Binance",
 			BaseURL: server.URL, // Remove "http://" prefix
-			Symbols: map[string]string{
-				"BTC": "BTCUSDT",
+			Symbols: map[string][]string{
+				"BTC": {"BTCUSDT"},
 			},
-			Endpoints: map[string]string{
-				"BTC": "/api/v3/ticker/24hr?symbol=BTCUSDT",
-			},
+			EndpointTemplate: "/api/v3/ticker/24hr?symbol={symbol}",
 		},
 		"bybit": {
 			Name:    "Bybit",
 			BaseURL: server.URL,
-			Symbols: map[string]string{
-				"BTC": "BTCUSDT",
-			},
-			Endpoints: map[string]string{
-				"BTC": "/v5/market/tickers?category=spot&symbol=BTCUSDT",
-			},
+			Symbols: map[string][]string{"BTC": {"BTCUSDT"}},
+			EndpointTemplate: "/v5/market/tickers?category=spot&symbol={symbol}",
 		},
 		"coinbase": {
 			Name:    "Coinbase",
 			BaseURL: server.URL,
-			Symbols: map[string]string{
-				"BTC": "BTC-USD",
-			},
-			Endpoints: map[string]string{
-				"BTC": "/products/BTC-USD/ticker",
-			},
+			Symbols: map[string][]string{"BTC": {"BTC-USD"}},
+			EndpointTemplate: "/products/BTC-USD/ticker",
 		},
 		"crypto.com": {
 			Name:    "Crypto.com",
 			BaseURL: server.URL,
-			Symbols: map[string]string{
-				"BTC": "BTC_USDT",
-			},
-			Endpoints: map[string]string{
-				"BTC": "/v2/public/get-ticker?instrument_name=BTC_USDT",
-			},
+			Symbols: map[string][]string{"BTC": {"BTC_USDT"}},
+			EndpointTemplate: "/v2/public/get-ticker?instrument_name={symbol}",
 		},
 	}
 
-	customSymbols := map[string][]string{
+	customCoins := map[string][]string{
 		"BTC": {"binance", "bybit", "coinbase", "crypto.com"},
 	}
 
 	// Create client with custom configs
 	client := &PriceFeedClient{
 		exchangeConfigs: customConfigs,
-		symbolExchanges: customSymbols,
+		coinExchanges:   customCoins,
 	}
 
 	// Test fetching individual exchange prices
 	t.Run("FetchIndividualExchangePrices", func(t *testing.T) {
 		// Test Binance
-		price, err := client.FetchPriceFromExchange(context.Background(), "binance", "BTC")
-		if err != nil {
-			t.Errorf("Failed to fetch from Binance: %v", err)
-		}
-		if price == nil {
-			t.Fatal("Expected price from Binance, got nil")
-		}
-		if price.Exchange != "Binance" {
-			t.Errorf("Expected exchange 'Binance', got %s", price.Exchange)
-		}
-		if price.Price != 50000.0 {
-			t.Errorf("Expected price 50000.0, got %f", price.Price)
-		}
-		if price.Volume != 1000.5 {
-			t.Errorf("Expected volume 1000.5, got %f", price.Volume)
-		}
+		price, err := client.FetchPriceFromExchange(context.Background(), "binance", "BTC", "BTCUSDT")
+		assert.Nil(t, err)
+		assert.NotNil(t, price)
+		assert.Equal(t, "Binance", price.Exchange)
+		assert.Equal(t, 50000.0, price.Price)
+		assert.Equal(t, 1000.5, price.Volume)
 
 		// Test Bybit
-		price, err = client.FetchPriceFromExchange(context.Background(), "bybit", "BTC")
-		if err != nil {
-			t.Errorf("Failed to fetch from Bybit: %v", err)
-		}
-		if price == nil {
-			t.Fatal("Expected price from Bybit, got nil")
-		}
-		if price.Price != 50100.0 {
-			t.Errorf("Expected price 50100.0, got %f", price.Price)
-		}
-		if price.Volume != 800.25 {
-			t.Errorf("Expected volume 800.25, got %f", price.Volume)
-		}
+		price, err = client.FetchPriceFromExchange(context.Background(), "bybit", "BTC", "BTCUSDT")
+		assert.Nil(t, err)
+		assert.NotNil(t, price)
+		assert.Equal(t, "Bybit", price.Exchange)
+		assert.Equal(t, 50100.0, price.Price)
+		assert.Equal(t, 800.25, price.Volume)
 
 		// Test Coinbase
-		price, err = client.FetchPriceFromExchange(context.Background(), "coinbase", "BTC")
-		if err != nil {
-			t.Errorf("Failed to fetch from Coinbase: %v", err)
-		}
-		if price == nil {
-			t.Fatal("Expected price from Coinbase, got nil")
-		}
-		if price.Price != 50200.0 {
-			t.Errorf("Expected price 50200.0, got %f", price.Price)
-		}
-		if price.Volume != 1200.75 {
-			t.Errorf("Expected volume 1200.75, got %f", price.Volume)
-		}
+		price, err = client.FetchPriceFromExchange(context.Background(), "coinbase", "BTC", "BTC-USD")
+		assert.Nil(t, err)
+		assert.NotNil(t, price)
+		assert.Equal(t, "Coinbase", price.Exchange)
+		assert.Equal(t, 50200.0, price.Price)
+		assert.Equal(t, 1200.75, price.Volume)
 
 		// Test Crypto.com
-		price, err = client.FetchPriceFromExchange(context.Background(), "crypto.com", "BTC")
-		if err != nil {
-			t.Errorf("Failed to fetch from Crypto.com: %v", err)
-		}
-		if price == nil {
-			t.Fatal("Expected price from Crypto.com, got nil")
-		}
-		if price.Price != 50300.0 {
-			t.Errorf("Expected price 50300.0, got %f", price.Price)
-		}
-		if price.Volume != 900.30 {
-			t.Errorf("Expected volume 900.30, got %f", price.Volume)
-		}
+		price, err = client.FetchPriceFromExchange(context.Background(), "crypto.com", "BTC", "BTC_USDT")
+		assert.Nil(t, err)
+		assert.NotNil(t, price)
+		assert.Equal(t, "Crypto.com", price.Exchange)
+		assert.Equal(t, 50300.0, price.Price)
+		assert.Equal(t, 900.30, price.Volume)
 	})
 
 	// Test getting aggregated price feed
 	t.Run("GetAggregatedPriceFeed", func(t *testing.T) {
 		result, err := client.GetPriceFeed(context.Background(), "BTC")
-		if err != nil {
-			t.Errorf("Failed to get price feed: %v", err)
-		}
-		if result == nil {
-			t.Fatal("Expected price feed result, got nil")
-		}
+		assert.Nil(t, err)
+		assert.NotNil(t, result)
 
 		// Check basic structure
-		if result.Symbol != "BTC" {
-			t.Errorf("Expected symbol 'BTC', got %s", result.Symbol)
-		}
-		if !result.Success {
-			t.Error("Expected success true, got false")
-		}
-		if result.ExchangeCount != 4 {
-			t.Errorf("Expected 4 exchanges, got %d", result.ExchangeCount)
-		}
+		assert.Equal(t, "BTC", result.Symbol)
+		assert.True(t, result.Success)
+		assert.Equal(t, 4, result.ExchangeCount)
 
 		// Check that we have prices from all exchanges
-		if len(result.ExchangePrices) != 4 {
-			t.Errorf("Expected 4 exchange prices, got %d", len(result.ExchangePrices))
-		}
+		assert.Equal(t, 4, len(result.ExchangePrices))
 
 		// Verify individual exchange prices
 		expectedPrices := map[string]float64{
@@ -245,13 +189,8 @@ func TestPriceFeedClient_BTCPrice(t *testing.T) {
 
 		for _, price := range result.ExchangePrices {
 			expectedPrice, exists := expectedPrices[price.Exchange]
-			if !exists {
-				t.Errorf("Unexpected exchange: %s", price.Exchange)
-				continue
-			}
-			if price.Price != expectedPrice {
-				t.Errorf("Expected price %f for %s, got %f", expectedPrice, price.Exchange, price.Price)
-			}
+			assert.True(t, exists)
+			assert.Equal(t, expectedPrice, price.Price)
 		}
 
 		// Check volume weighted average calculation
@@ -259,11 +198,8 @@ func TestPriceFeedClient_BTCPrice(t *testing.T) {
 		// (50000*1000.5 + 50100*800.25 + 50200*1200.75 + 50300*900.3) / (1000.5 + 800.25 + 1200.75 + 900.3)
 		// = 50150.25 (approximately)
 		expectedAvg := 50151.28017837921
-		t.Log("volume weighted avg: ", result.VolumeWeightedAvg)
 		actualAvg, parseErr := strconv.ParseFloat(result.VolumeWeightedAvg, 64)
-		if parseErr != nil {
-			t.Errorf("Failed to parse volume weighted average: %v", parseErr)
-		}
+		assert.Nil(t, parseErr)
 
 		// Allow some tolerance for floating point precision
 		tolerance := 0.0000001
@@ -274,18 +210,14 @@ func TestPriceFeedClient_BTCPrice(t *testing.T) {
 		// Check total volume
 		expectedTotalVolume := 1000.5 + 800.25 + 1200.75 + 900.3
 		actualTotalVolume, parseErr := strconv.ParseFloat(result.TotalVolume, 64)
-		if parseErr != nil {
-			t.Errorf("Failed to parse total volume: %v", parseErr)
-		}
+		assert.Nil(t, parseErr)
 		if abs(actualTotalVolume-expectedTotalVolume) > tolerance {
 			t.Errorf("Expected total volume around %f, got %f", expectedTotalVolume, actualTotalVolume)
 		}
 
 		// Check timestamp is recent
 		now := time.Now().Unix()
-		if result.Timestamp < now-60 || result.Timestamp > now+60 {
-			t.Errorf("Timestamp %d is not recent (current: %d)", result.Timestamp, now)
-		}
+		assert.True(t, result.Timestamp >= now-60 && result.Timestamp <= now+60)
 	})
 }
 
@@ -311,11 +243,8 @@ func TestPriceFeedClient_ErrorScenarios(t *testing.T) {
 		"binance": {
 			Name:    "Binance",
 			BaseURL: server.URL,
-			Symbols: map[string]string{
-				"BTC": "BTCUSDT",
-			},
-			Endpoints: map[string]string{
-				"BTC": "/api/v3/ticker/24hr?symbol=BTCUSDT",
+			Symbols: map[string][]string{
+				"BTC": {"BTCUSDT"},
 			},
 		},
 	}
@@ -326,43 +255,29 @@ func TestPriceFeedClient_ErrorScenarios(t *testing.T) {
 
 	client := &PriceFeedClient{
 		exchangeConfigs: customConfigs,
-		symbolExchanges: customSymbols,
+		coinExchanges:   customSymbols,
 	}
 
 	t.Run("TestInvalidExchange", func(t *testing.T) {
-		_, err := client.FetchPriceFromExchange(context.Background(), "invalid_exchange", "BTC")
-		if err == nil {
-			t.Error("Expected error for invalid exchange, got nil")
-			return
-		}
-		if err.Code != appErrors.ErrExchangeNotConfigured.Code {
-			t.Errorf("Expected error code %d, got %d", appErrors.ErrExchangeNotConfigured.Code, err.Code)
-		}
+		result, err := client.FetchPriceFromExchange(context.Background(), "invalid_exchange", "BTC", "BTCUSDT")
+		assert.Error(t, err)
+		assert.Equal(t, appErrors.ErrExchangeNotConfigured.Code, err.Code)
+		assert.Nil(t, result)
 	})
 
 	t.Run("TestInvalidSymbol", func(t *testing.T) {
-		_, err := client.FetchPriceFromExchange(context.Background(), "binance", "INVALID")
-		if err == nil {
-			t.Error("Expected error for invalid symbol, got nil")
-			return
-		}
-		if err.Code != appErrors.ErrSymbolNotSupportedByExchange.Code {
-			t.Errorf("Expected error code %d, got %d", appErrors.ErrSymbolNotSupportedByExchange.Code, err.Code)
-		}
+		result, err := client.FetchPriceFromExchange(context.Background(), "binance", "BTC", "INVALID")
+		assert.Error(t, err)
+		assert.Equal(t, appErrors.ErrExchangeInvalidStatusCode.Code, err.Code)
+		assert.Nil(t, result)
 	})
 
 	t.Run("TestInsufficientData", func(t *testing.T) {
 		// Test with only one exchange that fails
 		result, err := client.GetPriceFeed(context.Background(), "BTC")
-		if err == nil {
-			t.Error("Expected error for insufficient data, got nil")
-		}
-		if err != nil && err.Code != appErrors.ErrInsufficientExchangeData.Code {
-			t.Errorf("Expected error code %d, got %d", appErrors.ErrInsufficientExchangeData.Code, err.Code)
-		}
-		if result != nil {
-			t.Error("Expected nil result for insufficient data")
-		}
+		assert.Error(t, err)
+		assert.Equal(t, appErrors.ErrInsufficientExchangeData.Code, err.Code)
+		assert.Nil(t, result)
 	})
 }
 
@@ -409,15 +324,9 @@ func TestCalculateVolumeWeightedAverage(t *testing.T) {
 			avg, volume, count := CalculateVolumeWeightedAverage(tt.prices)
 
 			tolerance := 0.01
-			if abs(avg-tt.expectedAvg) > tolerance {
-				t.Errorf("Expected average %f, got %f", tt.expectedAvg, avg)
-			}
-			if abs(volume-tt.expectedVolume) > tolerance {
-				t.Errorf("Expected volume %f, got %f", tt.expectedVolume, volume)
-			}
-			if count != tt.expectedCount {
-				t.Errorf("Expected count %d, got %d", tt.expectedCount, count)
-			}
+			assert.InDelta(t, tt.expectedAvg, avg, tolerance)
+			assert.InDelta(t, tt.expectedVolume, volume, tolerance)
+			assert.Equal(t, tt.expectedCount, count)
 		})
 	}
 }

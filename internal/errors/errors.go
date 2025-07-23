@@ -114,8 +114,8 @@ var (
 	// =============================================================================
 	// EXCHANGE ERRORS (6000-6999)
 	// =============================================================================
-	ErrMissingSymbol                 = AppError{6001, "exchange error: symbol parameter is required", "", 0, ""}
-	ErrInvalidSymbol                 = AppError{6002, "exchange error: invalid symbol. Supported symbols: BTC, ETH, ALEO", "", 0, ""}
+	ErrMissingCoin                   = AppError{6001, "exchange error: coin parameter is required", "", 0, ""}
+	ErrInvalidCoin                   = AppError{6002, "exchange error: invalid coin. Supported coins: BTC, ETH, ALEO", "", 0, ""}
 	ErrPriceFeedFailed               = AppError{6003, "exchange error: failed to get price feed data", "", 0, ""}
 	ErrExchangeNotConfigured         = AppError{6004, "exchange error: exchange not configured", "", 0, ""}
 	ErrSymbolNotSupportedByExchange  = AppError{6005, "exchange error: symbol not supported by exchange", "", 0, ""}

@@ -97,11 +97,7 @@ func TestExtractDataFromHTML_WithValidRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			result, err := ExtractDataFromTargetURL(context.Background(), testCase.attestationRequest)
-			if err != nil {
-				t.Fatalf("Expected no error, got %v", err)
-			}
-
-			t.Logf("Result: %v", result)
+			assert.Nil(t, err)
 
 			// For JSON responses, compare the parsed structures
 			if testCase.attestationRequest.ResponseFormat == "json" {
@@ -165,7 +161,6 @@ func TestExtractDataFromHTML_WithInvalidRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := ExtractDataFromTargetURL(context.Background(), testCase.attestationRequest)
-			t.Logf("Error: %v", err)
 			assert.Equal(t, testCase.expectedPayload, err)
 		})
 	}
@@ -246,11 +241,7 @@ func TestExtractDataFromJSON_WithValidRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			result, err := ExtractDataFromTargetURL(context.Background(), testCase.attestationRequest)
-			if err != nil {
-				t.Fatalf("Expected no error, got %v", err)
-			}
-
-			t.Logf("Result: %v", result)
+			assert.Nil(t, err)
 
 			// For JSON responses, compare the parsed structures
 			if testCase.attestationRequest.ResponseFormat == "json" {
@@ -328,7 +319,6 @@ func TestExtractDataFromJSON_WithInvalidRequest(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := ExtractDataFromTargetURL(context.Background(), testCase.attestationRequest)
-			t.Logf("Error: %v", err)
 			assert.Equal(t, testCase.expectedPayload, err)
 		})
 	}
