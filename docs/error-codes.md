@@ -272,8 +272,8 @@ Exchange errors occur during cryptocurrency price feed operations and exchange A
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
-| `6001` | `ErrMissingSymbol` | Symbol parameter is required | 400 |
-| `6002` | `ErrInvalidSymbol` | Invalid symbol (supported: BTC, ETH, ALEO) | 400 |
+| `6001` | `ErrMissingCoin` | Coin parameter is required | 400 |
+| `6002` | `ErrInvalidCoin` | Invalid coin (supported: BTC, ETH, ALEO) | 400 |
 
 ### Exchange Configuration
 

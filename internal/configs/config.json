@@ -6,85 +6,98 @@
             "binance": {
                 "name": "Binance",
                 "baseURL": "api.binance.com",
+                "endpointTemplate": "/api/v3/ticker/24hr?symbol={symbol}",
                 "symbols": {
-                    "BTC": "BTCUSDT",
-                    "ETH": "ETHUSDT"
-                },
-                "endpoints": {
-                    "BTC": "/api/v3/ticker/24hr?symbol=BTCUSDT",
-                    "ETH": "/api/v3/ticker/24hr?symbol=ETHUSDT"
+                    "BTC": [
+                        "BTCUSDT",
+                        "BTCUSDC"
+                    ],
+                    "ETH": [
+                        "ETHUSDT",
+                        "ETHUSDC"
+                    ]
                 }
             },
             "bybit": {
                 "name": "Bybit",
                 "baseURL": "api.bybit.com",
+                "endpointTemplate": "/v5/market/tickers?category=spot&symbol={symbol}",
                 "symbols": {
-                    "BTC": "BTCUSDT",
-                    "ETH": "ETHUSDT"
-                },
-                "endpoints": {
-                    "BTC": "/v5/market/tickers?category=spot&symbol=BTCUSDT",
-                    "ETH": "/v5/market/tickers?category=spot&symbol=ETHUSDT"
+                    "BTC": [
+                        "BTCUSDT",
+                        "BTCUSDC"
+                    ],
+                    "ETH": [
+                        "ETHUSDT",
+                        "ETHUSDC"
+                    ]
                 }
             },
             "coinbase": {
                 "name": "Coinbase",
                 "baseURL": "api.exchange.coinbase.com",
+                "endpointTemplate": "/products/{symbol}/ticker",
                 "symbols": {
-                    "ALEO": "ALEO-USD",
-                    "BTC": "BTC-USD",
-                    "ETH": "ETH-USD"
-                },
-                "endpoints": {
-                    "ALEO": "/products/ALEO-USD/ticker",
-                    "BTC": "/products/BTC-USD/ticker",
-                    "ETH": "/products/ETH-USD/ticker"
+                    "ALEO": [
+                        "ALEO-USD"
+                    ],
+                    "BTC": [
+                        "BTC-USD",
+                        "BTC-USDT"
+                    ],
+                    "ETH": [
+                        "ETH-USD",
+                        "ETH-USDT"
+                    ]
                 }
             },
             "crypto.com": {
                 "name": "Crypto.com",
                 "baseURL": "api.crypto.com",
+                "endpointTemplate": "/v2/public/get-ticker?instrument_name={symbol}",
                 "symbols": {
-                    "BTC": "BTC_USDT",
-                    "ETH": "ETH_USDT"
-                },
-                "endpoints": {
-                    "BTC": "/v2/public/get-ticker?instrument_name=BTC_USDT",
-                    "ETH": "/v2/public/get-ticker?instrument_name=ETH_USDT"
+                    "BTC": [
+                        "BTC_USDT",
+                        "BTC_USD"
+                    ],
+                    "ETH": [
+                        "ETH_USDT",
+                        "ETH_USD"
+                    ]
                 }
             },
             "gate.io": {
                 "name": "Gate.io",
                 "baseURL": "api.gateio.ws",
+                "endpointTemplate": "/api/v4/spot/tickers?currency_pair={symbol}",
                 "symbols": {
-                    "ALEO": "ALEO_USDT"
-                },
-                "endpoints": {
-                    "ALEO": "/api/v4/spot/tickers?currency_pair=ALEO_USDT"
+                    "ALEO": [
+                        "ALEO_USDT"
+                    ]
                 }
             },
             "mexc": {
                 "name": "MEXC",
                 "baseURL": "api.mexc.com",
+                "endpointTemplate": "/api/v3/ticker/24hr?symbol={symbol}",
                 "symbols": {
-                    "ALEO": "ALEOUSDT"
-                },
-                "endpoints": {
-                    "ALEO": "/api/v3/ticker/24hr?symbol=ALEOUSDT"
+                    "ALEO": [
+                        "ALEOUSDT"
+                    ]
                 }
             },
             "xt": {
                 "name": "XT",
                 "baseURL": "xt.com",
+                "endpointTemplate": "/sapi/v4/market/public/ticker/24h?symbol={symbol}",
                 "symbols": {
-                    "ALEO": "ALEO_USDT"
-                },
-                "endpoints": {
-                    "ALEO": "/sapi/v4/market/public/ticker/24h?symbol=ALEO_USDT"
+                    "ALEO": [
+                        "ALEO_USDT"
+                    ]
                 }
             }
         },
-        "symbolExchanges": {
+        "coinExchanges": {
             "ALEO": [
                 "xt",
                 "gate.io",

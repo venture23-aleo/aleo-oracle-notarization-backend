@@ -25,6 +25,7 @@ type ExchangePrice struct {
 	Exchange string  `json:"exchange"` // Exchange name.
 	Price    float64 `json:"price"`    // Price.
 	Volume   float64 `json:"volume"`   // Volume.
+	Coin     string  `json:"coin"`     // Coin.
 	Symbol   string  `json:"symbol"`   // Symbol.
 }
 
@@ -42,17 +43,17 @@ type PriceFeedResult struct {
 // PriceFeedClient is the client for the price feed.
 type PriceFeedClient struct {
 	exchangeConfigs configs.ExchangesConfig // Exchange configurations.
-	symbolExchanges configs.SymbolExchanges // Symbol exchanges.
+	coinExchanges   configs.CoinExchanges   // Coin exchanges.
 }
 
 // NewPriceFeedClient creates a new PriceFeedClient with default configurations
 func NewPriceFeedClient() *PriceFeedClient {
 	exchangeConfigs := configs.GetExchangesConfigs() // Get exchange configurations.
-	symbolExchanges := configs.GetSymbolExchanges()  // Get symbol exchanges.
+	coinExchanges := configs.GetCoinExchanges()      // Get coin exchanges.
 
 	return &PriceFeedClient{
 		exchangeConfigs: exchangeConfigs,
-		symbolExchanges: symbolExchanges,
+		coinExchanges:   coinExchanges,
 	}
 }
 
@@ -60,7 +61,7 @@ func NewPriceFeedClient() *PriceFeedClient {
 //
 // This function performs the following steps sequentially:
 //  1. Retrieves the exchange configuration for the given exchangeKey.
-//  2. Retrieves the endpoint for the given symbol from the exchange configuration.
+//  2. Replace the symbol in the endpoint template.
 //  3. Constructs the full URL for the API request, handling cases where the BaseURL may or may not include the protocol.
 //  4. Creates a retryable HTTP client for robust network requests.
 //  5. Builds an HTTP GET request with the provided context.
@@ -79,7 +80,7 @@ func NewPriceFeedClient() *PriceFeedClient {
 // Returns:
 //   - *ExchangePrice: The parsed price and volume data from the exchange.
 //   - *appErrors.AppError: An application error if any step fails, otherwise nil.
-func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKey, symbol string) (*ExchangePrice, *appErrors.AppError) {
+func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKey, coin, symbol string) (*ExchangePrice, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	// Step 1: Get exchange configuration.
@@ -89,14 +90,10 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 		return nil, appErrors.NewAppError(appErrors.ErrExchangeNotConfigured)
 	}
 
-	// Step 2: Get endpoint for the symbol.
-	endpoint, exists := config.Endpoints[symbol]
-	if !exists {
-		reqLogger.Error("Symbol not supported by exchange", "symbol", symbol, "exchange", exchangeKey)
-		return nil, appErrors.NewAppError(appErrors.ErrSymbolNotSupportedByExchange)
-	}
+	// Step 2: Replace the symbol in the endpoint template.
+	endpoint := strings.Replace(config.EndpointTemplate, "{symbol}", symbol, 1)
 
-	// Step 3: Construct the full URL, handling protocol presence.
+	// Step 3: Construct the full URL.
 	var url string
 	if strings.HasPrefix(config.BaseURL, "http://") || strings.HasPrefix(config.BaseURL, "https://") {
 		url = fmt.Sprintf("%s%s", config.BaseURL, endpoint)
@@ -167,6 +164,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 		Exchange: config.Name,
 		Price:    price,
 		Volume:   volume,
+		Coin:     symbol,
 		Symbol:   symbol,
 	}, nil
 }
@@ -461,13 +459,15 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice) (float64, float64, i
 
 	var totalVolume float64
 	var weightedSum float64
-	validPrices := 0
+	exchanges := make(map[string]bool)
 
 	for _, price := range prices {
 		if price.Price > 0 && price.Volume > 0 {
 			weightedSum += price.Price * price.Volume
 			totalVolume += price.Volume
-			validPrices++
+			if _, exists := exchanges[price.Exchange]; !exists {
+				exchanges[price.Exchange] = true
+			}
 		}
 	}
 
@@ -476,7 +476,7 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice) (float64, float64, i
 	}
 
 	volumeWeightedAvg := weightedSum / totalVolume
-	return volumeWeightedAvg, totalVolume, validPrices
+	return volumeWeightedAvg, totalVolume, len(exchanges)
 }
 
 // Fetch prices from all exchanges concurrently
@@ -486,13 +486,13 @@ type fetchResult struct {
 	err      *appErrors.AppError
 }
 
-// GetPriceFeed fetches and calculates the volume-weighted average price for a given symbol
-func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*PriceFeedResult, *appErrors.AppError) {
+// GetPriceFeed fetches and calculates the volume-weighted average price for a given coin
+func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, coinName string) (*PriceFeedResult, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
-	exchanges, exists := c.symbolExchanges[strings.ToUpper(symbol)]
+	exchanges, exists := c.coinExchanges[strings.ToUpper(coinName)]
 	if !exists {
-		reqLogger.Error("Invalid symbol", "symbol", symbol)
-		return nil, appErrors.NewAppError(appErrors.ErrInvalidSymbol)
+		reqLogger.Error("Invalid coin", "coin", coinName)
+		return nil, appErrors.NewAppError(appErrors.ErrInvalidCoin)
 	}
 
 	var exchangePrices []ExchangePrice
@@ -501,24 +501,49 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*Pri
 	// Buffer size matches the number of exchanges to prevent blocking
 	results := make(chan fetchResult, len(exchanges))
 
+	totalTradingPairs := 0
+
 	// Launch concurrent goroutines to fetch prices from each exchange
 	// Each goroutine fetches data independently and sends results through the channel
 	for _, exchange := range exchanges {
-		go func(ex string) {
-			price, err := c.FetchPriceFromExchange(ctx, ex, strings.ToUpper(symbol))
-			results <- fetchResult{price: price, err: err, exchange: ex}
-		}(exchange)
+		coin := strings.ToUpper(coinName)
+		// Step 1: Get exchange configuration.
+		config, exists := c.exchangeConfigs[exchange]
+		if !exists {
+			reqLogger.Error("Exchange not configured", "exchange", exchange)
+			return nil, appErrors.NewAppError(appErrors.ErrExchangeNotConfigured)
+		}
+
+		// Step 2: Get symbol list and construct endpoint for the symbol.
+		symbolList, exists := config.Symbols[coin]
+		if !exists {
+			reqLogger.Error("Coin not supported by exchange", "coin", coin, "exchange", exchange)
+			return nil, appErrors.NewAppError(appErrors.ErrInvalidCoin)
+		}
+
+		if len(symbolList) == 0 {
+			reqLogger.Error("No trading pairs configured for coin", "coin", coin, "exchange", exchange)
+			return nil, appErrors.NewAppError(appErrors.ErrSymbolNotSupportedByExchange)
+		}
+
+		for _, symbol := range symbolList {
+			totalTradingPairs++
+			go func(ex string, cn string, symbol string) {
+				price, err := c.FetchPriceFromExchange(ctx, ex, cn, symbol)
+				results <- fetchResult{price: price, err: err, exchange: ex}
+			}(exchange, coin, symbol)
+		}
 	}
 
 	// Collect results from all goroutines
 	// Process results in the order they complete, not necessarily the order of exchanges
-	for i := 0; i < len(exchanges); i++ {
+	for i := 0; i < totalTradingPairs; i++ {
 		result := <-results
 		if result.err != nil {
 			metrics.RecordExchangeApiError(result.exchange, strconv.Itoa(int(result.err.Code)))
 			// Log the error but continue processing other exchanges
 			// This ensures the system is resilient to individual exchange failures
-			reqLogger.Error("Failed to fetch token price", "exchange", result.exchange, "error", result.err.Details)
+			reqLogger.Error("Failed to fetch token price", "exchange", result.exchange, "coin", coinName, "error", result.err.Details)
 			continue
 		}
 		if result.price != nil {
@@ -530,7 +555,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*Pri
 	// Calculate volume-weighted average
 	volumeWeightedAvg, totalVolume, exchangeCount := CalculateVolumeWeightedAverage(exchangePrices)
 
-	metrics.RecordPriceFeedExchangeCount(symbol, exchangeCount)
+	metrics.RecordPriceFeedExchangeCount(coinName, exchangeCount)
 
 	// Ensure at least 2 exchanges responded successfully
 	if exchangeCount < 2 {
@@ -540,7 +565,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, symbol string) (*Pri
 	}
 
 	return &PriceFeedResult{
-		Symbol:            strings.ToUpper(symbol),
+		Symbol:            strings.ToUpper(coinName),
 		VolumeWeightedAvg: strconv.FormatFloat(volumeWeightedAvg, 'f', -1, 64),
 		TotalVolume:       strconv.FormatFloat(totalVolume, 'f', -1, 64),
 		ExchangeCount:     exchangeCount,
