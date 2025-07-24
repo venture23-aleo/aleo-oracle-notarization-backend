@@ -268,12 +268,12 @@ Encoding errors occur during data encoding, buffer writing, and format conversio
 
 Exchange errors occur during cryptocurrency price feed operations and exchange API interactions.
 
-### Symbol Validation
+### Token Validation
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
-| `6001` | `ErrMissingCoin` | Coin parameter is required | 400 |
-| `6002` | `ErrInvalidCoin` | Invalid coin (supported: BTC, ETH, ALEO) | 400 |
+| `6001` | `ErrMissingToken` | Token parameter is required | 400 |
+| `6002` | `ErrInvalidToken` | Invalid token (supported: BTC, ETH, ALEO) | 400 |
 
 ### Exchange Configuration
 
