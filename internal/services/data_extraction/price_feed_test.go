@@ -101,33 +101,33 @@ func TestPriceFeedClient_BTCPrice(t *testing.T) {
 			EndpointTemplate: "/api/v3/ticker/24hr?symbol={symbol}",
 		},
 		"bybit": {
-			Name:    "Bybit",
-			BaseURL: server.URL,
-			Symbols: map[string][]string{"BTC": {"BTCUSDT"}},
+			Name:             "Bybit",
+			BaseURL:          server.URL,
+			Symbols:          map[string][]string{"BTC": {"BTCUSDT"}},
 			EndpointTemplate: "/v5/market/tickers?category=spot&symbol={symbol}",
 		},
 		"coinbase": {
-			Name:    "Coinbase",
-			BaseURL: server.URL,
-			Symbols: map[string][]string{"BTC": {"BTC-USD"}},
+			Name:             "Coinbase",
+			BaseURL:          server.URL,
+			Symbols:          map[string][]string{"BTC": {"BTC-USD"}},
 			EndpointTemplate: "/products/BTC-USD/ticker",
 		},
 		"crypto.com": {
-			Name:    "Crypto.com",
-			BaseURL: server.URL,
-			Symbols: map[string][]string{"BTC": {"BTC_USDT"}},
+			Name:             "Crypto.com",
+			BaseURL:          server.URL,
+			Symbols:          map[string][]string{"BTC": {"BTC_USDT"}},
 			EndpointTemplate: "/v2/public/get-ticker?instrument_name={symbol}",
 		},
 	}
 
-	customCoins := map[string][]string{
+	customTokens := map[string][]string{
 		"BTC": {"binance", "bybit", "coinbase", "crypto.com"},
 	}
 
 	// Create client with custom configs
 	client := &PriceFeedClient{
 		exchangeConfigs: customConfigs,
-		coinExchanges:   customCoins,
+		tokenExchanges:  customTokens,
 	}
 
 	// Test fetching individual exchange prices
@@ -172,7 +172,7 @@ func TestPriceFeedClient_BTCPrice(t *testing.T) {
 		assert.NotNil(t, result)
 
 		// Check basic structure
-		assert.Equal(t, "BTC", result.Symbol)
+		assert.Equal(t, "BTC", result.Token)
 		assert.True(t, result.Success)
 		assert.Equal(t, 4, result.ExchangeCount)
 
@@ -249,13 +249,13 @@ func TestPriceFeedClient_ErrorScenarios(t *testing.T) {
 		},
 	}
 
-	customSymbols := map[string][]string{
+	customTokens := map[string][]string{
 		"BTC": {"binance"},
 	}
 
 	client := &PriceFeedClient{
 		exchangeConfigs: customConfigs,
-		coinExchanges:   customSymbols,
+		tokenExchanges:  customTokens,
 	}
 
 	t.Run("TestInvalidExchange", func(t *testing.T) {

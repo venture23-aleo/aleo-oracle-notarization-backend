@@ -16,12 +16,12 @@ func TestValidateConfigs(t *testing.T) {
 	exchangeConfigs := GetExchangesConfigs()
 	require.NotEmpty(t, exchangeConfigs, "No exchange configurations returned")
 
-	coinExchanges := GetCoinExchanges()
-	require.NotEmpty(t, coinExchanges, "No coin exchanges returned")
+	tokenExchanges := GetTokenExchanges()
+	require.NotEmpty(t, tokenExchanges, "No token exchanges returned")
 
 	// Log some info for debugging
 	t.Logf("Loaded %d exchange configurations", len(exchangeConfigs))
-	t.Logf("Loaded %d coin mappings", len(coinExchanges))
+	t.Logf("Loaded %d token mappings", len(tokenExchanges))
 
 	// Test valid exchanges
 	expectedExchanges := []string{"binance", "coinbase"}
@@ -30,15 +30,15 @@ func TestValidateConfigs(t *testing.T) {
 	}
 
 	// Test valid symbols
-	expectedCoins := []string{"BTC", "ETH", "ALEO"}
-	for _, expected := range expectedCoins {
-		assert.Contains(t, coinExchanges, expected, "Expected coin %s not found in mappings", expected)
+	expectedTokens := []string{"BTC", "ETH", "ALEO"}
+	for _, expected := range expectedTokens {
+		assert.Contains(t, tokenExchanges, expected, "Expected token %s not found in mappings", expected)
 	}
 
 	// Test invalid symbols
-	invalidCoins := []string{"INVALID", "INVALID2"}
-	for _, invalid := range invalidCoins {
-		assert.NotContains(t, coinExchanges, invalid, "Invalid coin %s found in mappings", invalid)
+	invalidTokens := []string{"INVALID", "INVALID2"}
+	for _, invalid := range invalidTokens {
+		assert.NotContains(t, tokenExchanges, invalid, "Invalid token %s found in mappings", invalid)
 	}
 
 	// Test invalid exchanges

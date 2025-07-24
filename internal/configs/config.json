@@ -97,7 +97,7 @@
                 }
             }
         },
-        "coinExchanges": {
+        "tokenExchanges": {
             "ALEO": [
                 "xt",
                 "gate.io",

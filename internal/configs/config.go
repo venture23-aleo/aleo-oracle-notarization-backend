@@ -13,20 +13,20 @@ import (
 //go:embed config.json
 var configFS embed.FS
 
-type CoinExchanges map[string][]string
+type TokenExchanges map[string][]string
 
 type ExchangeConfig struct {
-	Name      string              `json:"name"`
-	BaseURL   string              `json:"baseURL"`
-	Symbols   map[string][]string `json:"symbols"`
-	EndpointTemplate string       `json:"endpointTemplate"`
+	Name             string              `json:"name"`
+	BaseURL          string              `json:"baseURL"`
+	Symbols          map[string][]string `json:"symbols"`
+	EndpointTemplate string              `json:"endpointTemplate"`
 }
 
 type ExchangesConfig map[string]ExchangeConfig
 
 type PriceFeedConfig struct {
-	Exchanges    ExchangesConfig `json:"exchanges"`
-	CoinExchanges CoinExchanges  `json:"coinExchanges"`
+	Exchanges      ExchangesConfig `json:"exchanges"`
+	TokenExchanges TokenExchanges  `json:"tokenExchanges"`
 }
 
 // AppConfig holds application-wide configuration
@@ -84,9 +84,9 @@ func GetExchangesConfigs() ExchangesConfig {
 	return appConfig.PriceFeedConfig.Exchanges
 }
 
-func GetCoinExchanges() CoinExchanges {
+func GetTokenExchanges() TokenExchanges {
 	appConfig := GetAppConfig()
-	return appConfig.PriceFeedConfig.CoinExchanges
+	return appConfig.PriceFeedConfig.TokenExchanges
 }
 
 // ValidateConfigs validates that all configurations loaded correctly
@@ -103,16 +103,16 @@ func ValidateConfigs() error {
 	}
 
 	var exchangeKeys []string
-	var symbolKeys []string
+	var tokenKeys []string
 	exchangeConfigs := appConfig.PriceFeedConfig.Exchanges
-	symbolExchanges := appConfig.PriceFeedConfig.CoinExchanges
+	tokenExchanges := appConfig.PriceFeedConfig.TokenExchanges
 
 	if len(exchangeConfigs) == 0 {
 		errors = append(errors, "No exchange configurations found")
 	}
 
-	if len(symbolExchanges) == 0 {
-		errors = append(errors, "No symbol exchanges found")
+	if len(tokenExchanges) == 0 {
+		errors = append(errors, "No token exchanges found")
 	}
 
 	for exchangeKey, config := range exchangeConfigs {
@@ -132,17 +132,17 @@ func ValidateConfigs() error {
 	}
 
 	// Validate symbol exchanges mapping
-	for symbol, exchanges := range symbolExchanges {
+	for token, exchanges := range tokenExchanges {
 		if len(exchanges) == 0 {
-			errors = append(errors, fmt.Sprintf("Symbol %s: no exchanges configured", symbol))
+			errors = append(errors, fmt.Sprintf("Token %s: no exchanges configured", token))
 		}
 		// Check that all referenced exchanges exist in exchange configs
 		for _, exchange := range exchanges {
 			if _, exists := exchangeConfigs[exchange]; !exists {
-				errors = append(errors, fmt.Sprintf("Symbol %s: exchange %s not found in exchange configs", symbol, exchange))
+				errors = append(errors, fmt.Sprintf("Token %s: exchange %s not found in exchange configs", token, exchange))
 			}
 		}
-		symbolKeys = append(symbolKeys, symbol)
+		tokenKeys = append(tokenKeys, token)
 	}
 
 	// Return combined error if any validation failed
@@ -150,7 +150,7 @@ func ValidateConfigs() error {
 		return fmt.Errorf("configuration validation failed:\n%s", strings.Join(errors, "\n"))
 	}
 
-	logger.Info("Configuration validation passed", "exchange_count", len(exchangeConfigs), "symbol_count", len(symbolExchanges), "exchanges", strings.Join(exchangeKeys, ","), "symbols", strings.Join(symbolKeys, ","))
+	logger.Info("Configuration validation passed", "exchange_count", len(exchangeConfigs), "token_count", len(tokenExchanges), "exchanges", strings.Join(exchangeKeys, ","), "tokens", strings.Join(tokenKeys, ","))
 
 	return nil
 }

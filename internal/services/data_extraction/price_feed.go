@@ -25,13 +25,13 @@ type ExchangePrice struct {
 	Exchange string  `json:"exchange"` // Exchange name.
 	Price    float64 `json:"price"`    // Price.
 	Volume   float64 `json:"volume"`   // Volume.
-	Coin     string  `json:"coin"`     // Coin.
+	Token    string  `json:"token"`    // Token.
 	Symbol   string  `json:"symbol"`   // Symbol.
 }
 
 // PriceFeedResult represents the result of a price feed calculation
 type PriceFeedResult struct {
-	Symbol            string          `json:"symbol"`            // Symbol.
+	Token             string          `json:"token"`             // Token.
 	VolumeWeightedAvg string          `json:"volumeWeightedAvg"` // Volume-weighted average price.
 	TotalVolume       string          `json:"totalVolume"`       // Total volume.
 	ExchangeCount     int             `json:"exchangeCount"`     // Number of exchanges.
@@ -43,17 +43,17 @@ type PriceFeedResult struct {
 // PriceFeedClient is the client for the price feed.
 type PriceFeedClient struct {
 	exchangeConfigs configs.ExchangesConfig // Exchange configurations.
-	coinExchanges   configs.CoinExchanges   // Coin exchanges.
+	tokenExchanges  configs.TokenExchanges  // Token exchanges.
 }
 
 // NewPriceFeedClient creates a new PriceFeedClient with default configurations
 func NewPriceFeedClient() *PriceFeedClient {
 	exchangeConfigs := configs.GetExchangesConfigs() // Get exchange configurations.
-	coinExchanges := configs.GetCoinExchanges()      // Get coin exchanges.
+	tokenExchanges := configs.GetTokenExchanges()    // Get token exchanges.
 
 	return &PriceFeedClient{
 		exchangeConfigs: exchangeConfigs,
-		coinExchanges:   coinExchanges,
+		tokenExchanges:  tokenExchanges,
 	}
 }
 
@@ -75,12 +75,13 @@ func NewPriceFeedClient() *PriceFeedClient {
 // Parameters:
 //   - ctx: The context for request cancellation and logging.
 //   - exchangeKey: The key identifying the exchange (e.g., "binance").
-//   - symbol: The trading symbol (e.g., "BTC").
+//   - token: The token (e.g., "BTC").
+//   - symbol: The trading symbol (e.g., "BTCUSDT").
 //
 // Returns:
 //   - *ExchangePrice: The parsed price and volume data from the exchange.
 //   - *appErrors.AppError: An application error if any step fails, otherwise nil.
-func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKey, coin, symbol string) (*ExchangePrice, *appErrors.AppError) {
+func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKey, token, symbol string) (*ExchangePrice, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	// Step 1: Get exchange configuration.
@@ -107,28 +108,28 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 	// Step 5: Create request with context.
 	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		reqLogger.Error("Error creating HTTP request", "error", err, "exchange", exchangeKey, "symbol", symbol)
+		reqLogger.Error("Error creating HTTP request", "error", err, "exchange", exchangeKey, "token", token, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeFetchFailed, err.Error())
 	}
 
 	// Step 6: Execute the HTTP request.
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		reqLogger.Error("Error fetching price from exchange", "error", err, "exchange", exchangeKey, "symbol", symbol)
+		reqLogger.Error("Error fetching price from exchange", "error", err, "exchange", exchangeKey, "token", token, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeFetchFailed, err.Error())
 	}
 	defer resp.Body.Close()
 
 	// Step 7: Check for valid HTTP status code.
 	if resp.StatusCode != http.StatusOK {
-		reqLogger.Error("Invalid status code", "status_code", resp.StatusCode, "exchange", exchangeKey, "symbol", symbol)
+		reqLogger.Error("Invalid status code", "status_code", resp.StatusCode, "exchange", exchangeKey, "token", token, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithResponseStatus(appErrors.ErrExchangeInvalidStatusCode, resp.StatusCode)
 	}
 
 	// Step 8: Read the response body.
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		reqLogger.Error("Error reading response body", "error", err, "exchange", exchangeKey, "symbol", symbol)
+		reqLogger.Error("Error reading response body", "error", err, "exchange", exchangeKey, "token", token, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseDecodeFailed, err.Error())
 	}
 
@@ -155,7 +156,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 	// Step 10: Parse price and volume from the decoded response.
 	price, volume, parseErr := c.parseExchangeResponse(exchangeKey, data)
 	if parseErr != nil {
-		reqLogger.Error("Error parsing exchange response", "error", parseErr, "exchange", exchangeKey, "symbol", symbol)
+		reqLogger.Error("Error parsing exchange response", "error", parseErr, "exchange", exchangeKey, "token", token, "symbol", symbol)
 		return nil, appErrors.NewAppErrorWithDetails(appErrors.ErrExchangeResponseParseFailed, parseErr.Error())
 	}
 
@@ -164,7 +165,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchangeKe
 		Exchange: config.Name,
 		Price:    price,
 		Volume:   volume,
-		Coin:     symbol,
+		Token:    token,
 		Symbol:   symbol,
 	}, nil
 }
@@ -486,13 +487,13 @@ type fetchResult struct {
 	err      *appErrors.AppError
 }
 
-// GetPriceFeed fetches and calculates the volume-weighted average price for a given coin
-func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, coinName string) (*PriceFeedResult, *appErrors.AppError) {
+// GetPriceFeed fetches and calculates the volume-weighted average price for a given token
+func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string) (*PriceFeedResult, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
-	exchanges, exists := c.coinExchanges[strings.ToUpper(coinName)]
+	exchanges, exists := c.tokenExchanges[strings.ToUpper(tokenName)]
 	if !exists {
-		reqLogger.Error("Invalid coin", "coin", coinName)
-		return nil, appErrors.NewAppError(appErrors.ErrInvalidCoin)
+		reqLogger.Error("Invalid token", "token", tokenName)
+		return nil, appErrors.NewAppError(appErrors.ErrInvalidToken)
 	}
 
 	var exchangePrices []ExchangePrice
@@ -506,7 +507,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, coinName string) (*P
 	// Launch concurrent goroutines to fetch prices from each exchange
 	// Each goroutine fetches data independently and sends results through the channel
 	for _, exchange := range exchanges {
-		coin := strings.ToUpper(coinName)
+		token := strings.ToUpper(tokenName)
 		// Step 1: Get exchange configuration.
 		config, exists := c.exchangeConfigs[exchange]
 		if !exists {
@@ -515,23 +516,23 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, coinName string) (*P
 		}
 
 		// Step 2: Get symbol list and construct endpoint for the symbol.
-		symbolList, exists := config.Symbols[coin]
+		symbolList, exists := config.Symbols[token]
 		if !exists {
-			reqLogger.Error("Coin not supported by exchange", "coin", coin, "exchange", exchange)
-			return nil, appErrors.NewAppError(appErrors.ErrInvalidCoin)
+			reqLogger.Error("Token not supported by exchange", "token", token, "exchange", exchange)
+			return nil, appErrors.NewAppError(appErrors.ErrInvalidToken)
 		}
 
 		if len(symbolList) == 0 {
-			reqLogger.Error("No trading pairs configured for coin", "coin", coin, "exchange", exchange)
+			reqLogger.Error("No trading pairs configured for token", "token", token, "exchange", exchange)
 			return nil, appErrors.NewAppError(appErrors.ErrSymbolNotSupportedByExchange)
 		}
 
 		for _, symbol := range symbolList {
 			totalTradingPairs++
-			go func(ex string, cn string, symbol string) {
-				price, err := c.FetchPriceFromExchange(ctx, ex, cn, symbol)
+			go func(ex string, tk string, sym string) {
+				price, err := c.FetchPriceFromExchange(ctx, ex, tk, sym)
 				results <- fetchResult{price: price, err: err, exchange: ex}
-			}(exchange, coin, symbol)
+			}(exchange, token, symbol)
 		}
 	}
 
@@ -543,7 +544,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, coinName string) (*P
 			metrics.RecordExchangeApiError(result.exchange, strconv.Itoa(int(result.err.Code)))
 			// Log the error but continue processing other exchanges
 			// This ensures the system is resilient to individual exchange failures
-			reqLogger.Error("Failed to fetch token price", "exchange", result.exchange, "coin", coinName, "error", result.err.Details)
+			reqLogger.Error("Failed to fetch token price", "exchange", result.exchange, "token", tokenName, "error", result.err.Details)
 			continue
 		}
 		if result.price != nil {
@@ -555,7 +556,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, coinName string) (*P
 	// Calculate volume-weighted average
 	volumeWeightedAvg, totalVolume, exchangeCount := CalculateVolumeWeightedAverage(exchangePrices)
 
-	metrics.RecordPriceFeedExchangeCount(coinName, exchangeCount)
+	metrics.RecordPriceFeedExchangeCount(tokenName, exchangeCount)
 
 	// Ensure at least 2 exchanges responded successfully
 	if exchangeCount < 2 {
@@ -565,7 +566,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, coinName string) (*P
 	}
 
 	return &PriceFeedResult{
-		Symbol:            strings.ToUpper(coinName),
+		Token:             strings.ToUpper(tokenName),
 		VolumeWeightedAvg: strconv.FormatFloat(volumeWeightedAvg, 'f', -1, 64),
 		TotalVolume:       strconv.FormatFloat(totalVolume, 'f', -1, 64),
 		ExchangeCount:     exchangeCount,
@@ -588,15 +589,15 @@ func ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.At
 		}, appErrors.NewAppError(appErrors.ErrInvalidEncodingOption)
 	}
 
-	// Extract symbol from the price feed URL
-	var symbol string
+	// Extract token from the price feed URL
+	var token string
 	switch attestationRequest.Url {
 	case constants.PRICE_FEED_BTC_URL:
-		symbol = "BTC"
+		token = "BTC"
 	case constants.PRICE_FEED_ETH_URL:
-		symbol = "ETH"
+		token = "ETH"
 	case constants.PRICE_FEED_ALEO_URL:
-		symbol = "ALEO"
+		token = "ALEO"
 	default:
 		logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)
 		return ExtractDataResult{
@@ -614,10 +615,10 @@ func ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.At
 	}
 
 	// Get the price feed data
-	result, appErr := priceFeedClient.GetPriceFeed(ctx, symbol)
+	result, appErr := priceFeedClient.GetPriceFeed(ctx, token)
 
 	if appErr != nil {
-		reqLogger.Error("Error getting price feed for ", "symbol", symbol, "error", appErr)
+		reqLogger.Error("Error getting price feed for ", "token", token, "error", appErr)
 		return ExtractDataResult{
 			StatusCode: http.StatusInternalServerError,
 		}, appErr
