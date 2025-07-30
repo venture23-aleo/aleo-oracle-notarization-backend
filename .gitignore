@@ -5,3 +5,4 @@ bin/
 secrets/
 native/outputs/
 logs/
+enclave_artifacts/

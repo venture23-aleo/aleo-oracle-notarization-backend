@@ -16,7 +16,7 @@ The backend can handle different types of data, including integers, floats, and 
 ### Basic Setup
 ```sh
 # Generate enclave signing key
-make gen-key
+make generate-enclave-signing-key
 
 # Build and run the application
 make docker-build
@@ -65,11 +65,11 @@ This application runs inside an Intel SGX enclave for enhanced security. The enc
 To reproduce the enclave measurement hash (MRENCLAVE), you can run the following commands:
 
 ```sh
-make gen-key
-make get-enclave-info
+make generate-enclave-signing-key
+make extract-enclave-artifacts
 ``` 
 
-It will generate/update a `enclave_info.json` file in the root of the project. You can use this file to verify the enclave measurement hash (MRENCLAVE) of the running enclave. Ensure that the Intel SGX driver is loaded and the device files `sgx_enclave` and `sgx_provision` are accessible.  
+It will generate/update a `enclave_artifacts` directory in the root of the project. You can use this directory to verify the enclave measurement hash (MRENCLAVE) of the running enclave. Ensure that the Intel SGX driver is loaded and the device files `sgx_enclave` and `sgx_provision` are accessible.  
 
 ## 🤝 Contributing
 

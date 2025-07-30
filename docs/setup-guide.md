@@ -23,10 +23,9 @@ This guide covers how to run the Aleo Oracle Notarization Backend using Docker c
   Before building the Docker image, you need an enclave signing key (private key) to sign the Gramine manifest. This key must be an RSA 3072-bit key with public exponent 3, as required by Intel SGX.
 
   ```sh
-  make gen-key         # Uses gramine-sgx-gen-private-key (requires Gramine)
-  make gen-key-openssl # Uses OpenSSL with exponent 3 (requires OpenSSL 1.1.1+)
+  make generate-enclave-signing-key # Uses OpenSSL with exponent 3 (requires OpenSSL 1.1.1+)
   ```
-    Both commands will create `secrets/enclave-key.pem` suitable for SGX signing.
+  This will create `secrets/enclave-key.pem` suitable for SGX signing.
 
 ## 2. Build and Run the Docker Image
 
@@ -68,7 +67,7 @@ This project is designed to support reproducible builds, ensuring that the same 
   - Files such as `/etc/hosts`, `/etc/resolv.conf`, `/etc/sgx_default_qcnl.conf` and manifest templates are included in the build context and copied into the image, ensuring consistent configuration across builds.
 
 - **Deterministic Key Generation:**
-  - The enclave signing key is generated using a standard process (`make gen-key` or `make gen-key-openssl`), and you can check the key's properties for consistency.
+  - The enclave signing key is generated using a standard process (`make generate-enclave-signing-key`), and you can check the key's properties for consistency.
 
 - **Standardized Build Process:**
   - All build and run steps are wrapped in Makefile targets, so every user and CI system runs the same commands with the same environment variables and arguments.

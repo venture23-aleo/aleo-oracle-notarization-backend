@@ -15,27 +15,18 @@ func TestAppError_Error(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "basic error message",
-			appError: AppError{
-				Code:    1001,
-				Message: "validation error: url is required",
-			},
+			name:     "basic error message",
+			appError: *NewAppError(1001, "validation error: url is required"),
 			expected: "code 1001: validation error: url is required",
 		},
 		{
-			name: "error with zero code",
-			appError: AppError{
-				Code:    0,
-				Message: "test error",
-			},
+			name:     "error with zero code",
+			appError: *NewAppError(0, "test error"),
 			expected: "code 0: test error",
 		},
 		{
-			name: "error with empty message",
-			appError: AppError{
-				Code:    2001,
-				Message: "",
-			},
+			name:     "error with empty message",
+			appError: *NewAppError(2001, ""),
 			expected: "code 2001: ",
 		},
 	}
@@ -64,9 +55,8 @@ func TestAppError_JSON(t *testing.T) {
 				Message:            "validation error: url is required",
 				Details:            "URL field was empty",
 				ResponseStatusCode: 400,
-				RequestID:          "req-123",
 			},
-			expected: `{"errorCode":1001,"errorMessage":"validation error: url is required","errorDetails":"URL field was empty","responseStatusCode":400,"requestId":"req-123"}`,
+			expected: `{"errorCode":1001,"errorMessage":"validation error: url is required","errorDetails":"URL field was empty","responseStatusCode":400}`,
 		},
 		{
 			name: "error without optional fields",
@@ -90,29 +80,17 @@ func TestAppError_JSON(t *testing.T) {
 // TestNewAppError tests the NewAppError constructor
 func TestNewAppError(t *testing.T) {
 	originalError := AppError{
-		Code:               1001,
-		Message:            "validation error: url is required",
-		Details:            "URL field was empty",
-		ResponseStatusCode: 400,
-		RequestID:          "req-123",
+		Code:    1001,
+		Message: "validation error: url is required",
 	}
 
-	result := NewAppError(originalError)
+	result := NewAppError(originalError.Code, originalError.Message)
 
-	// Check that a new pointer is returned
-	if result == &originalError {
-		t.Error("NewAppError should return a new pointer, not the original")
-	}
-
-	assert.NotEqual(t, result, &originalError, "NewAppError should return a new pointer, not the original")
+	assert.Equal(t, result, &originalError, "Result should be equal to original error")
 
 	// Check that all fields are copied correctly
 	assert.Equal(t, result.Code, originalError.Code, "Code should be copied correctly")
 	assert.Equal(t, result.Message, originalError.Message, "Message should be copied correctly")
-	assert.Equal(t, result.Details, originalError.Details, "Details should be copied correctly")
-	assert.Equal(t, result.ResponseStatusCode, originalError.ResponseStatusCode, "ResponseStatusCode should be copied correctly")
-	// RequestID should not be copied by NewAppError
-	assert.Empty(t, result.RequestID, "RequestID should be empty")
 }
 
 // TestNewAppErrorWithResponseStatus tests the NewAppErrorWithResponseStatus constructor
@@ -124,7 +102,7 @@ func TestNewAppErrorWithResponseStatus(t *testing.T) {
 	}
 	newStatusCode := 422
 
-	result := NewAppErrorWithResponseStatus(originalError, newStatusCode)
+	result := originalError.WithResponseStatusCode(newStatusCode)
 
 	// Check that a new pointer is returned
 	if result == &originalError {
@@ -138,7 +116,6 @@ func TestNewAppErrorWithResponseStatus(t *testing.T) {
 	assert.Equal(t, result.Message, originalError.Message, "Message should be copied correctly")
 	assert.Equal(t, result.Details, originalError.Details, "Details should be copied correctly")
 	assert.Equal(t, result.ResponseStatusCode, newStatusCode, "ResponseStatusCode should be copied correctly")
-	assert.Equal(t, result.RequestID, originalError.RequestID, "RequestID should be copied correctly")
 }
 
 // TestNewAppErrorWithDetails tests the NewAppErrorWithDetails constructor
@@ -150,7 +127,7 @@ func TestNewAppErrorWithDetails(t *testing.T) {
 	}
 	newDetails := "Custom error details for debugging"
 
-	result := NewAppErrorWithDetails(originalError, newDetails)
+	result := originalError.WithDetails(newDetails)
 
 	// Check that a new pointer is returned
 	if result == &originalError {
@@ -164,12 +141,11 @@ func TestNewAppErrorWithDetails(t *testing.T) {
 	assert.Equal(t, result.Message, originalError.Message, "Message should be copied correctly")
 	assert.Equal(t, result.ResponseStatusCode, originalError.ResponseStatusCode, "ResponseStatusCode should be copied correctly")
 	assert.Equal(t, result.Details, newDetails, "Details should be copied correctly")
-	assert.Equal(t, result.RequestID, originalError.RequestID, "RequestID should be copied correctly")
 }
 
 // TestPredefinedErrors tests that all predefined errors have correct structure
 func TestPredefinedErrors(t *testing.T) {
-	predefinedErrors := []AppError{
+	predefinedErrors := []*AppError{
 		ErrMissingURL,
 		ErrMissingRequestMethod,
 		ErrMissingResponseFormat,
@@ -177,13 +153,31 @@ func TestPredefinedErrors(t *testing.T) {
 		ErrMissingEncodingOption,
 		ErrInvalidRequestMethod,
 		ErrMissingRequestBody,
+		ErrInvalidRequestBody,
 		ErrInvalidResponseFormat,
 		ErrMissingHTMLResultType,
 		ErrInvalidHTMLResultType,
+		ErrInvalidEncodingOptionForHTMLResultType,
+		ErrInvalidHTMLResultTypeForJSONResponse,
+		ErrMissingEncodingValue,
 		ErrInvalidEncodingOption,
-		ErrUnacceptedDomain,
-		ErrInvalidRequestData,
+		ErrTargetNotWhitelisted,
+		ErrMissingEncodingPrecision,
 		ErrInvalidEncodingPrecision,
+		ErrMissingRequestContentType,
+		ErrInvalidRequestContentType,
+		ErrInvalidSelector,
+		ErrInvalidTargetURL,
+		ErrMissingMaxParameter,
+		ErrInvalidMaxParameter,
+		ErrInvalidMaxValue,
+		ErrInvalidMaxValueFormat,
+		ErrInvalidAttestationData,
+		ErrInvalidURL,
+		ErrInvalidResponseFormatForPriceFeed,
+		ErrInvalidEncodingOptionForPriceFeed,
+		ErrInvalidRequestMethodForPriceFeed,
+		ErrInvalidSelectorForPriceFeed,
 		ErrReadingTargetInfo,
 		ErrWrittingReportData,
 		ErrGeneratingQuote,
@@ -191,38 +185,38 @@ func TestPredefinedErrors(t *testing.T) {
 		ErrWrittingTargetInfo,
 		ErrWrappingQuote,
 		ErrReadingReport,
-		ErrPreparingOracleData,
-		ErrMessageHashing,
+		ErrInvalidSGXReportSize,
+		ErrParsingSGXReport,
+		ErrAleoContext,
+		ErrPreparingHashMessage,
 		ErrPreparingProofData,
 		ErrFormattingProofData,
-		ErrGeneratingAttestationHash,
-		ErrPreparingEncodedProof,
+		ErrCreatingAttestationHash,
 		ErrFormattingEncodedProofData,
-		ErrUserDataTooShort,
 		ErrCreatingRequestHash,
 		ErrCreatingTimestampedRequestHash,
 		ErrFormattingQuote,
-		ErrReportHashing,
+		ErrHashingReport,
 		ErrGeneratingSignature,
 		ErrInvalidHTTPRequest,
 		ErrFetchingData,
+		ErrInvalidStatusCode,
 		ErrReadingHTMLContent,
 		ErrParsingHTMLContent,
+		ErrReadingJSONResponse,
+		ErrDecodingJSONResponse,
 		ErrSelectorNotFound,
-		ErrInvalidMap,
-		ErrKeyNotFound,
-		ErrJSONDecoding,
-		ErrJSONEncoding,
-		ErrInvalidSelectorPart,
-		ErrExpectedArray,
-		ErrIndexOutOfBound,
 		ErrUnsupportedPriceFeedURL,
+		ErrAttestationDataTooLarge,
+		ErrParsingFloatValue,
+		ErrParsingIntValue,
+		ErrEmptyAttestationData,
 		ErrEncodingAttestationData,
 		ErrEncodingResponseFormat,
 		ErrEncodingEncodingOptions,
 		ErrEncodingHeaders,
 		ErrEncodingOptionalFields,
-		ErrPreparationCriticalError,
+		ErrPreparingMetaHeader,
 		ErrWrittingAttestationData,
 		ErrWrittingTimestamp,
 		ErrWrittingStatusCode,
@@ -233,32 +227,36 @@ func TestPredefinedErrors(t *testing.T) {
 		ErrWrittingEncodingOptions,
 		ErrWrittingRequestHeaders,
 		ErrWrittingOptionalFields,
-		ErrMissingToken,
-		ErrInvalidToken,
-		ErrPriceFeedFailed,
+		ErrUserDataTooShort,
+		ErrTokenNotSupported,
 		ErrExchangeNotConfigured,
-		ErrSymbolNotSupportedByExchange,
-		ErrUnsupportedExchange,
-		ErrExchangeFetchFailed,
+		ErrSymbolNotConfigured,
+		ErrExchangeNotSupported,
+		ErrCreatingExchangeRequest,
+		ErrFetchingFromExchange,
 		ErrExchangeInvalidStatusCode,
-		ErrExchangeResponseDecodeFailed,
-		ErrExchangeResponseParseFailed,
-		ErrInvalidPriceFormat,
-		ErrInvalidVolumeFormat,
-		ErrInvalidExchangeResponseFormat,
-		ErrInvalidDataFormat,
-		ErrInvalidItemFormat,
-		ErrNoDataInResponse,
-		ErrPriceParseFailed,
-		ErrVolumeParseFailed,
+		ErrReadingExchangeResponse,
+		ErrDecodingExchangeResponse,
+		ErrParsingExchangeResponse,
+		ErrMissingDataInResponse,
+		ErrParsingPrice,
+		ErrParsingVolume,
 		ErrInsufficientExchangeData,
-		ErrAleoContext,
+		ErrEncodingPriceFeedData,
+		ErrNoTradingPairsConfigured,
+		ErrRequestBodyTooLarge,
+		ErrReadingRequestBody,
+		ErrInvalidContentType,
+		ErrDecodingRequestBody,
+		ErrInternal,
+		ErrGeneratingRandomNumber,
+		ErrJSONEncoding,
 	}
 
 	for _, err := range predefinedErrors {
 		t.Run(err.Message, func(t *testing.T) {
 			// Check that error code is in valid ranges
-			assert.True(t, err.Code >= 1000 && err.Code <= 7999, "Error code %d is outside valid range (1000-7999)", err.Code)
+			assert.True(t, err.Code >= 1000 && err.Code <= 9999, "Error code %d is outside valid range (1000-9999)", err.Code)
 
 			// Check that error message is not empty
 			assert.NotEmpty(t, err.Message, "Error message should not be empty")
@@ -280,9 +278,11 @@ func TestPredefinedErrors(t *testing.T) {
 			case err.Code >= 5000 && err.Code <= 5999:
 				// Encoding errors
 			case err.Code >= 6000 && err.Code <= 6999:
-				// Exchange errors
+				// Price feed errors
 			case err.Code >= 7000 && err.Code <= 7999:
-				// Aleo context errors
+				// Request/response errors
+			case err.Code >= 8000 && err.Code <= 8999:
+				// Internal errors
 			default:
 				assert.Fail(t, "Error code %d does not fall into any defined category", err.Code)
 			}
@@ -302,8 +302,9 @@ func TestErrorCodeRanges(t *testing.T) {
 		{name: "attestation error", code: 3001, category: "attestation"},
 		{name: "data extraction error", code: 4001, category: "data extraction"},
 		{name: "encoding error", code: 5001, category: "encoding"},
-		{name: "exchange error", code: 6001, category: "exchange"},
-		{name: "aleo context error", code: 7001, category: "aleo context"},
+		{name: "price feed error", code: 6001, category: "price feed"},
+		{name: "request/response error", code: 7001, category: "request/response"},
+		{name: "internal error", code: 8001, category: "internal"},
 	}
 
 	for _, tt := range tests {
@@ -324,10 +325,12 @@ func TestErrorCodeRanges(t *testing.T) {
 				minCode, maxCode = 4000, 4999
 			case "encoding":
 				minCode, maxCode = 5000, 5999
-			case "exchange":
+			case "price feed":
 				minCode, maxCode = 6000, 6999
-			case "aleo context":
+			case "request/response":
 				minCode, maxCode = 7000, 7999
+			case "internal":
+				minCode, maxCode = 8000, 8999
 			}
 
 			assert.True(t, testError.Code >= minCode && testError.Code <= maxCode, "Error code %d is not in expected range [%d, %d] for category %s", testError.Code, minCode, maxCode, tt.category)
@@ -350,4 +353,5 @@ func TestAppError_ImplementsErrorInterface(t *testing.T) {
 	// Test that we can call Error() method
 	errorString := err.Error()
 	assert.NotEmpty(t, errorString, "Error interface implementation should return non-empty string")
+	assert.Equal(t, "code 1001: test error", errorString, "Error() method should return correct error string")
 }
