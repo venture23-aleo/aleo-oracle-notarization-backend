@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -e
 
 ALERT_VERSION="0.27.0"
