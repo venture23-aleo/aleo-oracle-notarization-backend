@@ -83,8 +83,25 @@ lint:
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 	staticcheck ./...
 
+
+# ─────────key-openssl────────────────────────────────────────────────────
+# Generate the private key for SGX signing using OpenSSL (exponent 3)
+# Usage: make generate-enclave-signing-key
+# Requires OpenSSL 1.1.1 or later
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: generate-enclave-signing-key
+generate-enclave-signing-key:
+	@mkdir -p secrets
+	@echo ">> Generating enclave private key at secrets/enclave-key. && \pem using OpenSSL ..."
+	@openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -pkeyopt rsa_keygen_pubexp:3 -out secrets/enclave-key.pem
+	@chmod 600 secrets/enclave-key.pem
+	@echo ">> Enclave signing key generated successfully!"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Generate manifest template
+# Usage: make generate-manifest-template
+# Requires Gramine to be installed
 # ─────────────────────────────────────────────────────────────────────────────
 .PHONY: generate-manifest-template
 generate-manifest-template:
@@ -92,17 +109,37 @@ generate-manifest-template:
 	@scripts/generate-manifest-template.sh $(APP) $(DOCKER_MANIFEST_TEMPLATE) $(LD_LIBRARY_PATH)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Get enclave info
+# Extract enclave artifacts
 # ─────────────────────────────────────────────────────────────────────────────
-.PHONY: get-enclave-info
-get-enclave-info: docker-build
-	docker compose run --volume "$(shell pwd)/enclave_info.json/:/app/enclave_info.json" --entrypoint /bin/bash --rm $(APP) -c "gramine-sgx-sigstruct-view /app/${APP}.sig -v --output-format json > /app/enclave_info.json"
+# Usage: make extract-enclave-artifacts
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: extract-enclave-artifacts
+extract-enclave-artifacts: docker-build
+	@echo ">> Getting enclave info..."
+	@echo ">> Creating temporary container..."
+	@container_id=$$(docker create $(APP)) && \
+	echo ">> Container ID: $$container_id" && \
+	echo ">> Copying enclave signature file..." && \
+	mkdir -p enclave_artifacts && \
+	docker cp $$container_id:/app/${APP}.manifest.sgx ./enclave_artifacts/${APP}.manifest.sgx && \
+	docker cp $$container_id:/app/${APP}.sig  ./enclave_artifacts/${APP}.sig && \
+	docker cp $$container_id:/app/${APP}.metadata.json ./enclave_artifacts/${APP}.metadata.json && \
+	echo ">> Removing temporary container..." && \
+	docker rm $$container_id && \
+	echo ">> Enclave info extracted successfully!"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Native Build and Run
+# Usage: make native-build
+# Requires Gramine to be installed
 # ─────────────────────────────────────────────────────────────────────────────
+.PHONY: native-clean
+native-clean:
+	@echo ">> Cleaning native build artifacts..."
+	rm -rf native/outputs/*
+
 .PHONY: native-build
-native-build:
+native-build: native-clean
 	@echo ">> Building native binary..."
 	$(GOCMD) build -o native/outputs/$(APP) ./cmd/server
 
@@ -112,13 +149,8 @@ native-run: native-build
 	@chmod +x native/run-native.sh
 	./native/run-native.sh
 
-.PHONY: native-clean
-native-clean:
-	@echo ">> Cleaning native build artifacts..."
-	rm -rf native/outputs/*
-
 # ─────────────────────────────────────────────────────────────────────────────
-# Docker
+# Docker Management (Build, Run, Stop, Logs, Status)
 # ─────────────────────────────────────────────────────────────────────────────
 # Docker compose flags (can be overridden from command line)
 DOCKER_FLAGS ?= -d
@@ -127,11 +159,13 @@ DOCKER_SERVICES ?= $(APP)
 
 .PHONY: docker-build
 docker-build: generate-manifest-template
+	@mkdir -p enclave_artifacts
 	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose build $(APP)
 	docker tag $(APP):latest $(APP):$(COMMIT)
 
 .PHONY: docker-run
 docker-run: docker-build
+	@echo ">> Running Docker container..."
 	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) $(DOCKER_FLAGS)
 
 .PHONY: docker-run-fg
@@ -142,26 +176,6 @@ docker-run-fg: docker-build
 docker-run-rebuild: docker-build
 	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) --build --force-recreate
 
-.PHONY: setup-alertmanager
-setup-alertmanager:
-	@chmod +x scripts/setup-alertmanager.sh
-	@echo ">> Setting up Alertmanager..."
-	@scripts/setup-alertmanager.sh
-
-.PHONY: setup-prometheus
-setup-prometheus:
-	@chmod +x scripts/setup-prometheus.sh
-	@echo ">> Setting up Prometheus..."
-	@scripts/setup-prometheus.sh
-
-.PHONY: setup-monitoring
-setup-monitoring: setup-alertmanager setup-prometheus
-	@echo ">> Monitoring setup complete!"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Docker Management
-# ─────────────────────────────────────────────────────────────────────────────
 .PHONY: docker-stop
 docker-stop:
 	@echo ">> Stopping all Docker containers..."
@@ -178,35 +192,31 @@ docker-status:
 	docker compose -f $(DOCKER_COMPOSE_FILE) ps
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Prometheus Monitoring And Alertmanager Setup
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: setup-alertmanager
+setup-alertmanager:
+	@chmod +x scripts/setup-alertmanager.sh
+	@echo ">> Setting up Alertmanager..."
+	@scripts/setup-alertmanager.sh
+
+.PHONY: setup-prometheus
+setup-prometheus:
+	@chmod +x scripts/setup-prometheus.sh
+	@echo ">> Setting up Prometheus..."
+	@scripts/setup-prometheus.sh
+
+.PHONY: setup-monitoring
+setup-monitoring: setup-alertmanager setup-prometheus
+	@echo ">> Monitoring setup complete!"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Clean & Help
 # ─────────────────────────────────────────────────────────────────────────────
 .PHONY: clean
 clean:
 	@echo ">> Cleaning binaries..."
 	rm -rf bin/*
-
-.PHONY: gen-key
-# ─────────────────────────────────────────────────────────────────────────────
-# Generate the enclave private key for SGX signing
-# Usage: make gen-key
-# Requires gramine-sgx-gen-private-key to be installed
-# ─────────────────────────────────────────────────────────────────────────────
-gen-key:
-	@mkdir -p secrets
-	@echo ">> Generating enclave private key at secrets/enclave-key.pem ..."
-	rm -f secrets/enclave-key.pem
-	gramine-sgx-gen-private-key secrets/enclave-key.pem
-
-.PHONY: gen-key-openssl
-# ─────────────────────────────────────────────────────────────────────────────
-# Generate the enclave private key for SGX signing using OpenSSL (exponent 3)
-# Usage: make gen-key-openssl
-# Requires OpenSSL 1.1.1 or later
-# ─────────────────────────────────────────────────────────────────────────────
-gen-key-openssl:
-	@mkdir -p secrets
-	@echo ">> Generating enclave private key at secrets/enclave-key.pem using OpenSSL ..."
-	openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -pkeyopt rsa_keygen_pubexp:3 -out secrets/enclave-key.pem
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Help
@@ -261,10 +271,9 @@ help:
 	@echo "  setup-prometheus            Setup Prometheus"
 	@echo
 	@echo "SGX/Enclave Targets:"
-	@echo "  generate-manifest-template  Generate manifest template"
-	@echo "  get-enclave-info            Get enclave info"
-	@echo "  gen-key                     Generate enclave private key (Gramine tool)"
-	@echo "  gen-key-openssl             Generate enclave private key (OpenSSL)"
+	@echo "  generate-manifest-template   Generate manifest template"
+	@echo "  extract-enclave-artifacts    Extract enclave artifacts"
+	@echo "  generate-enclave-signing-key Generate enclave signing key (OpenSSL)"
 	@echo
 	@echo "Utility:"
 	@echo "  help            Show this help"

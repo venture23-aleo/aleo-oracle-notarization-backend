@@ -160,16 +160,6 @@ var (
 		},
 	)
 
-	// Business Metrics
-	AttestationDataSize = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "attestation_data_size_bytes",
-			Help:    "Size of attestation data in bytes",
-			Buckets: []float64{100, 500, 1000, 5000, 10000, 50000, 100000},
-		},
-		[]string{"type"},
-	)
-
 	// Error Metrics
 	ErrorsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -242,11 +232,6 @@ func RecordRandomNumberGeneration(status string, duration float64) {
 // RecordError records error metrics
 func RecordError(errorType, component string) {
 	ErrorsTotal.WithLabelValues(errorType, component).Inc()
-}
-
-// RecordAttestationDataSize records attestation data size metrics
-func RecordAttestationDataSize(attestationType string, sizeBytes int) {
-	AttestationDataSize.WithLabelValues(attestationType).Observe(float64(sizeBytes))
 }
 
 // RecordEnclaveHealthStatus records enclave health status

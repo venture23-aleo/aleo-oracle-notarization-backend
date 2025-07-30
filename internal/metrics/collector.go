@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 )
 
 // SystemMetricsCollector collects system-level metrics

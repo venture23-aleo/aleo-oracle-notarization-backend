@@ -90,11 +90,8 @@ which gramine-sgx
 Generate the RSA 3072-bit private key required for SGX enclave signing:
 
 ```bash
-# Using Gramine's key generation tool
-make gen-key
-
-# OR using OpenSSL (alternative)
-make gen-key-openssl
+# Using OpenSSL
+make generate-enclave-signing-key
 ```
 
 This creates `secrets/enclave-key.pem` which will be used to sign the Gramine manifest.

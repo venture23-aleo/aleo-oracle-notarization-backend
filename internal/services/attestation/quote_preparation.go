@@ -6,11 +6,11 @@ import (
 	"math/big"
 
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
+	aleoUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/aleoutil"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 )
 
 // QuotePreparationData contains all the data needed for quote generation
@@ -55,7 +55,7 @@ func PrepareOracleUserData(
 	err *appErrors.AppError,
 ) {
 	// Step 1: Get the Aleo context.
-	aleoContext, err := aleoContext.GetAleoContext()
+	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -64,25 +64,25 @@ func PrepareOracleUserData(
 	userDataProof, encodedPositions, err = PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
 
 	if err != nil {
-		return nil, nil, nil, appErrors.NewAppError(appErrors.ErrPreparingProofData)
+		return nil, nil, nil, appErrors.ErrPreparingProofData
 	}
 
-	// Step 3: Set the token ID in the proof data based on the attestation request URL.
-	switch attestationRequest.Url {
-	case constants.PRICE_FEED_ALEO_URL:
-		userDataProof[0] = constants.ALEO_TOKEN_ID
-	case constants.PRICE_FEED_BTC_URL:
-		userDataProof[0] = constants.BTC_TOKEN_ID
-	case constants.PRICE_FEED_ETH_URL:
-		userDataProof[0] = constants.ETH_TOKEN_ID
+	if common.IsPriceFeedURL(attestationRequest.Url) {
+		tokenID := common.GetTokenIDFromPriceFeedURL(attestationRequest.Url)
+		logger.Debug("Token ID: ", "tokenID", tokenID)
+		if tokenID == 0 {
+			logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)
+			return nil, nil, nil, appErrors.ErrUnsupportedPriceFeedURL
+		}
+		userDataProof[0] = byte(tokenID)
 	}
 
 	// Step 4: Format the proof data into C0 - C7 chunks.
-	userData, formatError := aleoContext.GetSession().FormatMessage(userDataProof, 8)
+	userData, formatError := aleoContext.GetSession().FormatMessage(userDataProof, constants.OracleUserDataChunkSize)
 
 	if formatError != nil {
 		logger.Error("failed to format proof data", "error", formatError)
-		return nil, nil, nil, appErrors.NewAppError(appErrors.ErrFormattingProofData)
+		return nil, nil, nil, appErrors.ErrFormattingProofData
 	}
 
 	// Step 5: Return the prepared data.
@@ -107,7 +107,7 @@ func PrepareOracleUserData(
 //   - err: an application error if any step fails
 func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encoding.ProofPositionalInfo) (encodedRequest []byte, err *appErrors.AppError) {
 	// Step 1: Retrieve the Aleo context.
-	aleoContext, err := aleoContext.GetAleoContext()
+	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 	encodedRequest, formatError := aleoContext.GetSession().FormatMessage(encodedRequestProof, 8)
 	if formatError != nil {
 		logger.Error("failed to format encoded proof data:", "error", formatError)
-		return nil, appErrors.NewAppError(appErrors.ErrFormattingEncodedProofData)
+		return nil, appErrors.ErrFormattingEncodedProofData
 	}
 
 	// Step 4: Return the encoded request.
@@ -153,7 +153,7 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 //   - err: an application error if any step fails
 func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, requestHashString string, err *appErrors.AppError) {
 	// Step 1: Retrieve the Aleo context.
-	aleoContext, err := aleoContext.GetAleoContext()
+	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		return nil, "", err
 	}
@@ -162,14 +162,14 @@ func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, reques
 	requestHash, hashError := aleoContext.GetSession().HashMessage(encodedRequest)
 	if hashError != nil {
 		logger.Error("failed to create request hash:", "error", hashError)
-		return nil, "", appErrors.NewAppError(appErrors.ErrCreatingRequestHash)
+		return nil, "", appErrors.ErrCreatingRequestHash
 	}
 
 	// Step 3: Create the request hash string - Hash the encoded request.
 	requestHashString, hashError = aleoContext.GetSession().HashMessageToString(encodedRequest)
 	if hashError != nil {
 		logger.Error("failed to create request hash:", "error", hashError)
-		return nil, "", appErrors.NewAppError(appErrors.ErrCreatingRequestHash)
+		return nil, "", appErrors.ErrCreatingRequestHash
 	}
 
 	// Step 4: Return both the byte slice hash and the string hash.
@@ -200,7 +200,7 @@ func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, reques
 //   - err: an application error if any step fails
 func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (timestampedRequestHash string, err *appErrors.AppError) {
 	// Step 1: Retrieve the Aleo context.
-	aleoContext, err := aleoContext.GetAleoContext()
+	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		return "", err
 	}
@@ -213,8 +213,8 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 	timestampedRequestHashInput := append(requestHash, timestampBytes...)
 
 	// Step 4: Create the timestamped request hash input chunks.
-	timestampedRequestHashInputChunk1 := new(big.Int).SetBytes(utils.ReverseBytes(timestampedRequestHashInput[:encoding.TARGET_ALIGNMENT]))
-	timestampedRequestHashInputChunk2 := new(big.Int).SetBytes(utils.ReverseBytes(timestampedRequestHashInput[encoding.TARGET_ALIGNMENT : 2*encoding.TARGET_ALIGNMENT]))
+	timestampedRequestHashInputChunk1 := new(big.Int).SetBytes(common.ReverseBytes(timestampedRequestHashInput[:encoding.TARGET_ALIGNMENT]))
+	timestampedRequestHashInputChunk2 := new(big.Int).SetBytes(common.ReverseBytes(timestampedRequestHashInput[encoding.TARGET_ALIGNMENT : 2*encoding.TARGET_ALIGNMENT]))
 
 	// Step 5: Create the timestamped request hash format message.
 	timestampedRequestHashFormatMessage := fmt.Sprintf("{ request_hash: %su128, attestation_timestamp: %su128 }", timestampedRequestHashInputChunk1, timestampedRequestHashInputChunk2)
@@ -225,7 +225,7 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 	// Step 7: Handle error.
 	if hashError != nil {
 		logger.Error("Failed to create timestamped request hash: ", "error", err)
-		return "", appErrors.NewAppError(appErrors.ErrCreatingTimestampedRequestHash)
+		return "", appErrors.ErrCreatingTimestampedRequestHash
 	}
 
 	return timestampedRequestHash, nil

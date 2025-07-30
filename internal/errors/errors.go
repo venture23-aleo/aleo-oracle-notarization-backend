@@ -10,7 +10,11 @@ type AppError struct {
 	Message            string `json:"errorMessage"`
 	Details            string `json:"errorDetails,omitempty"`
 	ResponseStatusCode int    `json:"responseStatusCode,omitempty"`
-	RequestID          string `json:"requestId,omitempty"`
+}
+
+type AppErrorWithRequestID struct {
+	AppError
+	RequestID string `json:"requestId,omitempty"`
 }
 
 // Error implements the error interface.
@@ -18,154 +22,171 @@ func (e AppError) Error() string {
 	return fmt.Sprintf("code %d: %s", e.Code, e.Message)
 }
 
+// NewAppError creates a new AppError with the given code and message
+func NewAppError(code uint, message string) *AppError {
+	return &AppError{
+		Code:    code,
+		Message: message,
+	}
+}
+
+// WithResponseStatusCode creates a new AppError with a specific response status code
+func (e *AppError) WithResponseStatusCode(responseStatusCode int) *AppError {
+	return &AppError{
+		Code:               e.Code,
+		Message:            e.Message,
+		ResponseStatusCode: responseStatusCode,
+		Details:            e.Details,
+	}
+}
+
+// WithDetails creates a new AppError with a specific details
+func (e *AppError) WithDetails(details string) *AppError {
+	return &AppError{
+		Code:               e.Code,
+		Message:            e.Message,
+		ResponseStatusCode: e.ResponseStatusCode,
+		Details:            details,
+	}
+}
+
 // AppErrors are the errors for the application.
 var (
 	// =============================================================================
 	// VALIDATION ERRORS (1000-1999)
 	// =============================================================================
-	ErrMissingURL               = AppError{1001, "validation error: url is required", "", 0, ""}
-	ErrMissingRequestMethod     = AppError{1002, "validation error: requestMethod is required", "", 0, ""}
-	ErrMissingResponseFormat    = AppError{1003, "validation error: responseFormat is required", "", 0, ""}
-	ErrMissingSelector          = AppError{1004, "validation error: selector is required", "", 0, ""}
-	ErrMissingEncodingOption    = AppError{1005, "validation error: encodingOptions.value is required", "", 0, ""}
-	ErrInvalidRequestMethod     = AppError{1006, "validation error: requestMethod expected to be GET/POST", "", 0, ""}
-	ErrMissingRequestBody       = AppError{1007, "validation error: requestBody is required with POST requestMethod", "", 0, ""}
-	ErrInvalidResponseFormat    = AppError{1008, "validation error: responseFormat expected to be html/json", "", 0, ""}
-	ErrMissingHTMLResultType    = AppError{1009, "validation error: htmlResultType is required with html responseFormat", "", 0, ""}
-	ErrInvalidHTMLResultType    = AppError{1010, "validation error: htmlResultType expected to be element/value", "", 0, ""}
-	ErrInvalidEncodingOption    = AppError{1011, "validation error: invalid encoding option", "", 0, ""}
-	ErrUnacceptedDomain         = AppError{1012, "validation error: attestation target is not whitelisted", "", 0, ""}
-	ErrInvalidRequestData       = AppError{1013, "validation error: failed to decode a request, invalid request structure", "", 0, ""}
-	ErrInvalidEncodingPrecision = AppError{1014, "validation error: invalid encoding precision", "", 0, ""}
-	ErrMissingMaxParameter      = AppError{1015, "validation error: max parameter is required", "", 0, ""}
-	ErrInvalidMaxParameter      = AppError{1016, "validation error: max parameter is invalid", "", 0, ""}
-	ErrInvalidMaxValue          = AppError{1017, "validation error: max value is invalid", "", 0, ""}
-	ErrInvalidMaxValueFormat    = AppError{1018, "validation error: max value format is invalid", "", 0, ""}
-	ErrInvalidMaxValueRange     = AppError{1019, "validation error: max value range is invalid", "", 0, ""}
-	ErrGeneratingRandomNumber   = AppError{1020, "validation error: failed to generate random number", "", 0, ""}
+	ErrMissingURL                             = NewAppError(1001, "validation error: url is required")
+	ErrMissingRequestMethod                   = NewAppError(1002, "validation error: requestMethod is required")
+	ErrMissingResponseFormat                  = NewAppError(1003, "validation error: responseFormat is required")
+	ErrMissingSelector                        = NewAppError(1004, "validation error: selector is required")
+	ErrMissingEncodingOption                  = NewAppError(1005, "validation error: encodingOptions.value is required")
+	ErrInvalidRequestMethod                   = NewAppError(1006, "validation error: requestMethod expected to be GET/POST")
+	ErrMissingRequestBody                     = NewAppError(1007, "validation error: requestBody is required with POST requestMethod")
+	ErrInvalidRequestBody                     = NewAppError(1008, "validation error: requestBody is not allowed with GET requestMethod")
+	ErrInvalidResponseFormat                  = NewAppError(1009, "validation error: responseFormat expected to be html/json")
+	ErrMissingHTMLResultType                  = NewAppError(1010, "validation error: htmlResultType is required with html responseFormat")
+	ErrInvalidHTMLResultType                  = NewAppError(1011, "validation error: htmlResultType expected to be element/value")
+	ErrInvalidEncodingOptionForHTMLResultType = NewAppError(1012, "validation error: expected encodingOptions.value to be string with htmlResultType element")
+	ErrInvalidHTMLResultTypeForJSONResponse   = NewAppError(1013, "validation error: htmlResultType is not allowed with json responseFormat")
+	ErrMissingEncodingValue                   = NewAppError(1014, "validation error: encodingOptions.value is required")
+	ErrInvalidEncodingOption                  = NewAppError(1015, "validation error: invalid encoding option. expected: string/float/int")
+	ErrTargetNotWhitelisted                   = NewAppError(1016, "validation error: attestation target is not whitelisted")
+	ErrMissingEncodingPrecision               = NewAppError(1017, "validation error: encodingOptions.precision is required for float encoding")
+	ErrInvalidEncodingPrecision               = NewAppError(1018, "validation error: invalid encodingOptions.precision")
+	ErrMissingRequestContentType              = NewAppError(1019, "validation error: requestContentType is required with POST requestMethod")
+	ErrInvalidRequestContentType              = NewAppError(1020, "validation error: requestContentType is not allowed with GET requestMethod")
+	ErrInvalidSelector                        = NewAppError(1021, "validation error: selector expected to be weightedAvgPrice for price feed requests")
+	ErrInvalidTargetURL                       = NewAppError(1022, "validation error: url should not include a scheme. Please remove https:// or http:// from your url")
+	ErrMissingMaxParameter                    = NewAppError(1023, "validation error: missing max search parameter")
+	ErrInvalidMaxParameter                    = NewAppError(1024, "validation error: invalid max search parameter")
+	ErrInvalidMaxValue                        = NewAppError(1025, "validation error: expected max search parameter to be a number 2-2^127")
+	ErrInvalidMaxValueFormat                  = NewAppError(1026, "validation error: invalid max value format")
+	ErrInvalidAttestationData                 = NewAppError(1027, "validation error: attestation data is invalid")
+	ErrInvalidURL                             = NewAppError(1028, "validation error: invalid url")
+	ErrInvalidResponseFormatForPriceFeed      = NewAppError(1029, "validation error: responseFormat expected to be json for price feed requests")
+	ErrInvalidEncodingOptionForPriceFeed      = NewAppError(1030, "validation error: invalid encoding option. expected: float for price feed requests")
+	ErrInvalidRequestMethodForPriceFeed       = NewAppError(1031, "validation error: requestMethod expected to be GET for price feed requests")
+	ErrInvalidSelectorForPriceFeed            = NewAppError(1032, "validation error: selector expected to be weightedAvgPrice for price feed requests")
 
 	// =============================================================================
 	// ENCLAVE ERRORS (2000-2999)
 	// =============================================================================
-	ErrReadingTargetInfo  = AppError{2001, "enclave error: failed to read the target info", "", 0, ""}
-	ErrWrittingReportData = AppError{2002, "enclave error: failed to write the report data", "", 0, ""}
-	ErrGeneratingQuote    = AppError{2003, "enclave error: failed to generate the quote", "", 0, ""}
-	ErrReadingQuote       = AppError{2004, "enclave error: failed to read the quote", "", 0, ""}
-	ErrWrittingTargetInfo = AppError{2005, "enclave error: failed to write the target info", "", 0, ""}
-	ErrWrappingQuote      = AppError{2006, "enclave error: failed to wrap quote in openenclave format", "", 0, ""}
-	ErrReadingReport      = AppError{2007, "enclave error: failed to read the report", "", 0, ""}
+	ErrReadingTargetInfo    = NewAppError(2001, "enclave error: failed to read the target info")
+	ErrWrittingReportData   = NewAppError(2002, "enclave error: failed to write the report data")
+	ErrGeneratingQuote      = NewAppError(2003, "enclave error: failed to generate the quote")
+	ErrReadingQuote         = NewAppError(2004, "enclave error: failed to read the quote")
+	ErrWrittingTargetInfo   = NewAppError(2005, "enclave error: failed to write the target info")
+	ErrWrappingQuote        = NewAppError(2006, "enclave error: failed to wrap quote in openenclave format")
+	ErrReadingReport        = NewAppError(2007, "enclave error: failed to read the report")
+	ErrInvalidSGXReportSize = NewAppError(2008, "enclave error: invalid SGX report size")
+	ErrParsingSGXReport     = NewAppError(2009, "enclave error: failed to parse SGX report")
+	ErrEmptyQuote           = NewAppError(2010, "enclave error: empty quote")
 
 	// =============================================================================
 	// ATTESTATION ERRORS (3000-3999)
 	// =============================================================================
-	ErrPreparingOracleData            = AppError{3001, "attestation error: failed to prepare oracle data", "", 0, ""}
-	ErrMessageHashing                 = AppError{3002, "attestation error: failed to prepare hash message for oracle data", "", 0, ""}
-	ErrPreparingProofData             = AppError{3003, "attestation error: failed to prepare proof data", "", 0, ""}
-	ErrFormattingProofData            = AppError{3004, "attestation error: failed to format proof data", "", 0, ""}
-	ErrGeneratingAttestationHash      = AppError{3005, "attestation error: failed to generate to attestation hash", "", 0, ""}
-	ErrPreparingEncodedProof          = AppError{3006, "attestation error: failed to prepare encoded request proof", "", 0, ""}
-	ErrFormattingEncodedProofData     = AppError{3007, "attestation error: failed to format encoded proof data", "", 0, ""}
-	ErrUserDataTooShort               = AppError{3008, "attestation error: userData too short for expected zeroing", "", 0, ""}
-	ErrCreatingRequestHash            = AppError{3009, "attestation error: failed to create request hash", "", 0, ""}
-	ErrCreatingTimestampedRequestHash = AppError{3010, "attestation error: failed to create timestamped request hash", "", 0, ""}
-	ErrFormattingQuote                = AppError{3011, "attestation error: failed to format quote", "", 0, ""}
-	ErrReportHashing                  = AppError{3012, "attestation error: failed to hash the oracle report", "", 0, ""}
-	ErrGeneratingSignature            = AppError{3013, "attestation error: failed to generate signature", "", 0, ""}
-	ErrDecodingQuote                  = AppError{3014, "attestation error: failed to decode quote", "", 0, ""}
+	ErrAleoContext                    = NewAppError(7001, "attestation error: failed to initialize Aleo context")
+	ErrPreparingHashMessage           = NewAppError(3001, "attestation error: failed to prepare hash message for oracle data")
+	ErrPreparingProofData             = NewAppError(3002, "attestation error: failed to prepare proof data")
+	ErrFormattingProofData            = NewAppError(3003, "attestation error: failed to format proof data")
+	ErrCreatingAttestationHash        = NewAppError(3004, "attestation error: failed to create attestation hash")
+	ErrFormattingEncodedProofData     = NewAppError(3005, "attestation error: failed to format encoded proof data")
+	ErrCreatingRequestHash            = NewAppError(3006, "attestation error: failed to create request hash")
+	ErrCreatingTimestampedRequestHash = NewAppError(3007, "attestation error: failed to create timestamped request hash")
+	ErrFormattingQuote                = NewAppError(3008, "attestation error: failed to format quote")
+	ErrHashingReport                  = NewAppError(3009, "attestation error: failed to hash the oracle report")
+	ErrGeneratingSignature            = NewAppError(3010, "attestation error: failed to generate signature")
 
 	// =============================================================================
 	// DATA EXTRACTION ERRORS (4000-4999)
 	// =============================================================================
-	ErrInvalidHTTPRequest      = AppError{4001, "data extraction error: invalid http request", "", 0, ""}
-	ErrFetchingData            = AppError{4002, "data extraction error: failed to fetch the data from the provided endpoint", "", 0, ""}
-	ErrReadingHTMLContent      = AppError{4003, "data extraction error: failed to read HTML content", "", 0, ""}
-	ErrParsingHTMLContent      = AppError{4004, "data extraction error: failed to parse HTML content", "", 0, ""}
-	ErrSelectorNotFound        = AppError{4005, "data extraction error: selector not found", "", 0, ""}
-	ErrInvalidMap              = AppError{4006, "data extraction error: expected map but got something else", "", 0, ""}
-	ErrKeyNotFound             = AppError{4007, "data extraction error: key not found", "", 0, ""}
-	ErrJSONDecoding            = AppError{4008, "data extraction error: failed to decode the JSON response", "", 0, ""}
-	ErrJSONEncoding            = AppError{4009, "data extraction error: failed to encode data to JSON", "", 0, ""}
-	ErrInvalidSelectorPart     = AppError{4010, "data extraction error: invalid selector part", "", 0, ""}
-	ErrExpectedArray           = AppError{4011, "data extraction error: expected array at key", "", 0, ""}
-	ErrIndexOutOfBound         = AppError{4012, "data extraction error: index out of bounds", "", 0, ""}
-	ErrUnsupportedPriceFeedURL = AppError{4013, "data extraction error: unsupported price feed URL", "", 0, ""}
-	ErrAttestationDataTooLarge = AppError{4014, "data extraction error: attestation data too large", "", 0, ""}
+	ErrInvalidHTTPRequest      = NewAppError(4001, "data extraction error: invalid http request")
+	ErrFetchingData            = NewAppError(4002, "data extraction error: failed to fetch the data from the provided endpoint")
+	ErrInvalidStatusCode       = NewAppError(4003, "data extraction error: invalid status code returned from endpoint")
+	ErrReadingHTMLContent      = NewAppError(4004, "data extraction error: failed to read HTML content from target url")
+	ErrParsingHTMLContent      = NewAppError(4005, "data extraction error: failed to parse HTML content from target url")
+	ErrReadingJSONResponse     = NewAppError(4006, "data extraction error: failed to read the json response from target url")
+	ErrDecodingJSONResponse    = NewAppError(4007, "data extraction error: failed to decode JSON response from target url")
+	ErrSelectorNotFound        = NewAppError(4008, "data extraction error: selector not found")
+	ErrUnsupportedPriceFeedURL = NewAppError(4009, "data extraction error: unsupported price feed URL")
+	ErrAttestationDataTooLarge = NewAppError(4010, "data extraction error: attestation data too large")
+	ErrParsingFloatValue       = NewAppError(4011, "data extraction error: extracted value expected to be float but failed to parse as float")
+	ErrParsingIntValue         = NewAppError(4012, "data extraction error: extracted value expected to be int but failed to parse as int")
+	ErrEmptyAttestationData    = NewAppError(4013, "data extraction error: extracted attestation data is empty")
 
 	// =============================================================================
 	// ENCODING ERRORS (5000-5999)
 	// =============================================================================
-	ErrEncodingAttestationData  = AppError{5001, "encoding error: failed to encode attestation data", "", 0, ""}
-	ErrEncodingResponseFormat   = AppError{5002, "encoding error: failed to encode response format", "", 0, ""}
-	ErrEncodingEncodingOptions  = AppError{5003, "encoding error: failed to encode encoding options", "", 0, ""}
-	ErrEncodingHeaders          = AppError{5004, "encoding error: failed to encode headers", "", 0, ""}
-	ErrEncodingOptionalFields   = AppError{5005, "encoding error: failed to encode optional fields", "", 0, ""}
-	ErrPreparationCriticalError = AppError{5006, "encoding error: critical error while preparing data", "", 0, ""}
-	ErrWrittingAttestationData  = AppError{5007, "encoding error: failed to write attestation data to buffer", "", 0, ""}
-	ErrWrittingTimestamp        = AppError{5008, "encoding error: failed to write timestamp to buffer", "", 0, ""}
-	ErrWrittingStatusCode       = AppError{5009, "encoding error: failed to write status code to buffer", "", 0, ""}
-	ErrWrittingUrl              = AppError{5010, "encoding error: failed to write url to buffer", "", 0, ""}
-	ErrWrittingSelector         = AppError{5011, "encoding error: failed to write selector to buffer", "", 0, ""}
-	ErrWrittingResponseFormat   = AppError{5012, "encoding error: failed to write response format to buffer", "", 0, ""}
-	ErrWrittingRequestMethod    = AppError{5013, "encoding error: failed to write request method to buffer", "", 0, ""}
-	ErrWrittingEncodingOptions  = AppError{5014, "encoding error: failed to write encoding options to buffer", "", 0, ""}
-	ErrWrittingRequestHeaders   = AppError{5015, "encoding error: failed to write request headers to buffer", "", 0, ""}
-	ErrWrittingOptionalFields   = AppError{5016, "encoding error: failed to write optional headers to buffer", "", 0, ""}
+	ErrEncodingAttestationData = NewAppError(5001, "encoding error: failed to encode attestation data")
+	ErrEncodingResponseFormat  = NewAppError(5002, "encoding error: failed to encode response format")
+	ErrEncodingEncodingOptions = NewAppError(5003, "encoding error: failed to encode encoding options")
+	ErrEncodingHeaders         = NewAppError(5004, "encoding error: failed to encode headers")
+	ErrEncodingOptionalFields  = NewAppError(5005, "encoding error: failed to encode optional fields")
+	ErrPreparingMetaHeader     = NewAppError(5006, "encoding error: error while preparing meta header")
+	ErrWrittingAttestationData = NewAppError(5007, "encoding error: failed to write attestation data to buffer")
+	ErrWrittingTimestamp       = NewAppError(5008, "encoding error: failed to write timestamp to buffer")
+	ErrWrittingStatusCode      = NewAppError(5009, "encoding error: failed to write status code to buffer")
+	ErrWrittingUrl             = NewAppError(5010, "encoding error: failed to write url to buffer")
+	ErrWrittingSelector        = NewAppError(5011, "encoding error: failed to write selector to buffer")
+	ErrWrittingResponseFormat  = NewAppError(5012, "encoding error: failed to write response format to buffer")
+	ErrWrittingRequestMethod   = NewAppError(5013, "encoding error: failed to write request method to buffer")
+	ErrWrittingEncodingOptions = NewAppError(5014, "encoding error: failed to write encoding options to buffer")
+	ErrWrittingRequestHeaders  = NewAppError(5015, "encoding error: failed to write request headers to buffer")
+	ErrWrittingOptionalFields  = NewAppError(5016, "encoding error: failed to write optional headers to buffer")
+	ErrUserDataTooShort        = NewAppError(5017, "encoding error: userData too short for expected zeroing")
 
 	// =============================================================================
-	// EXCHANGE ERRORS (6000-6999)
+	// PRICE FEED ERRORS (6000-6999)
 	// =============================================================================
-	ErrMissingToken                  = AppError{6001, "exchange error: token parameter is required", "", 0, ""}
-	ErrInvalidToken                  = AppError{6002, "exchange error: invalid token. Supported tokens: BTC, ETH, ALEO", "", 0, ""}
-	ErrPriceFeedFailed               = AppError{6003, "exchange error: failed to get price feed data", "", 0, ""}
-	ErrExchangeNotConfigured         = AppError{6004, "exchange error: exchange not configured", "", 0, ""}
-	ErrSymbolNotSupportedByExchange  = AppError{6005, "exchange error: symbol not supported by exchange", "", 0, ""}
-	ErrUnsupportedExchange           = AppError{6006, "exchange error: unsupported exchange", "", 0, ""}
-	ErrExchangeFetchFailed           = AppError{6007, "exchange error: failed to fetch from exchange", "", 0, ""}
-	ErrExchangeInvalidStatusCode     = AppError{6008, "exchange error: returned invalid status code", "", 0, ""}
-	ErrExchangeResponseDecodeFailed  = AppError{6009, "exchange error: failed to decode exchange response", "", 0, ""}
-	ErrExchangeResponseParseFailed   = AppError{6010, "exchange error: failed to parse exchange response", "", 0, ""}
-	ErrInvalidPriceFormat            = AppError{6011, "exchange error: invalid price format", "", 0, ""}
-	ErrInvalidVolumeFormat           = AppError{6012, "exchange error: invalid volume format", "", 0, ""}
-	ErrInvalidExchangeResponseFormat = AppError{6013, "exchange error: invalid exchange response format", "", 0, ""}
-	ErrInvalidDataFormat             = AppError{6014, "exchange error: invalid data format", "", 0, ""}
-	ErrInvalidItemFormat             = AppError{6015, "exchange error: invalid item format", "", 0, ""}
-	ErrNoDataInResponse              = AppError{6016, "exchange error: no data in response", "", 0, ""}
-	ErrPriceParseFailed              = AppError{6017, "exchange error: failed to parse price", "", 0, ""}
-	ErrVolumeParseFailed             = AppError{6018, "exchange error: failed to parse volume", "", 0, ""}
-	ErrInsufficientExchangeData      = AppError{6019, "exchange error: insufficient data from exchanges", "", 0, ""}
+	ErrTokenNotSupported         = NewAppError(6001, "price feed error: token not supported. Supported tokens: BTC, ETH, ALEO")
+	ErrExchangeNotConfigured     = NewAppError(6002, "price feed error: exchange not configured")
+	ErrSymbolNotConfigured       = NewAppError(6003, "price feed error: symbol not configured")
+	ErrExchangeNotSupported      = NewAppError(6004, "price feed error: exchange not supported")
+	ErrCreatingExchangeRequest   = NewAppError(6005, "price feed error: failed to create exchange request")
+	ErrFetchingFromExchange      = NewAppError(6006, "price feed error: failed to fetch from exchange")
+	ErrExchangeInvalidStatusCode = NewAppError(6007, "price feed error: invalid status code returned from exchange")
+	ErrReadingExchangeResponse   = NewAppError(6008, "price feed error: failed to read exchange response")
+	ErrDecodingExchangeResponse  = NewAppError(6009, "price feed error: failed to decode exchange response")
+	ErrParsingExchangeResponse   = NewAppError(6010, "price feed error: failed to parse exchange response")
+	ErrMissingDataInResponse     = NewAppError(6011, "price feed error: missing data in response")
+	ErrParsingPrice              = NewAppError(6012, "price feed error: failed to parse price")
+	ErrParsingVolume             = NewAppError(6013, "price feed error: failed to parse volume")
+	ErrInsufficientExchangeData  = NewAppError(6014, "price feed error: insufficient data from exchanges")
+	ErrEncodingPriceFeedData     = NewAppError(6015, "price feed error: failed to encode price feed data")
+	ErrNoTradingPairsConfigured  = NewAppError(6016, "price feed error: no trading pairs configured for token")
 
 	// =============================================================================
-	// ALEO CONTEXT ERRORS (7000-7999)
+	// REQUEST/RESPONSE ERRORS (7000-7999)
 	// =============================================================================
-	ErrAleoContext = AppError{7001, "aleo context error: failed to initialize Aleo context", "", 0, ""}
+	ErrRequestBodyTooLarge = NewAppError(7001, "request error: payload exceeds the allowed size limit")
+	ErrReadingRequestBody  = NewAppError(7002, "request error: failed to read the request body")
+	ErrInvalidContentType  = NewAppError(7003, "request error: invalid content type, expected application/json")
+	ErrDecodingRequestBody = NewAppError(7004, "request error: failed to decode request body, invalid request structure")
+
+	// =============================================================================
+	// INTERNAL ERRORS (8000-8999)
+	// =============================================================================
+	ErrInternal               = NewAppError(8001, "internal error: unexpected failure occurred")
+	ErrGeneratingRandomNumber = NewAppError(8002, "internal error: failed to generate random number")
+	ErrJSONEncoding           = NewAppError(8003, "internal error: failed to encode data to JSON")
 )
-
-// NewAppError creates a new AppError with the given code and message
-func NewAppError(err AppError) *AppError {
-	return &AppError{
-		Code:               err.Code,
-		Message:            err.Message,
-		Details:            err.Details,
-		ResponseStatusCode: err.ResponseStatusCode,
-	}
-}
-
-// NewAppErrorWithResponseStatus creates a new AppError with a specific response status code
-func NewAppErrorWithResponseStatus(err AppError, responseStatusCode int) *AppError {
-	return &AppError{
-		Code:               err.Code,
-		Message:            err.Message,
-		Details:            err.Details,
-		ResponseStatusCode: responseStatusCode,
-	}
-}
-
-// NewAppErrorWithResponseStatus creates a new AppError with a specific response status code
-func NewAppErrorWithDetails(err AppError, details string) *AppError {
-	return &AppError{
-		Code:               err.Code,
-		Message:            err.Message,
-		Details:            details,
-		ResponseStatusCode: err.ResponseStatusCode,
-	}
-}

@@ -5,10 +5,10 @@ import (
 	"math"
 	"strings"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/utils"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	"github.com/venture23-aleo/aleo-oracle-encoding/positionRecorder"
@@ -35,25 +35,25 @@ func prepareAttestationData(attestationData string, encodingOptions *encoding.En
 	// Check the encoding option.
 	switch encodingOptions.Value {
 	case encoding.ENCODING_OPTION_STRING:
-		return utils.PadStringToLength(attestationData, 0x00, constants.ATTESTATION_DATA_SIZE_LIMIT)
+		return common.PadStringToLength(attestationData, 0x00, constants.AttestationDataSizeLimit)
 
 	case encoding.ENCODING_OPTION_FLOAT:
 		// Check if the attestation data contains a dot.
 		if strings.Contains(attestationData, ".") {
-			return utils.PadStringToLength(attestationData, '0', math.MaxUint8)
+			return common.PadStringToLength(attestationData, '0', math.MaxUint8)
 		} else {
 			// Pad the string to the target length.
-			return utils.PadStringToLength(attestationData+".", '0', math.MaxUint8)
+			return common.PadStringToLength(attestationData+".", '0', math.MaxUint8)
 		}
 	case encoding.ENCODING_OPTION_INT:
 		// For integers we prepend zeroes instead of appending, that allows strconv to parse it no matter how many zeroes there are
-		padString, err := utils.PadStringToLength("", '0', math.MaxUint8-len(attestationData))
+		padString, err := common.PadStringToLength("", '0', math.MaxUint8-len(attestationData))
 		if err != nil {
 			return "", err
 		}
 		return padString + attestationData, nil
 	default:
-		return "", appErrors.NewAppError(appErrors.ErrInvalidEncodingOption)
+		return "", appErrors.ErrInvalidEncodingOption
 	}
 }
 
@@ -65,7 +65,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	var preppedAttestationData string
 
 	// Check if the URL is a price feed.
-	if req.Url != constants.PRICE_FEED_BTC_URL && req.Url != constants.PRICE_FEED_ETH_URL && req.Url != constants.PRICE_FEED_ALEO_URL {
+	if !common.IsPriceFeedURL(req.Url) {
 		var preppedAttestationDataError *appErrors.AppError
 		preppedAttestationData, preppedAttestationDataError = prepareAttestationData(attestationData, &req.EncodingOptions)
 		if preppedAttestationDataError != nil {
@@ -91,7 +91,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	// Check if the attestation data is encoded.
 	if err != nil {
 		logger.Error("Failed to encode attestation data: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrEncodingAttestationData)
+		return nil, nil, appErrors.ErrEncodingAttestationData
 	}
 
 	// Write the attestation data to the buffer.
@@ -99,7 +99,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write attestation data to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingAttestationData)
+		return nil, nil, appErrors.ErrWrittingAttestationData
 	}
 
 	// Write the timestamp to the buffer.
@@ -107,7 +107,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write timestamp to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingTimestamp)
+		return nil, nil, appErrors.ErrWrittingTimestamp
 	}
 
 	// Write the status code to the buffer.
@@ -115,7 +115,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write status code to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingStatusCode)
+		return nil, nil, appErrors.ErrWrittingStatusCode
 	}
 
 	// Write the URL to the buffer.
@@ -123,7 +123,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write URL to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingUrl)
+		return nil, nil, appErrors.ErrWrittingUrl
 	}
 
 	// Write the selector to the buffer.
@@ -131,14 +131,14 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write selector to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingSelector)
+		return nil, nil, appErrors.ErrWrittingSelector
 	}
 
 	// Encode the response format.
 	responseFormat, err := encoding.EncodeResponseFormat(req.ResponseFormat)
 	if err != nil {
 		logger.Error("Failed to encode response format: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrEncodingResponseFormat)
+		return nil, nil, appErrors.ErrEncodingResponseFormat
 	}
 
 	// Write the response format to the buffer.
@@ -146,7 +146,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write response format to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingResponseFormat)
+		return nil, nil, appErrors.ErrWrittingResponseFormat
 	}
 
 	// Write the request method to the buffer.
@@ -154,14 +154,14 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write request method to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingRequestMethod)
+		return nil, nil, appErrors.ErrWrittingRequestMethod
 	}
 
 	// Encode the encoding options.
 	encodingOptions, err := encoding.EncodeEncodingOptions(&req.EncodingOptions)
 	if err != nil {
 		logger.Error("Failed to encode encoding options: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrEncodingEncodingOptions)
+		return nil, nil, appErrors.ErrEncodingEncodingOptions
 	}
 
 	// Write the encoding options to the buffer.
@@ -169,7 +169,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write encoding options to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingEncodingOptions)
+		return nil, nil, appErrors.ErrWrittingEncodingOptions
 	}
 
 	// Encode the request headers.
@@ -180,7 +180,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write request headers to buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingRequestHeaders)
+		return nil, nil, appErrors.ErrWrittingRequestHeaders
 	}
 
 	// write optional fields:
@@ -192,7 +192,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	encodedOptionalFields, err := encoding.EncodeOptionalFields(req.HTMLResultType, req.RequestContentType, req.RequestBody)
 	if err != nil {
 		logger.Error("Failed to encode optional fields: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrEncodingOptionalFields)
+		return nil, nil, appErrors.ErrEncodingOptionalFields
 	}
 
 	// Write the optional fields to the buffer.
@@ -200,7 +200,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write optional fields buffer: ", "error", err)
-		return nil, nil, appErrors.NewAppError(appErrors.ErrWrittingOptionalFields)
+		return nil, nil, appErrors.ErrWrittingOptionalFields
 	}
 
 	result := buf.Bytes()
@@ -208,7 +208,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	// Check if the result is aligned.
 	if len(result)%encoding.TARGET_ALIGNMENT != 0 {
 		logger.Error("Result is not aligned!")
-		return nil, nil, appErrors.NewAppError(appErrors.ErrPreparationCriticalError)
+		return nil, nil, appErrors.ErrPreparingMetaHeader
 	}
 
 	logger.Debug("preppedAttestationData: ", "preppedAttestationData", preppedAttestationData)
@@ -218,7 +218,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	// Check if the attestation data length is too long.
 	if attestationDataLen > math.MaxUint16 {
 		logger.Error("Cannot create encoded data meta header - attestationDataLen is too long")
-		return nil, nil, appErrors.NewAppError(appErrors.ErrPreparationCriticalError)
+		return nil, nil, appErrors.ErrPreparingMetaHeader
 	}
 
 	methodLen := len(req.RequestMethod)
@@ -227,7 +227,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	// Check if the method length is too long.
 	if methodLen > math.MaxUint16 {
 		logger.Error("Cannot create encoded data meta header - methodLen is too long")
-		return nil, nil, appErrors.NewAppError(appErrors.ErrPreparationCriticalError)
+		return nil, nil, appErrors.ErrPreparingMetaHeader
 	}
 
 	urlLen := len(req.Url)
@@ -236,7 +236,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	// Check if the URL length is too long.
 	if urlLen > math.MaxUint16 {
 		logger.Error("Cannot create encoded data meta header - urlLen is too long")
-		return nil, nil, appErrors.NewAppError(appErrors.ErrPreparationCriticalError)
+		return nil, nil, appErrors.ErrPreparingMetaHeader
 	}
 
 	selectorLen := len(req.Selector)
@@ -245,7 +245,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	// Check if the selector length is too long.
 	if selectorLen > math.MaxUint16 {
 		logger.Error("Cannot create encoded data meta header - selectorLen is too long")
-		return nil, nil, appErrors.NewAppError(appErrors.ErrPreparationCriticalError)
+		return nil, nil, appErrors.ErrPreparingMetaHeader
 	}
 
 	headersLen := len(encodedHeaders)
@@ -254,7 +254,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	// Check if the headers length is too long.
 	if headersLen > math.MaxUint16 {
 		logger.Error("Cannot create encoded data meta header - headersLen is too long")
-		return nil, nil, appErrors.NewAppError(appErrors.ErrPreparationCriticalError)
+		return nil, nil, appErrors.ErrPreparingMetaHeader
 	}
 
 	optionalFieldsLen := len(encodedOptionalFields)
@@ -263,7 +263,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	// Check if the optional fields length is too long.
 	if optionalFieldsLen > math.MaxUint16 {
 		logger.Error("Cannot create encoded data meta header - optionalFieldsLen is too long")
-		return nil, nil, appErrors.NewAppError(appErrors.ErrPreparationCriticalError)
+		return nil, nil, appErrors.ErrPreparingMetaHeader
 	}
 
 	// Create the meta header. Fill the empty meta header with the actual content.
@@ -316,7 +316,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 // Returns:
 //   - ([]byte): The canonicalized userData buffer with attestation data and timestamp fields zeroed out.
 //   - (*appErrors.AppError): An application error if the operation fails (e.g., if the buffer is too short).
-func PrepareEncodedRequestProof(userData []byte, encodedPositions encoding.ProofPositionalInfo) ([]byte, *appErrors.AppError) {
+func PrepareEncodedRequestProof(userDataProof []byte, encodedPositions encoding.ProofPositionalInfo) ([]byte, *appErrors.AppError) {
 	// Step 1: Retrieve the attestation data and timestamp lengths from the encoded positions.
 	attestationDataLen := encodedPositions.Data.Len
 	timestampLen := encodedPositions.Timestamp.Len
@@ -333,20 +333,20 @@ func PrepareEncodedRequestProof(userData []byte, encodedPositions encoding.Proof
 	logger.Debug("endOffset", "endOffset", endOffset)
 
 	// Step 4: Check if the userData buffer is large enough.
-	if endOffset > len(userData) {
-		logger.Error("User data is too short")
-		return nil, appErrors.NewAppError(appErrors.ErrUserDataTooShort)
+	if endOffset > len(userDataProof) {
+		logger.Error("User data proof is too short", "endOffset", endOffset, "userDataProofLen", len(userDataProof))
+		return nil, appErrors.ErrUserDataTooShort
 	}
 
 	// Log the userData buffer before zeroing.
-	logger.Debug("userData before clearing", "userData", userData)
+	logger.Debug("userDataProof before clearing", "userDataProof", userDataProof)
 
 	// Step 5: Zero out the attestation data and timestamp fields in the buffer.
-	clear(userData[metaHeaderLen:endOffset])
+	clear(userDataProof[metaHeaderLen:endOffset])
 
 	// Log the userData buffer after zeroing.
-	logger.Debug("userData after clearing", "userData", userData)
+	logger.Debug("userDataProof after clearing", "userDataProof", userDataProof)
 
 	// Return the canonicalized buffer and nil error.
-	return userData, nil
+	return userDataProof, nil
 }

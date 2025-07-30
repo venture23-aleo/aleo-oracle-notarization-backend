@@ -2,9 +2,10 @@ package attestation
 
 import (
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
+	aleoUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/aleoutil"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 )
 
 // OracleData is the data of the oracle.
@@ -62,17 +63,17 @@ type OracleData struct {
 //   - appError (*appErrors.AppError): An application error, if any occurred during processing.
 func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors.AppError) {
 	// Step 1: Retrieve Aleo context
-	aleoContext, err := aleoContext.GetAleoContext()
+	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err
 	}
 
 	// Step 2: Format the quote into 10 chunks (C0 - C9)
-	oracleReport, formatErr := aleoContext.GetSession().FormatMessage(quote, 10)
+	oracleReport, formatErr := aleoContext.GetSession().FormatMessage(quote, constants.OracleReportChunkSize)
 	if formatErr != nil {
 		logger.Error("Failed to format quote: ", "error", formatErr)
-		return nil, appErrors.NewAppError(appErrors.ErrFormattingQuote)
+		return nil, appErrors.ErrFormattingQuote
 	}
 
 	// Step 3: Return the formatted oracle report
@@ -101,24 +102,24 @@ func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors
 //   - appError (*appErrors.AppError): An application error if any step fails, otherwise nil.
 func PrepareOracleSignature(oracleReport []byte) (signature string, appError *appErrors.AppError) {
 	// Step 1: Retrieve Aleo context
-	aleoContext, err := aleoContext.GetAleoContext()
+	aleo, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		logger.Error("Error getting Aleo context: ", "error", err)
 		return "", err
 	}
 
 	// Step 2: Hash the oracle report
-	hashedMessage, hashErr := aleoContext.GetSession().HashMessage(oracleReport)
+	hashedMessage, hashErr := aleo.GetSession().HashMessage(oracleReport)
 	if hashErr != nil {
 		logger.Error("Failed to hash report", "error", hashErr)
-		return "", appErrors.NewAppError(appErrors.ErrReportHashing)
+		return "", appErrors.ErrHashingReport
 	}
 
 	// Step 3: Sign the hashed message
-	signature, signErr := aleoContext.Sign(hashedMessage)
+	signature, signErr := aleo.Sign(hashedMessage)
 	if signErr != nil {
 		logger.Error("Error while generating signature: ", "error", signErr)
-		return "", appErrors.NewAppError(appErrors.ErrGeneratingSignature)
+		return "", appErrors.ErrGeneratingSignature
 	}
 
 	// Step 4: Return the signature
@@ -144,7 +145,7 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 //   - err (*appErrors.AppError): An application error if any step fails, otherwise nil.
 func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appErrors.AppError) {
 	// Step 1: Retrieve Aleo context
-	aleoContext, err := aleoContext.GetAleoContext()
+	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err
@@ -153,8 +154,8 @@ func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appE
 	// Step 2: Hash the user data
 	attestationHash, hashError := aleoContext.GetSession().HashMessage(userData)
 	if hashError != nil {
-		logger.Error("Failed to hash message: ", "error", hashError)
-		return nil, appErrors.NewAppError(appErrors.ErrMessageHashing)
+		logger.Error("Failed to create attestation hash: ", "error", hashError)
+		return nil, appErrors.ErrCreatingAttestationHash
 	}
 
 	// Step 3: Return the attestation hash
@@ -188,7 +189,7 @@ func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appE
 //   - *appErrors.AppError: An error object if any step fails, otherwise nil.
 func BuildCompleteOracleData(quotePrepData *QuotePreparationData, quote []byte) (*OracleData, *appErrors.AppError) {
 	// Step 1: Retrieve Aleo context
-	aleoContext, err := aleoContext.GetAleoContext()
+	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		logger.Error("Error getting Aleo context: ", "error", err)
 		return nil, err

@@ -1,27 +1,7 @@
 package constants
 
-// GraminePathsStruct is the structure for the Gramine paths.
-type GraminePathsStruct struct {
-	MY_TARGET_INFO_PATH   string
-	TARGET_INFO_PATH      string
-	USER_REPORT_DATA_PATH string
-	REPORT_PATH           string
-	ATTESTATION_TYPE_PATH string
-	QUOTE_PATH            string
-}
-
-// GRAMINE_PATHS is the structure for the Gramine paths.
-var GRAMINE_PATHS = GraminePathsStruct{
-	MY_TARGET_INFO_PATH:   "/dev/attestation/my_target_info",
-	TARGET_INFO_PATH:      "/dev/attestation/target_info",
-	USER_REPORT_DATA_PATH: "/dev/attestation/user_report_data",
-	REPORT_PATH:           "/dev/attestation/report",
-	ATTESTATION_TYPE_PATH: "/dev/attestation/attestation_type",
-	QUOTE_PATH:            "/dev/attestation/quote",
-}
-
-// ALLOWED_HEADERS defines which HTTP headers are permitted. Non-whitelisted header values are masked with asterisks for security.
-var ALLOWED_HEADERS = []string{
+// AllowedHeaders defines which HTTP headers are permitted. Non-whitelisted header values are masked with asterisks for security.
+var AllowedHeaders = []string{
 	"Accept",
 	"Accept-Charset",
 	"Accept-Datetime",
@@ -73,16 +53,40 @@ var ALLOWED_HEADERS = []string{
 	"Sec-GPC",
 }
 
-// PRICE_FEED_BTC_URL, PRICE_FEED_ETH_URL, and PRICE_FEED_ALEO_URL are the URLs for the price feeds.
-// BTC_TOKEN_ID, ETH_TOKEN_ID, and ALEO_TOKEN_ID are the token IDs for the price feeds.
-// ATTESTATION_DATA_SIZE_LIMIT is the size limit for the string attestation data.
+// PriceFeedBTCURL, PriceFeedETHURL, and PriceFeedAleoURL are the URLs for the price feeds.
+// BTCTokenID, ETHTokenID, and AleoTokenID are the token IDs for the price feeds.
+// AttestationDataSizeLimit is the size limit for the string attestation data.
+// PriceFeedSelector is the selector for the price feed.
+// RequestMethodGET, RequestMethodPOST, ResponseFormatHTML, ResponseFormatJSON, HTMLResultTypeValue, HTMLResultTypeElement, EncodingOptionString, EncodingOptionFloat, and EncodingOptionInt are the constants for the attestation.
 const (
-	PRICE_FEED_BTC_URL  = "price_feed: btc"
-	PRICE_FEED_ETH_URL  = "price_feed: eth"
-	PRICE_FEED_ALEO_URL = "price_feed: aleo"
-	BTC_TOKEN_ID        = 12
-	ETH_TOKEN_ID        = 11
-	ALEO_TOKEN_ID       = 8
-	// ATTESTATION_DATA_SIZE_LIMIT is the size limit for the attestation data.
-	ATTESTATION_DATA_SIZE_LIMIT = 1024 * 3
+	SGXReportType string = "sgx"
+
+	// Price feed Constants
+	PriceFeedBTCURL          string = "price_feed: btc"
+	PriceFeedETHURL          string = "price_feed: eth"
+	PriceFeedAleoURL         string = "price_feed: aleo"
+	BTCTokenID               int    = 12
+	ETHTokenID               int    = 11
+	AleoTokenID              int    = 8
+	AttestationDataSizeLimit int    = 1024 * 3
+	PriceFeedSelector        string = "weightedAvgPrice"
+
+	// Attestation Constants
+	RequestMethodGET      string = "GET"
+	RequestMethodPOST     string = "POST"
+	ResponseFormatHTML    string = "html"
+	ResponseFormatJSON    string = "json"
+	HTMLResultTypeValue   string = "value"
+	HTMLResultTypeElement string = "element"
+	EncodingOptionString  string = "string"
+	EncodingOptionFloat   string = "float"
+	EncodingOptionInt     string = "int"
+
+	// Max request and response body sizes
+	MaxRequestBodySize  = 10 * 1024   // 10 KB
+	MaxResponseBodySize = 1024 * 1024 // 1 MB
+
+	// Oracle Report Constants
+	OracleReportChunkSize   = 10
+	OracleUserDataChunkSize = 8
 )

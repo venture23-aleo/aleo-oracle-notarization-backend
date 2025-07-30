@@ -25,10 +25,9 @@ A `Makefile` is provided to simplify the most common development, build, and dep
 - `make docker-run-rebuild` – Build the Docker image and run the container with force rebuild.
 
 ### SGX/Enclave Targets
-- `make gen-key`         – Generate the enclave private key for SGX signing (Gramine tool).
-- `make gen-key-openssl` – Generate the enclave private key for SGX signing (OpenSSL).
+- `make generate-enclave-signing-key` – Generate the private key for SGX signing (OpenSSL).
 - `make generate-manifest-template` – Generate manifest template.
-- `make get-enclave-info` – Get enclave info to verify the enclave properties
+- `make extract-enclave-artifacts` – Extract enclave artifacts to verify the enclave properties
 
 ### Utility
 - `make help`          – Show a summary of available make targets.
@@ -52,8 +51,7 @@ make native-build  # Build native binary for Gramine
 make native-run    # Build and run natively with Gramine
 make docker-build  # Build Docker image (with manifest)
 make docker-run    # Build and run with Docker Compose (detached)
-make gen-key       # Generate the enclave private key for SGX signing (Gramine tool)
-make gen-key-openssl # Generate the enclave private key for SGX signing (OpenSSL)
+make generate-enclave-signing-key # Generate the private key for SGX signing (OpenSSL)
 make clean         # Clean up binaries
 make help          # Show help
 ```

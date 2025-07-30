@@ -113,7 +113,7 @@ All errors follow a consistent JSON format:
 	"timestamp": 1753095993,
 	"responseBody": "{\"daily\":{\"rain_sum\":[9.9],\"time\":[\"2024-02-28\"]},\"daily_units\":{\"rain_sum\":\"mm\",\"time\":\"iso8601\"},\"elevation\":117,\"generationtime_ms\":0.18739700317382812,\"latitude\":42.917397,\"longitude\":-74.37686,\"timezone\":\"GMT\",\"timezone_abbreviation\":\"GMT\",\"utc_offset_seconds\":0}",
 	"responseStatusCode": 200,
-	"attestationData": "9.9",
+	"attestationData": "9.90000",
 	"oracleData": {
 		"signature": "sign1pxpjkc6qkty8884va7cskvf3f3qddp7kgq0lz49nmt3p6505ksqnlj2jjjtgyqgpuswfeda6h7mp22gef2rm9lmltm4lwnjcxx426q4xrr0j93kyx27lz545wn4jsw6j980p44djtzh9huu882g82xcmplhhljf4pv58pp4s37n9x6t8l2jjkwv7xgdqdp8c9d9yuww9c44szkgzwlj",
 		"userData": "{  c0: {    f0: 83078176012732132008201242517438719u128,    f1: 4194512u128,    f2: 990000u128,    f3: 1753095993u128,    f4: 200u128,    f5: 60342083468630191586093329175857624168u128,    f6: 131834676623732570987566566458350202977u128,    f7: 129497169482354706382047440671282785647u128,    f8: 50807724463511848761743029374222100852u128,    f9: 74692127437806081291768309691546759020u128,    f10: 66780187641594627911418809394931511608u128,    f11: 129456280062884553844335022362353480240u128,    f12: 129455120460861251156776404096623928692u128,    f13: 33875855223963738476060961897u128,    f14: 121200813359967904192723595955179970916u128,    f15: 23856u128,    f16: 0u128,    f17: 5522759u128,    f18: 92233720368547758082u128,    f19: 221360928884514619396u128,    f20: 13055389343712134841237569546u128,    f21: 13856407623565317u128,    f22: 156035770564570580066107481452631621659u128,    f23: 3900269670161044694030315513202u128,    f24: 162743726813863731210145153184655802480u128,    f25: 101188681738744639914108759155086748777u128,    f26: 149456393680743922584091041160660086377u128,    f27: 42816717959947032433996830433837802860u128,    f28: 132119436183189587630719372684727700264u128,    f29: 64042929165508395635299690384626118507u128,    f30: 61431102749981217983499061483759611950u128,    f31: 13875u128  },  c1: {    f0: 55340232221128654849u128,    f1: 2u128,    f2: 0u128,    f3: 0u128,    f4: 0u128,    f5: 0u128,    f6: 0u128,    f7: 0u128,    f8: 0u128,    f9: 0u128,    f10: 0u128,    f11: 0u128,    f12: 0u128,    f13: 0u128,    f14: 0u128,    f15: 0u128,    f16: 0u128,    f17: 0u128,    f18: 0u128,    f19: 0u128,    f20: 0u128,    f21: 0u128,    f22: 0u128,    f23: 0u128,    f24: 0u128,    f25: 0u128,    f26: 0u128,    f27: 0u128,    f28: 0u128,    f29: 0u128,    f30: 0u128,    f31: 0u128  },  c2: {    f0: 0u128,    f1: 0u128,    f2: 0u128,    f3: 0u128,    f4: 0u128,    f5: 0u128,    f6: 0u128,    f7: 0u128,    f8: 0u128,    f9: 0u128,    f10: 0u128,    f11: 0u128,    f12: 0u128,    f13: 0u128,    f14: 0u128,    f15: 0u128,    f16: 0u128,    f17: 0u128,    f18: 0u128,    f19: 0u128,    f20: 0u128,    f21: 0u128,    f22: 0u128,    f23: 0u128,    f24: 0u128,    f25: 0u128,    f26: 0u128,    f27: 0u128,    f28: 0u128,    f29: 0u128,    f30: 0u128,    f31: 0u128  },  c3: {    f0: 0u128,    f1: 0u128,    f2: 0u128,    f3: 0u128,    f4: 0u128,    f5: 0u128,    f6: 0u128,    f7: 0u128,    f8: 0u128,    f9: 0u128,    f10: 0u128,    f11: 0u128,    f12: 0u128,    f13: 0u128,    f14: 0u128,    f15: 0u128,    f16: 0u128,    f17: 0u128,    f18: 0u128,    f19: 0u128,    f20: 0u128,    f21: 0u128,    f22: 0u128,    f23: 0u128,    f24: 0u128,    f25: 0u128,    f26: 0u128,    f27: 0u128,    f28: 0u128,    f29: 0u128,    f30: 0u128,    f31: 0u128  },  c4: {    f0: 0u128,    f1: 0u128,    f2: 0u128,    f3: 0u128,    f4: 0u128,    f5: 0u128,    f6: 0u128,    f7: 0u128,    f8: 0u128,    f9: 0u128,    f10: 0u128,    f11: 0u128,    f12: 0u128,    f13: 0u128,    f14: 0u128,    f15: 0u128,    f16: 0u128,    f17: 0u128,    f18: 0u128,    f19: 0u128,    f20: 0u128,    f21: 0u128,    f22: 0u128,    f23: 0u128,    f24: 0u128,    f25: 0u128,    f26: 0u128,    f27: 0u128,    f28: 0u128,    f29: 0u128,    f30: 0u128,    f31: 0u128  },  c5: {    f0: 0u128,    f1: 0u128,    f2: 0u128,    f3: 0u128,    f4: 0u128,    f5: 0u128,    f6: 0u128,    f7: 0u128,    f8: 0u128,    f9: 0u128,    f10: 0u128,    f11: 0u128,    f12: 0u128,    f13: 0u128,    f14: 0u128,    f15: 0u128,    f16: 0u128,    f17: 0u128,    f18: 0u128,    f19: 0u128,    f20: 0u128,    f21: 0u128,    f22: 0u128,    f23: 0u128,    f24: 0u128,    f25: 0u128,    f26: 0u128,    f27: 0u128,    f28: 0u128,    f29: 0u128,    f30: 0u128,    f31: 0u128  },  c6: {    f0: 0u128,    f1: 0u128,    f2: 0u128,    f3: 0u128,    f4: 0u128,    f5: 0u128,    f6: 0u128,    f7: 0u128,    f8: 0u128,    f9: 0u128,    f10: 0u128,    f11: 0u128,    f12: 0u128,    f13: 0u128,    f14: 0u128,    f15: 0u128,    f16: 0u128,    f17: 0u128,    f18: 0u128,    f19: 0u128,    f20: 0u128,    f21: 0u128,    f22: 0u128,    f23: 0u128,    f24: 0u128,    f25: 0u128,    f26: 0u128,    f27: 0u128,    f28: 0u128,    f29: 0u128,    f30: 0u128,    f31: 0u128  },  c7: {    f0: 0u128,    f1: 0u128,    f2: 0u128,    f3: 0u128,    f4: 0u128,    f5: 0u128,    f6: 0u128,    f7: 0u128,    f8: 0u128,    f9: 0u128,    f10: 0u128,    f11: 0u128,    f12: 0u128,    f13: 0u128,    f14: 0u128,    f15: 0u128,    f16: 0u128,    f17: 0u128,    f18: 0u128,    f19: 0u128,    f20: 0u128,    f21: 0u128,    f22: 0u128,    f23: 0u128,    f24: 0u128,    f25: 0u128,    f26: 0u128,    f27: 0u128,    f28: 0u128,    f29: 0u128,    f30: 0u128,    f31: 0u128  }}",
@@ -525,15 +525,31 @@ For `responseFormat: "json"`, use dot notation:
    - SGX hardware issues
    - Quote generation failures
 
-3. **Data Extraction Errors (4000-4999)**
+3. **Attestation Errors (3000-3999)**
+   - Failed to generate random number
+   - Failed to generate attestation hash
+   - Failed to format encoded proof data
+   - Failed to hash the oracle report
+   - Failed to generate signature
+
+4. **Data Extraction Errors (4000-4999)**
    - Network timeouts
    - Selector not found
    - Invalid response format
 
-4. **Exchange Errors (6000-6999)**
+5. **Exchange Errors (6000-6999)**
    - API rate limits
    - Exchange unavailable
    - Invalid symbol
+
+6. **Request/Response Errors (7000-7999)**
+   - Request body too large
+   - Failed to read request body
+   - Invalid content type
+   - Failed to decode request body
+
+7. **Internal Errors (8000-8999)**
+   - Unexpected failure
 
 ### Error Response Example
 

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/api"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/middlewares"
+	configs "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/middleware"
 )
 
 const (
@@ -33,12 +33,12 @@ func NewServer() (*http.Server, *http.Server) {
 	api.RegisterMetricsRoute(metricsMux)
 
 	// Create middleware stack
-	middlewareStack := []middlewares.Middleware{
-		middlewares.LoggingAndMetricsMiddleware, // Log all requests with request ID
+	middlewareStack := []middleware.Middleware{
+		middleware.Logging, // Log all requests with request ID
 	}
 
 	// Apply middleware stack to the mux.
-	handler := middlewares.Chain(mux, middlewareStack...)
+	handler := middleware.Chain(mux, middlewareStack...)
 
 	// Get the port and metrics port.
 	port := appConfig.Port

@@ -8,11 +8,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/configs"
+	aleoUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/aleoutil"
+	configs "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/server"
-	aleoContext "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/aleo_context"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/logger"
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	// 3. Initialize Aleo context
-	if err := aleoContext.InitAleoContext(); err != nil {
+	if err := aleoUtil.InitAleoContext(); err != nil {
 		log.Fatalf("Failed to initialize Aleo context: %v", err)
 	}
 
@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// 9. Shutdown Aleo context
-	if err := aleoContext.ShutdownAleoContext(); err != nil {
+	if err := aleoUtil.ShutdownAleoContext(); err != nil {
 		logger.Error("Error shutting down Aleo context", "error", err)
 	} else {
 		logger.Info("Aleo context shutdown successfully")

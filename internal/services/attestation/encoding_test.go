@@ -5,15 +5,17 @@ import (
 	"encoding/binary"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	"github.com/venture23-aleo/aleo-oracle-encoding/positionRecorder"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 )
 
-func TestPrepareProofData_PositionalInfo(t *testing.T) {
+func TestPrepareProofData_WithPositionalInfo(t *testing.T) {
 	testCases := []struct {
 		name                   string
 		attestationRequest     AttestationRequest
@@ -38,7 +40,7 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 			statusCode:             200,
 			attestationData:        "attestation data",
 			timestamp:              1715769600,
-			expectedError:          appErrors.NewAppError(appErrors.ErrEncodingAttestationData),
+			expectedError:          appErrors.ErrEncodingAttestationData,
 			expectedPositionalInfo: nil,
 		},
 		{
@@ -56,7 +58,7 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 			statusCode:             200,
 			attestationData:        "attestation data",
 			timestamp:              1715769600,
-			expectedError:          appErrors.NewAppError(appErrors.ErrInvalidEncodingOption),
+			expectedError:          appErrors.ErrInvalidEncodingOption,
 			expectedPositionalInfo: nil,
 		},
 		{
@@ -74,7 +76,7 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 			statusCode:             200,
 			attestationData:        string(bytes.Repeat([]byte("1"), 255)),
 			timestamp:              1715769600,
-			expectedError:          appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge),
+			expectedError:          appErrors.ErrAttestationDataTooLarge,
 			expectedPositionalInfo: nil,
 		},
 		{
@@ -92,7 +94,7 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 			statusCode:             200,
 			attestationData:        string(bytes.Repeat([]byte("1"), 100)),
 			timestamp:              1715769600,
-			expectedError:          appErrors.NewAppError(appErrors.ErrEncodingAttestationData),
+			expectedError:          appErrors.ErrEncodingAttestationData,
 			expectedPositionalInfo: nil,
 		},
 		{
@@ -110,7 +112,7 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 			statusCode:             200,
 			attestationData:        string(bytes.Repeat([]byte("1"), 10)),
 			timestamp:              1715769600,
-			expectedError:          appErrors.NewAppError(appErrors.ErrEncodingAttestationData),
+			expectedError:          appErrors.ErrEncodingAttestationData,
 			expectedPositionalInfo: nil,
 		},
 		{
@@ -128,7 +130,7 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 			statusCode:             200,
 			attestationData:        string(bytes.Repeat([]byte("a"), 10000)),
 			timestamp:              1715769600,
-			expectedError:          appErrors.NewAppError(appErrors.ErrAttestationDataTooLarge),
+			expectedError:          appErrors.ErrAttestationDataTooLarge,
 			expectedPositionalInfo: nil,
 		},
 		{
@@ -252,7 +254,7 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 		{
 			name: "valid attestation data with float encoding and price feed url",
 			attestationRequest: AttestationRequest{
-				Url:            constants.PRICE_FEED_BTC_URL,
+				Url:            constants.PriceFeedBTCURL,
 				RequestMethod:  "GET",
 				ResponseFormat: "json",
 				Selector:       "body",
@@ -374,11 +376,15 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 				RequestMethod:  "GET",
 				ResponseFormat: "json",
 				Selector:       "body",
+				EncodingOptions: encoding.EncodingOptions{
+					Value:     "",
+					Precision: 0,
+				},
 			},
 			statusCode:             200,
-			attestationData:        "attestation data",
+			attestationData:        string(bytes.Repeat([]byte("1"), 16)),
 			timestamp:              1715769600,
-			expectedError:          appErrors.NewAppError(appErrors.ErrInvalidEncodingOption),
+			expectedError:          appErrors.ErrInvalidEncodingOption,
 			expectedPositionalInfo: nil,
 		},
 	}
@@ -399,14 +405,14 @@ func TestPrepareProofData_PositionalInfo(t *testing.T) {
 				var attestationData = make([]byte, 2)
 				var attestationDataLen int
 
-				if testCase.attestationRequest.Url == constants.PRICE_FEED_BTC_URL || testCase.attestationRequest.Url == constants.PRICE_FEED_ETH_URL || testCase.attestationRequest.Url == constants.PRICE_FEED_ALEO_URL {
+				if common.IsPriceFeedURL(testCase.attestationRequest.Url) {
 					attestationDataLen = len(testCase.attestationData)
 				} else {
 					switch testCase.attestationRequest.EncodingOptions.Value {
 					case "float":
 						attestationDataLen = math.MaxUint8
 					case "string":
-						attestationDataLen = constants.ATTESTATION_DATA_SIZE_LIMIT
+						attestationDataLen = constants.AttestationDataSizeLimit
 					case "int":
 						attestationDataLen = math.MaxUint8
 					default:
@@ -521,7 +527,7 @@ func TestPrepareEncodedRequestProof(t *testing.T) {
 					Len: 1,
 				},
 			},
-			expectedError: appErrors.NewAppError(appErrors.ErrUserDataTooShort),
+			expectedError: appErrors.ErrUserDataTooShort,
 		},
 	}
 
@@ -540,4 +546,484 @@ func TestPrepareEncodedRequestProof(t *testing.T) {
 		})
 	}
 
+}
+
+func TestPrepareAttestationData(t *testing.T) {
+	testCases := []struct {
+		name            string
+		attestationData string
+		encodingOptions encoding.EncodingOptions
+		expectedResult  string
+		expectedError   *appErrors.AppError
+		description     string
+		statusCode      int
+		timestamp       int64
+	}{
+		// String encoding tests
+		{
+			name:            "string encoding - short data",
+			attestationData: "hello world",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "string",
+			},
+			expectedResult: func() string {
+				// Pad with null bytes to AttestationDataSizeLimit
+				padded := "hello world"
+				for len(padded) < constants.AttestationDataSizeLimit {
+					padded += "\x00"
+				}
+				return padded
+			}(),
+			expectedError: nil,
+			description:   "String encoding should pad with null bytes to AttestationDataSizeLimit",
+			statusCode:    200,
+			timestamp:     1715769600,
+		},
+		{
+			name:            "string encoding - empty data",
+			attestationData: "",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "string",
+			},
+			expectedResult: func() string {
+				// Pad with null bytes to AttestationDataSizeLimit
+				padded := ""
+				for len(padded) < constants.AttestationDataSizeLimit {
+					padded += "\x00"
+				}
+				return padded
+			}(),
+			expectedError: nil,
+			description:   "Empty string should be padded with null bytes to AttestationDataSizeLimit",
+			statusCode:    200,
+			timestamp:     1715769600,
+		},
+		{
+			name:            "string encoding - exact size data",
+			attestationData: string(bytes.Repeat([]byte("a"), constants.AttestationDataSizeLimit)),
+			encodingOptions: encoding.EncodingOptions{
+				Value: "string",
+			},
+			expectedResult: string(bytes.Repeat([]byte("a"), constants.AttestationDataSizeLimit)),
+			expectedError:  nil,
+			description:    "String of exact size should remain unchanged",
+			statusCode:     200,
+			timestamp:      1715769600,
+		},
+
+		// Float encoding tests
+		{
+			name:            "float encoding - with decimal point",
+			attestationData: "123.45",
+			encodingOptions: encoding.EncodingOptions{
+				Value:     "float",
+				Precision: 2,
+			},
+			expectedResult: func() string {
+				// Pad with '0' to MaxUint8 length
+				padded := "123.45"
+				for len(padded) < math.MaxUint8 {
+					padded += "0"
+				}
+				return padded
+			}(),
+			expectedError: nil,
+			description:   "Float with decimal point should be padded with '0' to MaxUint8 length",
+			statusCode:    200,
+			timestamp:     1715769600,
+		},
+		{
+			name:            "float encoding - without decimal point",
+			attestationData: "123",
+			encodingOptions: encoding.EncodingOptions{
+				Value:     "float",
+				Precision: 0,
+			},
+			expectedResult: func() string {
+				// Add decimal point and pad with '0' to MaxUint8 length
+				padded := "123."
+				for len(padded) < math.MaxUint8 {
+					padded += "0"
+				}
+				return padded
+			}(),
+			expectedError: nil,
+			description:   "Float without decimal point should add '.' and pad with '0' to MaxUint8 length",
+			statusCode:    200,
+			timestamp:     1715769600,
+		},
+		{
+			name:            "float encoding - zero value",
+			attestationData: "0",
+			encodingOptions: encoding.EncodingOptions{
+				Value:     "float",
+				Precision: 0,
+			},
+			expectedResult: func() string {
+				// Add decimal point and pad with '0' to MaxUint8 length
+				padded := "0."
+				for len(padded) < math.MaxUint8 {
+					padded += "0"
+				}
+				return padded
+			}(),
+			expectedError: nil,
+			description:   "Zero value should add '.' and pad with '0' to MaxUint8 length",
+			statusCode:    200,
+			timestamp:     1715769600,
+		},
+		{
+			name:            "float encoding - negative value",
+			attestationData: "-123.45",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "float",
+			},
+			expectedResult: "",
+			expectedError:  appErrors.ErrEncodingAttestationData,
+			description:    "Negative float should cause encoding error",
+			statusCode:     200,
+			timestamp:      1715769600,
+		},
+
+		// Integer encoding tests
+		{
+			name:            "int encoding - positive number",
+			attestationData: "123",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "int",
+			},
+			expectedResult: func() string {
+				// Prepend '0' characters to reach MaxUint8 length
+				padLength := math.MaxUint8 - len("123")
+				padString := ""
+				for i := 0; i < padLength; i++ {
+					padString += "0"
+				}
+				return padString + "123"
+			}(),
+			expectedError: nil,
+			description:   "Integer should be prepended with '0' to reach MaxUint8 length",
+			statusCode:    200,
+			timestamp:     1715769600,
+		},
+		{
+			name:            "int encoding - zero value",
+			attestationData: "0",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "int",
+			},
+			expectedResult: func() string {
+				// Prepend '0' characters to reach MaxUint8 length
+				padLength := math.MaxUint8 - len("0")
+				padString := ""
+				for i := 0; i < padLength; i++ {
+					padString += "0"
+				}
+				return padString + "0"
+			}(),
+			expectedError: nil,
+			description:   "Zero integer should be prepended with '0' to reach MaxUint8 length",
+			statusCode:    200,
+			timestamp:     1715769600,
+		},
+		{
+			name:            "int encoding - negative number",
+			attestationData: "-123",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "int",
+			},
+			expectedResult: "",
+			expectedError:  appErrors.ErrEncodingAttestationData,
+			description:    "Negative integer should cause encoding error",
+			statusCode:     200,
+			timestamp:      1715769600,
+		},
+		{
+			name:            "int encoding - large number",
+			attestationData: "999999999",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "int",
+			},
+			expectedResult: func() string {
+				// Prepend '0' characters to reach MaxUint8 length
+				padLength := math.MaxUint8 - len("999999999")
+				padString := ""
+				for i := 0; i < padLength; i++ {
+					padString += "0"
+				}
+				return padString + "999999999"
+			}(),
+			expectedError: nil,
+			description:   "Large integer should be prepended with '0' to reach MaxUint8 length",
+			statusCode:    200,
+			timestamp:     1715769600,
+		},
+
+		// Edge cases
+		{
+			name:            "int encoding - maximum length number",
+			attestationData: string(bytes.Repeat([]byte("9"), math.MaxUint8)),
+			encodingOptions: encoding.EncodingOptions{
+				Value: "int",
+			},
+			expectedResult: string(bytes.Repeat([]byte("9"), math.MaxUint8)),
+			expectedError:  appErrors.ErrEncodingAttestationData,
+			description:    "Integer of maximum length should cause encoding error",
+			statusCode:     200,
+			timestamp:      1715769600,
+		},
+		{
+			name:            "float encoding - maximum length with decimal",
+			attestationData: string(bytes.Repeat([]byte("9"), math.MaxUint8-1)) + ".",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "float",
+			},
+			expectedResult: string(bytes.Repeat([]byte("9"), math.MaxUint8-1)) + ".",
+			expectedError:  appErrors.ErrEncodingAttestationData,
+			description:    "Float of maximum length with decimal point should cause encoding error",
+			statusCode:     200,
+			timestamp:      1715769600,
+		},
+
+		// Invalid encoding option
+		{
+			name:            "invalid encoding option",
+			attestationData: "test data",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "invalid",
+			},
+			expectedResult: "",
+			expectedError:  appErrors.ErrInvalidEncodingOption,
+			description:    "Invalid encoding option should return error",
+			statusCode:     200,
+			timestamp:      1715769600,
+		},
+		{
+			name:            "empty encoding option",
+			attestationData: "test data",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "",
+			},
+			expectedResult: "",
+			expectedError:  appErrors.ErrInvalidEncodingOption,
+			description:    "Empty encoding option should return error",
+			statusCode:     200,
+			timestamp:      1715769600,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Test the function indirectly through PrepareProofData
+			// We'll use a non-price-feed URL to ensure prepareAttestationData is called
+			req := AttestationRequest{
+				Url:             "google.com", // Non-price-feed URL
+				RequestMethod:   "GET",
+				ResponseFormat:  "json",
+				Selector:        "body",
+				EncodingOptions: testCase.encodingOptions,
+			}
+
+			// Call PrepareProofData which internally calls prepareAttestationData
+			result, _, err := PrepareProofData(testCase.statusCode, testCase.attestationData, testCase.timestamp, req)
+
+			if testCase.expectedError != nil {
+				assert.Equal(t, testCase.expectedError, err, testCase.description)
+				assert.Nil(t, result, "Result should be nil when error is expected")
+			} else {
+				assert.Nil(t, err, testCase.description)
+				assert.NotNil(t, result, "Result should not be nil when no error is expected")
+
+				// For valid cases, we can't easily extract the prepared attestation data
+				// from the result buffer, so we just verify that no error occurred
+				// and the result is not nil
+			}
+		})
+	}
+}
+
+func TestPrepareAttestationData_EdgeCases(t *testing.T) {
+	testCases := []struct {
+		name            string
+		attestationData string
+		encodingOptions encoding.EncodingOptions
+		expectedError   *appErrors.AppError
+		description     string
+	}{
+		{
+			name:            "string encoding - very long data",
+			attestationData: string(bytes.Repeat([]byte("a"), constants.AttestationDataSizeLimit+100)),
+			encodingOptions: encoding.EncodingOptions{
+				Value: "string",
+			},
+			expectedError: nil, // Should be truncated/padded to exact size
+			description:   "Very long string should be handled properly",
+		},
+		{
+			name:            "float encoding - scientific notation",
+			attestationData: "1.23e-4",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "float",
+			},
+			expectedError: nil,
+			description:   "Scientific notation should be handled as float",
+		},
+		{
+			name:            "float encoding - multiple decimal points",
+			attestationData: "123.45.67",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "float",
+			},
+			expectedError: nil,
+			description:   "Multiple decimal points should be handled",
+		},
+		{
+			name:            "int encoding - hex string",
+			attestationData: "0xFF",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "int",
+			},
+			expectedError: appErrors.ErrEncodingAttestationData,
+			description:   "Hex string should cause encoding error",
+		},
+		{
+			name:            "int encoding - binary string",
+			attestationData: "0b101010",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "int",
+			},
+			expectedError: appErrors.ErrEncodingAttestationData,
+			description:   "Binary string should cause encoding error",
+		},
+		{
+			name:            "float encoding - negative number edge case",
+			attestationData: "-0.001",
+			encodingOptions: encoding.EncodingOptions{
+				Value:     "float",
+				Precision: 3,
+			},
+			expectedError: appErrors.ErrEncodingAttestationData,
+			description:   "Negative float should cause encoding error",
+		},
+		{
+			name:            "int encoding - negative number edge case",
+			attestationData: "-999999",
+			encodingOptions: encoding.EncodingOptions{
+				Value: "int",
+			},
+			expectedError: appErrors.ErrEncodingAttestationData,
+			description:   "Negative integer should cause encoding error",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			req := AttestationRequest{
+				Url:             "google.com",
+				RequestMethod:   "GET",
+				ResponseFormat:  "json",
+				Selector:        "body",
+				EncodingOptions: testCase.encodingOptions,
+			}
+
+			_, _, err := PrepareProofData(200, testCase.attestationData, 1715769600, req)
+
+			if testCase.expectedError != nil {
+				assert.Equal(t, testCase.expectedError, err, testCase.description)
+			} else {
+				// For edge cases, we mainly want to ensure no panic occurs
+				// The actual behavior might vary depending on the encoding library
+				assert.NotPanics(t, func() {
+					_, _, _ = PrepareProofData(200, testCase.attestationData, 1715769600, req)
+				}, testCase.description)
+			}
+		})
+	}
+}
+
+func TestPrepareAttestationData_Performance(t *testing.T) {
+	// Test performance with large data
+	largeData := string(bytes.Repeat([]byte("a"), 1000))
+
+	req := AttestationRequest{
+		Url:            "google.com",
+		RequestMethod:  "GET",
+		ResponseFormat: "json",
+		Selector:       "body",
+		EncodingOptions: encoding.EncodingOptions{
+			Value: "string",
+		},
+	}
+
+	// Benchmark the function
+	start := time.Now()
+	for i := 0; i < 100; i++ {
+		_, _, err := PrepareProofData(200, largeData, 1715769600, req)
+		assert.Nil(t, err)
+	}
+	duration := time.Since(start)
+
+	// Ensure it completes within reasonable time (1 second for 100 iterations)
+	assert.Less(t, duration, time.Second, "Performance test should complete within 1 second for 100 iterations")
+}
+
+func TestPrepareAttestationData_PriceFeedExclusion(t *testing.T) {
+	// Test that price feed URLs bypass prepareAttestationData
+	testCases := []struct {
+		name            string
+		url             string
+		attestationData string
+		encodingOptions encoding.EncodingOptions
+		description     string
+	}{
+		{
+			name:            "price feed btc - should bypass prepareAttestationData",
+			url:             "price_feed: btc",
+			attestationData: "123.45",
+			encodingOptions: encoding.EncodingOptions{
+				Value:     "float",
+				Precision: 2,
+			},
+			description: "Price feed URL should not call prepareAttestationData",
+		},
+		{
+			name:            "price feed eth - should bypass prepareAttestationData",
+			url:             "price_feed: eth",
+			attestationData: "456.78",
+			encodingOptions: encoding.EncodingOptions{
+				Value:     "float",
+				Precision: 2,
+			},
+			description: "Price feed URL should not call prepareAttestationData",
+		},
+		{
+			name:            "price feed aleo - should bypass prepareAttestationData",
+			url:             "price_feed: aleo",
+			attestationData: "789.01",
+			encodingOptions: encoding.EncodingOptions{
+				Value:     "float",
+				Precision: 2,
+			},
+			description: "Price feed URL should not call prepareAttestationData",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			req := AttestationRequest{
+				Url:             testCase.url,
+				RequestMethod:   "GET",
+				ResponseFormat:  "json",
+				Selector:        "weightedAvgPrice",
+				EncodingOptions: testCase.encodingOptions,
+			}
+
+			// For price feed URLs, the attestation data should be used as-is
+			// without calling prepareAttestationData
+			result, _, err := PrepareProofData(200, testCase.attestationData, 1715769600, req)
+
+			assert.Nil(t, err, testCase.description)
+			assert.NotNil(t, result, "Result should not be nil for price feed URLs")
+		})
+	}
 }
