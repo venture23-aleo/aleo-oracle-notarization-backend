@@ -27,9 +27,8 @@ jobs:
           git pull
           # Update env
           echo -e "APP=${{ vars.APP }}" > .env
-          sudo docker compose down
+          sudo make docker-stop
           # Remove all dangling (untagged) images to cleanup build artifacts
           sudo docker image prune -af
-          sudo docker compose build
-          sudo docker compose up -d
+          sudo make docker-run
           EOF
