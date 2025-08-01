@@ -31,5 +31,13 @@ echo "[+] Installing Docker packages..."
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 echo "[✓] Docker installation complete."
+
+echo "[+] Adding user to docker group..."
+sudo usermod -aG docker $USER
+
+echo "[✓] User added to docker group."
+
 echo "[✓] Verifying Docker version:"
 docker --version
+
+

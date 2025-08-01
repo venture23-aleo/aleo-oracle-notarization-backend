@@ -23,9 +23,46 @@ export COMMIT := $(shell git rev-parse HEAD)
 
 # LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT)"
 GOCMD := go
-LD_LIBRARY_PATH="/lib/x86_64-linux-gnu/"
-DOCKER_MANIFEST_TEMPLATE="docker/inputs/${APP}.manifest.template"
+export LD_LIBRARY_PATH=/lib/x86_64-linux-gnu/
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Directories
+# ─────────────────────────────────────────────────────────────────────────────
+export PROJECT_ROOT := $(shell pwd)
+
+export DEPLOYMENT_DIR := $(PROJECT_ROOT)/deployment
+
+export SHARED_DEPLOYMENT_DIR := $(DEPLOYMENT_DIR)/shared
+export SHARED_DEPLOYMENT_SCRIPTS_DIR := $(SHARED_DEPLOYMENT_DIR)/scripts
+export SHARED_DEPLOYMENT_CONFIGS_DIR := $(SHARED_DEPLOYMENT_DIR)/configs
+
+export DOCKER_DEPLOYMENT_DIR := $(DEPLOYMENT_DIR)/docker
+export DOCKER_DEPLOYMENT_SCRIPTS_DIR := $(DOCKER_DEPLOYMENT_DIR)/scripts
+export DOCKER_DEPLOYMENT_INPUTS_DIR := $(DOCKER_DEPLOYMENT_DIR)/inputs
+export DOCKER_DEPLOYMENT_MANIFEST_TEMPLATE := $(DOCKER_DEPLOYMENT_INPUTS_DIR)/$(APP).manifest.template
+export DOCKER_ENCLAVE_ARTIFACTS_DIR := $(DOCKER_DEPLOYMENT_DIR)/enclave_artifacts
+
+export NATIVE_DEPLOYMENT_DIR := $(DEPLOYMENT_DIR)/native
+export NATIVE_DEPLOYMENT_SCRIPTS_DIR := $(NATIVE_DEPLOYMENT_DIR)/scripts
+export NATIVE_DEPLOYMENT_INPUTS_DIR := $(NATIVE_DEPLOYMENT_DIR)/inputs
+export NATIVE_DEPLOYMENT_ENCLAVE_ARTIFACTS_DIR := $(NATIVE_DEPLOYMENT_DIR)/enclave_artifacts
+export NATIVE_DEPLOYMENT_MANIFEST_TEMPLATE := $(NATIVE_DEPLOYMENT_INPUTS_DIR)/$(APP).manifest.template
+
+export NATIVE_QCNL_CONFIG_FILE := $(NATIVE_DEPLOYMENT_INPUTS_DIR)/sgx_default_qcnl.conf
+export DOCKER_QCNL_CONFIG_FILE := $(DOCKER_DEPLOYMENT_INPUTS_DIR)/sgx_default_qcnl.conf
+
+export SECRETS_DIR := $(DEPLOYMENT_DIR)/secrets
+export ENCLAVE_SIGNING_KEY_FILE := $(SECRETS_DIR)/enclave-signing-key.pem
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Go version
+# ─────────────────────────────────────────────────────────────────────────────
+export GO_VERSION := 1.24.4
+export GO_ARCH := linux-amd64
+export GO_INSTALL_DIR := /usr/local
+
+# ─────────────────────────────────────────────────────────────────────────────
 export COMPOSE_BAKE=true
 
 # Default target
@@ -33,26 +70,8 @@ export COMPOSE_BAKE=true
 all: fmt vet lint test build
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Build Targets
+# Test 
 # ─────────────────────────────────────────────────────────────────────────────
-.PHONY: build
-build:
-	@echo ">> Building $(APP)..."
-	$(GOCMD) build -o bin/$(APP) ./cmd/server
-
-.PHONY: build-cross
-build-cross:
-	@echo ">> Cross-compiling for linux/amd64..."
-	GOOS=linux GOARCH=amd64 $(GOCMD) build -o bin/$(APP)-linux-amd64 ./cmd/server
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Run and Test
-# ─────────────────────────────────────────────────────────────────────────────
-.PHONY: run
-run: build
-	@echo ">> Running $(APP)..."
-	./bin/$(APP)
-
 .PHONY: test
 test:
 	@echo ">> Running unit tests..."
@@ -80,53 +99,84 @@ vet:
 .PHONY: lint
 lint:
 	@echo ">> Static analysis (staticcheck)..."
-	go install honnef.co/go/tools/cmd/staticcheck@latest
-	staticcheck ./...
+	@$(GOCMD) install honnef.co/go/tools/cmd/staticcheck@latest
+	@$(GOCMD) run honnef.co/go/tools/cmd/staticcheck@latest ./...
 
 
-# ─────────key-openssl────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 # Generate the private key for SGX signing using OpenSSL (exponent 3)
 # Usage: make generate-enclave-signing-key
 # Requires OpenSSL 1.1.1 or later
 # ─────────────────────────────────────────────────────────────────────────────
 .PHONY: generate-enclave-signing-key
 generate-enclave-signing-key:
-	@mkdir -p secrets
-	@echo ">> Generating enclave private key at secrets/enclave-key. && \pem using OpenSSL ..."
-	@openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -pkeyopt rsa_keygen_pubexp:3 -out secrets/enclave-key.pem
-	@chmod 600 secrets/enclave-key.pem
-	@echo ">> Enclave signing key generated successfully!"
-
+	@chmod +x $(SHARED_DEPLOYMENT_SCRIPTS_DIR)/generate-enclave-signing-key.sh
+	@$(SHARED_DEPLOYMENT_SCRIPTS_DIR)/generate-enclave-signing-key.sh
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Generate manifest template
-# Usage: make generate-manifest-template
-# Requires Gramine to be installed
+# Generate manifest template for Docker
+# Usage: make generate-docker-manifest-template
 # ─────────────────────────────────────────────────────────────────────────────
-.PHONY: generate-manifest-template
-generate-manifest-template:
-	chmod +x scripts/generate-manifest-template.sh
-	@scripts/generate-manifest-template.sh $(APP) $(DOCKER_MANIFEST_TEMPLATE) $(LD_LIBRARY_PATH)
+.PHONY: generate-docker-manifest-template
+generate-docker-manifest-template:
+	@chmod +x $(DOCKER_DEPLOYMENT_SCRIPTS_DIR)/generate-manifest-template.sh
+	@$(DOCKER_DEPLOYMENT_SCRIPTS_DIR)/generate-manifest-template.sh $(APP)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Extract enclave artifacts
+# Generate manifest template for Native
+# Usage: make generate-native-manifest-template
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: generate-native-manifest-template
+generate-native-manifest-template:
+	@chmod +x $(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/generate-manifest-template.sh
+	@$(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/generate-manifest-template.sh $(APP)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Extract enclave artifacts for Docker
 # ─────────────────────────────────────────────────────────────────────────────
 # Usage: make extract-enclave-artifacts
 # ─────────────────────────────────────────────────────────────────────────────
 .PHONY: extract-enclave-artifacts
-extract-enclave-artifacts: docker-build
-	@echo ">> Getting enclave info..."
-	@echo ">> Creating temporary container..."
-	@container_id=$$(docker create $(APP)) && \
-	echo ">> Container ID: $$container_id" && \
-	echo ">> Copying enclave signature file..." && \
-	mkdir -p enclave_artifacts && \
-	docker cp $$container_id:/app/${APP}.manifest.sgx ./enclave_artifacts/${APP}.manifest.sgx && \
-	docker cp $$container_id:/app/${APP}.sig  ./enclave_artifacts/${APP}.sig && \
-	docker cp $$container_id:/app/${APP}.metadata.json ./enclave_artifacts/${APP}.metadata.json && \
-	echo ">> Removing temporary container..." && \
-	docker rm $$container_id && \
-	echo ">> Enclave info extracted successfully!"
+extract-enclave-artifacts:
+	@chmod +x $(DOCKER_DEPLOYMENT_SCRIPTS_DIR)/extract-enclave-artifacts.sh
+	@$(DOCKER_DEPLOYMENT_SCRIPTS_DIR)/extract-enclave-artifacts.sh $(APP)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Native Installation and Setup
+# Usage: make native-setup
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: native-check-linux
+native-check-linux:
+	@lsb_release -a
+
+.PHONY: native-check-sgx
+native-check-sgx:
+	@echo ">> Checking SGX hardware support..."
+	@echo "CPU SGX Support:"
+	@sudo cat /proc/cpuinfo | grep -i sgx || echo "SGX not detected in CPU flags"
+	@echo "SGX Device Files:"
+	@ls -la /dev/sgx_enclave 2>/dev/null || echo "SGX device files not found"
+	@echo ">> SGX hardware check completed"
+
+.PHONY: native-install-sgx-dcap-aesm
+native-install-sgx-dcap-aesm:
+	@chmod +x $(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-sgx-dcap-aesm.sh
+	@$(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-sgx-dcap-aesm.sh
+	
+.PHONY: native-install-gramine
+native-install-gramine:
+	@chmod +x $(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-gramine.sh
+	@$(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-gramine.sh
+
+.PHONY: native-install-go
+native-install-go:
+	@chmod +x $(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-go.sh
+	@$(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-go.sh $(GO_VERSION)
+
+.PHONY: native-setup
+native-setup: native-check-linux native-check-sgx native-install-sgx-dcap-aesm native-install-gramine native-install-go
+	@echo ">> Native setup completed successfully!"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Native Build and Run
@@ -136,87 +186,91 @@ extract-enclave-artifacts: docker-build
 .PHONY: native-clean
 native-clean:
 	@echo ">> Cleaning native build artifacts..."
-	rm -rf native/outputs/*
+	@rm -rf $(NATIVE_DEPLOYMENT_ENCLAVE_ARTIFACTS_DIR)/*
 
 .PHONY: native-build
 native-build: native-clean
 	@echo ">> Building native binary..."
-	$(GOCMD) build -o native/outputs/$(APP) ./cmd/server
+	@$(GOCMD) build -o $(NATIVE_DEPLOYMENT_ENCLAVE_ARTIFACTS_DIR)/$(APP) ./cmd/server
 
 .PHONY: native-run
-native-run: native-build
+native-run: native-build generate-native-manifest-template generate-enclave-signing-key
 	@echo ">> Running native application with Gramine..."
-	@chmod +x native/run-native.sh
-	./native/run-native.sh
+	@chmod +x $(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/run-native.sh
+	@$(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/run-native.sh $(APP)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Docker Management (Build, Run, Stop, Logs, Status)
 # ─────────────────────────────────────────────────────────────────────────────
 # Docker compose flags (can be overridden from command line)
 DOCKER_FLAGS ?= -d
-DOCKER_COMPOSE_FILE ?= docker-compose.yml
+DOCKER_COMPOSE_FILE ?= "$(DOCKER_DEPLOYMENT_DIR)/docker-compose.yml"
 DOCKER_SERVICES ?= $(APP)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker Installation and Setup
+# Usage: make docker-setup
+# ─────────────────────────────────────────────────────────────────────────────
+.PHONY: docker-install
+docker-install:
+	@chmod +x $(DOCKER_DEPLOYMENT_SCRIPTS_DIR)/install-docker.sh
+	@$(DOCKER_DEPLOYMENT_SCRIPTS_DIR)/install-docker.sh
+
+.PHONY: docker-setup 
+docker-setup: docker-install generate-enclave-signing-key
+	@echo ">> Docker setup completed successfully!"
+
 .PHONY: docker-build
-docker-build: generate-manifest-template
-	@mkdir -p enclave_artifacts
-	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose build $(APP)
-	docker tag $(APP):latest $(APP):$(COMMIT)
+docker-build: generate-docker-manifest-template
+	@DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_DEPLOYMENT_INPUTS_DIR="$(DOCKER_DEPLOYMENT_INPUTS_DIR)" ENCLAVE_SIGNING_KEY_FILE="$(ENCLAVE_SIGNING_KEY_FILE)" docker compose -f $(DOCKER_COMPOSE_FILE) build $(APP)
+	@docker tag $(APP):latest $(APP):$(COMMIT)
 
 .PHONY: docker-run
 docker-run: docker-build
 	@echo ">> Running Docker container..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) $(DOCKER_FLAGS)
+	@docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) $(DOCKER_FLAGS)
 
 .PHONY: docker-run-fg
 docker-run-fg: docker-build
-	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES)
+	@echo ">> Running Docker container in foreground..."
+	@docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES)
 
 .PHONY: docker-run-rebuild
 docker-run-rebuild: docker-build
-	docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) --build --force-recreate
+	@echo ">> Running Docker container in foreground with rebuild..."
+	@docker compose -f $(DOCKER_COMPOSE_FILE) up $(DOCKER_SERVICES) --build --force-recreate
 
 .PHONY: docker-stop
 docker-stop:
 	@echo ">> Stopping all Docker containers..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) down
+	@docker compose -f $(DOCKER_COMPOSE_FILE) down
 
 .PHONY: docker-logs
 docker-logs:
 	@echo ">> Showing Docker logs..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) logs -f
+	@docker compose -f $(DOCKER_COMPOSE_FILE) logs -f
 
 .PHONY: docker-status
 docker-status:
 	@echo ">> Docker container status:"
-	docker compose -f $(DOCKER_COMPOSE_FILE) ps
+	@docker compose -f $(DOCKER_COMPOSE_FILE) ps
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Prometheus Monitoring And Alertmanager Setup
 # ─────────────────────────────────────────────────────────────────────────────
 .PHONY: setup-alertmanager
 setup-alertmanager:
-	@chmod +x scripts/setup-alertmanager.sh
-	@echo ">> Setting up Alertmanager..."
-	@scripts/setup-alertmanager.sh
+	@chmod +x $(SHARED_DEPLOYMENT_SCRIPTS_DIR)/setup-alertmanager.sh
+	@$(SHARED_DEPLOYMENT_SCRIPTS_DIR)/setup-alertmanager.sh
 
 .PHONY: setup-prometheus
 setup-prometheus:
-	@chmod +x scripts/setup-prometheus.sh
-	@echo ">> Setting up Prometheus..."
-	@scripts/setup-prometheus.sh
+	@chmod +x $(SHARED_DEPLOYMENT_SCRIPTS_DIR)/setup-prometheus.sh
+	@$(SHARED_DEPLOYMENT_SCRIPTS_DIR)/setup-prometheus.sh
 
 .PHONY: setup-monitoring
 setup-monitoring: setup-alertmanager setup-prometheus
 	@echo ">> Monitoring setup complete!"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Clean & Help
-# ─────────────────────────────────────────────────────────────────────────────
-.PHONY: clean
-clean:
-	@echo ">> Cleaning binaries..."
-	rm -rf bin/*
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Help
@@ -228,9 +282,6 @@ help:
 	@echo
 	@echo "Development Targets:"
 	@echo "  all             Run fmt, vet, lint, test, build"
-	@echo "  build           Compile binary"
-	@echo "  build-cross     Build linux/amd64 binary"
-	@echo "  run             Build and run locally"
 	@echo "  test            Run tests"
 	@echo "  fmt             Format code"
 	@echo "  vet             Static vetting"
@@ -238,11 +289,19 @@ help:
 	@echo "  clean           Remove binaries"
 	@echo
 	@echo "Native Targets:"
-	@echo "  native-build    Build native binary"
-	@echo "  native-run      Build and run native application with Gramine"
-	@echo "  native-clean    Clean native build artifacts"
+	@echo "  native-setup           Complete native environment setup (recommended)"
+	@echo "  native-check-linux     Check Linux distribution compatibility"
+	@echo "  native-check-sgx       Check SGX hardware support"
+	@echo "  native-install-sgx-dcap-aesm Install Intel SGX and DCAP drivers"
+	@echo "  native-install-gramine Install Gramine framework"
+	@echo "  native-install-go      Install Go 1.24.4"
+	@echo "  native-build           Build native binary"
+	@echo "  native-run             Build and run native application with Gramine"
+	@echo "  native-clean           Clean native build artifacts"
 	@echo
 	@echo "Docker Targets:"
+	@echo "  docker-setup    Complete Docker environment setup (recommended)"
+	@echo "  docker-install  Install Docker and Docker Compose"
 	@echo "  docker-build    Build Docker image"
 	@echo "  docker-run      Build and run Docker container (detached mode)"
 	@echo "  docker-run-fg   Build and run Docker container (foreground mode)"
@@ -271,8 +330,8 @@ help:
 	@echo "  setup-prometheus            Setup Prometheus"
 	@echo
 	@echo "SGX/Enclave Targets:"
-	@echo "  generate-manifest-template   Generate manifest template"
-	@echo "  extract-enclave-artifacts    Extract enclave artifacts"
+	@echo "  generate-docker-manifest-template   Generate manifest template"
+	@echo "  ENCLAVE_ARTIFACTS_DIRclave-artifacts    Extract enclave artifacts"
 	@echo "  generate-enclave-signing-key Generate enclave signing key (OpenSSL)"
 	@echo
 	@echo "Utility:"

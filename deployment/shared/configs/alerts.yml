@@ -12,17 +12,6 @@ groups:
           summary: "High error rate detected in Aleo Oracle Backend"
           description: "Error rate is {{ $value }} errors per second over the last 5 minutes"
 
-      # High Memory Usage
-      - alert: HighMemoryUsage
-        expr: memory_alloc_bytes / memory_sys_bytes > 0.8
-        for: 5m
-        labels:
-          severity: warning
-          service: aleo-oracle
-        annotations:
-          summary: "High memory usage detected"
-          description: "Memory usage is {{ $value | humanizePercentage }}"
- 
       # Service Down Alert
       - alert: AleoOracleServiceDown
         expr: up{job="aleo-oracle-backend"} == 0
@@ -45,6 +34,7 @@ groups:
           summary: "Low exchange count detected"
           description: "Price feed {{ $labels.feed }} has an exchange count of {{ $value }}."
 
+      # High Exchange API Error Rate
       - alert: HighExchangeApiErrorRate
         expr: rate(exchange_api_errors_total[5m]) > 0.1
         for: 1m
@@ -55,6 +45,7 @@ groups:
           summary: "High exchange API error rate"
           description: "Exchange {{ $labels.exchange }} returned error code {{ $labels.error_code }} with a rate of {{ $value | humanizePercentage }}"
 
+      # Total Exchange API Failures
       - alert: TotalExchangeApiFailures
         expr: sum by (exchange) (rate(exchange_api_errors_total[5m])) > 0.5
         for: 2m
@@ -75,6 +66,17 @@ groups:
         annotations:
           summary: "High attestation failure rate"
           description: "Attestation failure rate is {{ $value | humanizePercentage }}"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: memory_alloc_bytes / memory_sys_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: aleo-oracle
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
 
       # High Goroutine Count
       - alert: HighGoroutineCount

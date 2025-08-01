@@ -34,16 +34,6 @@ func createHeaderMiddleware(headerName, headerValue string) Middleware {
 	}
 }
 
-// Test helper function to create middleware that modifies the request
-func createRequestModifierMiddleware(modifyFunc func(*http.Request)) Middleware {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			modifyFunc(r)
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 func TestChain(t *testing.T) {
 	tests := []struct {
 		name            string

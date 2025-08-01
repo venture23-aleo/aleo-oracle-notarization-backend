@@ -257,7 +257,7 @@ func TestPriceFeed_WithInternalServerError(t *testing.T) {
 		tokenTradingPairs: tokenTradingPairs,
 	}
 
-	for token, _ := range tokenExchanges {
+	for token := range tokenExchanges {
 		price, err := priceFeedClient.GetPriceFeed(context.Background(), token)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)
@@ -281,7 +281,7 @@ func TestPriceFeed_With404Error(t *testing.T) {
 		tokenTradingPairs: tokenTradingPairs,
 	}
 
-	for token, _ := range tokenExchanges {
+	for token := range tokenExchanges {
 		price, err := priceFeedClient.GetPriceFeed(context.Background(), token)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)
@@ -443,7 +443,7 @@ func TestPriceFeed_PartialValidExchangeResponse(t *testing.T) {
 		tokenTradingPairs: tokenTradingPairs,
 	}
 
-	for token, _ := range tokenExchanges {
+	for token := range tokenExchanges {
 		price, err := priceFeedClient.GetPriceFeed(context.Background(), token)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)

@@ -9,6 +9,10 @@ CONFIG_DIR="/etc/alertmanager"
 DATA_DIR="/var/lib/alertmanager"
 SERVICE_FILE="/etc/systemd/system/alertmanager.service"
 
+SHARED_DEPLOYMENT_DIR=${SHARED_DEPLOYMENT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+
+ALERTMANAGER_CONFIG_FILE=${ALERTMANAGER_CONFIG_FILE:-${SHARED_DEPLOYMENT_DIR}/configs/alertmanager.yml}
+
 echo "🔧 Installing Alertmanager v${ALERT_VERSION}..."
 
 # Create a system user and group
@@ -19,7 +23,7 @@ sudo useradd -s /sbin/nologin --system -g ${ALERT_USER} ${ALERT_USER} || true
 sudo mkdir -p ${CONFIG_DIR} ${DATA_DIR}
 sudo chown -R ${ALERT_USER}:${ALERT_USER} ${CONFIG_DIR} ${DATA_DIR}
 
-sudo cp $PWD/scripts/inputs/alertmanager.yml ${CONFIG_DIR}/alertmanager.yml
+sudo cp ${ALERTMANAGER_CONFIG_FILE} ${CONFIG_DIR}/alertmanager.yml
 
 # Download and extract Alertmanager
 cd /tmp

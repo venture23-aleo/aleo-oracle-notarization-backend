@@ -1,8 +1,10 @@
-artifacts/
+
 bin/
 .env
 .env.*
-secrets/
-native/outputs/
 logs/
-enclave_artifacts/
+
+deployment/secrets/
+deployment/docker/enclave_artifacts/
+deployment/native/inputs/*.manifest.template
+deployment/native/enclave_artifacts/
