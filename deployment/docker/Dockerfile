@@ -28,6 +28,7 @@ ARG APP
 # Set workdir
 WORKDIR /app
 
+# Copy the built binary
 COPY --from=builder /app/${APP} .
 
 # RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libsgx-dcap-default-qpl && rm -rf /var/lib/apt/lists/*
@@ -35,12 +36,15 @@ COPY --from=builder /app/${APP} .
 # Copy configuration files
 # COPY docker/inputs/static_hosts docker/inputs/static_resolv.conf docker/inputs/entrypoint.sh docker/inputs/${APP}.manifest.template ./
 
-COPY docker/inputs/* ./
+# Copy the manifest template, static files, and the entrypoint script
+COPY deployment/docker/inputs/* ./
 
 RUN DEBIAN_FRONTEND=noninteractive dpkg -i /app/libsgx-dcap-default-qpl_1.23.100.0-jammy1_amd64.deb
 
-COPY docker/inputs/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
+# Copy the SGX default QCNL configuration file
+COPY deployment/docker/inputs/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
 
+# Make the entrypoint script executable
 RUN chmod +x entrypoint.sh
 
 RUN --mount=type=secret,id=gramine-private-key,target=/tmp/private-key.pem \
@@ -49,6 +53,5 @@ RUN --mount=type=secret,id=gramine-private-key,target=/tmp/private-key.pem \
     gramine-sgx-sigstruct-view ${APP}.sig -v --output-format json > ${APP}.metadata.json
 
 ENV APP=${APP}
-
 ENTRYPOINT ["./entrypoint.sh"]
 

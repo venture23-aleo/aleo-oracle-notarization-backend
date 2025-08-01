@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -e
+
+set -euo pipefail
 
 PROM_VERSION="2.43.0"
 PROM_USER="prometheus"
@@ -8,6 +9,10 @@ INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/prometheus"
 DATA_DIR="/var/lib/prometheus"
 SERVICE_FILE="/etc/systemd/system/prometheus.service"
+
+SHARED_SCRIPTS_DIR=${SHARED_SCRIPTS_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/" && pwd)}
+
+PROMETHEUS_CONFIG_FILE=${PROMETHEUS_CONFIG_FILE:-deployment/shared/configs/prometheus.yml}
 
 echo "⏳ Updating package list..."
 sudo apt update
@@ -56,8 +61,8 @@ ExecStart=${INSTALL_DIR}/prometheus \\
 WantedBy=multi-user.target
 EOF
 
-sudo cp $PWD/scripts/inputs/prometheus.yml ${CONFIG_DIR}/prometheus.yml
-sudo cp $PWD/scripts/inputs/alerts.yml ${CONFIG_DIR}/alerts.yml
+sudo cp ./deployment/common/inputs/prometheus.yml ${CONFIG_DIR}/prometheus.yml
+sudo cp ./deployment/common/inputs/alerts.yml ${CONFIG_DIR}/alerts.yml
 
 echo "🔄 Reloading systemd configuration..."
 sudo systemctl daemon-reload
@@ -67,7 +72,7 @@ sudo systemctl enable prometheus
 sudo systemctl start prometheus
 
 echo "✅ Prometheus install complete. Status:"
-sudo systemctl status prometheus --no-pager
+sudo systemctl is-active prometheus
 
 echo "🌐 Prometheus UI: http://localhost:9090"
 echo "🔐 Remember to secure access using firewall, reverse proxy, or VPN."

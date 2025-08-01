@@ -1,8 +1,68 @@
-artifacts/
-bin/
-scripts/
-Readme.md
-.env_sample
-secrets/
+# Documentation
+docs/
+*.md
+README.md
+
+# Development files
+.git/
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Build artifacts
+build/
+dist/
+*.exe
+*.dll
+
+# Test files
+test/
+tests/
 *_test.go
-examples/
+
+# Deployment scripts (not needed in container)
+deployment/scripts/
+deployment/native/
+deployment/common/
+
+# Configuration files (if not needed)
+.env
+.env.local
+
+# Go specific
+*.exe
+*.test
+*.out
+go.work
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

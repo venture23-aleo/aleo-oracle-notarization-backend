@@ -6,17 +6,20 @@
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
 # Configuration
-readonly APP_NAME="aleo-oracle-notarization-backend"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+readonly APP_NAME=${APP:-aleo-oracle-notarization-backend}
 
-echo "SCRIPT_DIR: $SCRIPT_DIR"
-echo "PROJECT_ROOT: $PROJECT_ROOT"
 
-readonly OUTPUT_DIR="$SCRIPT_DIR/outputs"
-readonly INPUT_DIR="$SCRIPT_DIR/inputs"
-readonly ENTRYPOINT="$OUTPUT_DIR/$APP_NAME"
-readonly SGX_KEY_FILE="$PROJECT_ROOT/secrets/enclave-key.pem"
+# Use environment variables with fallback to path calculation
+readonly SCRIPT_DIR=${NATIVE_DEPLOYMENT_SCRIPTS_DIR:-"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"}
+readonly NATIVE_DEPLOYMENT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+readonly DEPLOYMENT_ROOT=$(cd "$NATIVE_DEPLOYMENT_DIR/.." && pwd)
+readonly PROJECT_ROOT=$(cd "$DEPLOYMENT_ROOT/.." && pwd)
+readonly ENCLAVE_ARTIFACTS_DIR="$NATIVE_DEPLOYMENT_DIR/enclave_artifacts"
+readonly INPUT_DIR="$NATIVE_DEPLOYMENT_DIR/inputs"
+readonly DEPLOYMENT_DIR=$(cd "$NATIVE_DEPLOYMENT_DIR/.." && pwd)
+readonly ENTRYPOINT="$ENCLAVE_ARTIFACTS_DIR/$APP_NAME"
+readonly SGX_KEY_FILE="$DEPLOYMENT_ROOT/secrets/enclave-signing-key.pem"
+
 
 # Environment variables with defaults
 readonly LOG_LEVEL="${LOG_LEVEL:-debug}"
@@ -82,7 +85,7 @@ validate_environment() {
     fi
     
     # Check SGX support
-    if [[ -e /dev/sgx/enclave ]] || [[ -e /dev/isgx ]]; then
+    if [[ -e /dev/sgx_enclave ]] || [[ -e /dev/isgx ]]; then
         log_info "SGX hardware detected"
         readonly SGX_MODE="sgx"
     else
@@ -100,8 +103,8 @@ validate_files() {
         exit 1
     fi
     
-    # Ensure output directory exists
-    mkdir -p "$OUTPUT_DIR"
+    # Ensure enclave artifacts directory exists
+    mkdir -p "$ENCLAVE_ARTIFACTS_DIR"
 }
 
 # Build optimization
@@ -155,8 +158,8 @@ generate_manifest() {
     log_info "Generating Gramine manifest..."
     
     local template_manifest="$INPUT_DIR/$APP_NAME.manifest.template"
-    local actual_manifest="$OUTPUT_DIR/$APP_NAME.manifest"
-    local signed_manifest="$OUTPUT_DIR/$APP_NAME.manifest.sgx"
+    local actual_manifest="$ENCLAVE_ARTIFACTS_DIR/$APP_NAME.manifest"
+    local signed_manifest="$ENCLAVE_ARTIFACTS_DIR/$APP_NAME.manifest.sgx"
     
     # Clean up old manifests
     log_debug "Removing old manifest files..."
@@ -182,8 +185,8 @@ generate_manifest() {
 sign_manifest() {
     log_info "Signing SGX manifest..."
     
-    local actual_manifest="$OUTPUT_DIR/$APP_NAME.manifest"
-    local signed_manifest="$OUTPUT_DIR/$APP_NAME.manifest.sgx"
+    local actual_manifest="$ENCLAVE_ARTIFACTS_DIR/$APP_NAME.manifest"
+    local signed_manifest="$ENCLAVE_ARTIFACTS_DIR/$APP_NAME.manifest.sgx"
     
     if ! gramine-sgx-sign --manifest "$actual_manifest" --output "$signed_manifest" --key "$SGX_KEY_FILE"; then
         log_error "Failed to sign SGX manifest"

@@ -1,10 +1,10 @@
 services:
   aleo-oracle-notarization-backend:
     image: ${APP}:latest
-    container_name: notarization-backend
+    container_name: aleo-oracle-notarization-backend
     build: 
-      context: .
-      dockerfile: ./docker/Dockerfile
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
       secrets:
         - gramine-private-key
       args:
@@ -19,4 +19,4 @@ services:
       
 secrets:
   gramine-private-key:
-    file: ./secrets/enclave-key.pem
+    file: ${ENCLAVE_SIGNING_KEY_FILE}
