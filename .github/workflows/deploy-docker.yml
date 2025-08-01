@@ -31,4 +31,5 @@ jobs:
           # Remove all dangling (untagged) images to cleanup build artifacts
           sudo docker image prune -af
           sudo make docker-run
+          sudo make extract-enclave-artifacts
           EOF
