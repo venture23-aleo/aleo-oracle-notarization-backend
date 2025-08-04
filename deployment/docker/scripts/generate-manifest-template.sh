@@ -5,9 +5,9 @@ set -euo pipefail
 APP=${APP:-aleo-oracle-notarization-backend}
 
 
-DOCKER_DEPLOYMENT_DIR=${DOCKER_DEPLOYMENT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
-INPUTS_DIR=${DOCKER_DEPLOYMENT_INPUTS_DIR:-${DOCKER_DEPLOYMENT_DIR}/inputs}
-MANIFEST_TEMPLATE=${DOCKER_DEPLOYMENT_MANIFEST_TEMPLATE:-${INPUTS_DIR}/${APP}.manifest.template}
+DOCKER_DEPLOYMENT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+INPUTS_DIR=${DOCKER_DEPLOYMENT_DIR}/inputs
+MANIFEST_TEMPLATE=${INPUTS_DIR}/${APP}.manifest.template
 
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-/lib/x86_64-linux-gnu/}
 
@@ -57,4 +57,4 @@ remote_attestation = "dcap"
 entrypoint = "/${APP}"
 EOF
 
-echo "✅ Gramine manifest template generated as $MANIFEST_TEMPLATE" 
+echo ">> Gramine manifest template generated as $MANIFEST_TEMPLATE" 

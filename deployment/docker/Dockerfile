@@ -15,6 +15,7 @@ ARG APP
 # Copy source code
 COPY . .
 
+
 # Build the statically linked Go binary
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -buildvcs=false -o ${APP} ./cmd/server
 
@@ -31,14 +32,10 @@ WORKDIR /app
 # Copy the built binary
 COPY --from=builder /app/${APP} .
 
-# RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libsgx-dcap-default-qpl && rm -rf /var/lib/apt/lists/*
-
-# Copy configuration files
-# COPY docker/inputs/static_hosts docker/inputs/static_resolv.conf docker/inputs/entrypoint.sh docker/inputs/${APP}.manifest.template ./
-
 # Copy the manifest template, static files, and the entrypoint script
 COPY deployment/docker/inputs/* ./
 
+# Install SGX DCAP QPL
 RUN DEBIAN_FRONTEND=noninteractive dpkg -i /app/libsgx-dcap-default-qpl_1.23.100.0-jammy1_amd64.deb
 
 # Copy the SGX default QCNL configuration file

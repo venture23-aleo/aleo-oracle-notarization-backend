@@ -12,7 +12,7 @@ echo "[+] Updating package list..."
 sudo apt-get update
 
 echo "[+] Installing Gramine..."
-sudo apt-get install gramine
+sudo apt-get install -y gramine
 
 echo "[✓] Gramine installation complete."
 echo "[✓] Verifying Gramine version:"

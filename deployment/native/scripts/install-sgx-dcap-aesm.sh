@@ -2,9 +2,8 @@
 
 set -euo pipefail
 
-NATIVE_DEPLOYMENT_DIR=${NATIVE_DEPLOYMENT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
-
-readonly QCNL_CONFIG_FILE=${NATIVE_QCNL_CONFIG_FILE:-${NATIVE_DEPLOYMENT_DIR}/inputs/sgx_default_qcnl.conf}
+readonly DEPLOYMENT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+readonly QCNL_CONFIG_FILE=${DEPLOYMENT_DIR}/inputs/sgx_default_qcnl.conf
 
 # Add Intel SGX repository
 echo "[+] Adding Intel SGX repository..."
@@ -13,16 +12,16 @@ echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/intel-sgx-deb.asc] https://dow
 | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
 echo "[+] Updating package list..."
-sudo apt-get update
+sudo apt-get update -y
 
 echo "[+] Installing Intel SGX DCAP libraries..."
-sudo apt-get install libsgx-dcap-default-qpl  libsgx-dcap-ql 
+sudo apt-get install -y libsgx-dcap-default-qpl  libsgx-dcap-ql 
 
 echo "[+] Copying default QCNL configuration file..."
 sudo cp $QCNL_CONFIG_FILE /etc/sgx_default_qcnl.conf
 
 echo "[+] Enabling and starting AESMD service..."
 sudo systemctl enable aesmd
-sudo systemctl start 
+sudo systemctl start aesmd
 
 echo "[✓] Intel SGX DCAP libraries installation complete."

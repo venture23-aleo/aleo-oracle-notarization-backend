@@ -40,38 +40,70 @@ The system returns a JSON response with the following structure:
 
 ```json
 {
-  "symbol": "BTC",
-  "volumeWeightedAvg": "108774.20945278287",
-  "totalVolume": "23346.80847256",
-  "exchangeCount": 4,
-  "timestamp": 1751978451,
-  "exchangePrices": [
+  token: 'BTC',
+  volumeWeightedAvg: '114655.40268302493',
+  totalVolume: '21301.003131079997',
+  exchangeCount: 4,
+  timestamp: 1754294883,
+  exchangePrices: [
     {
-      "exchange": "Binance",
-      "price": 108761.31,
-      "volume": 9174.44757,
-      "symbol": "BTC"
+      exchange: 'Binance',
+      price: 114641.51,
+      volume: 7306.44218,
+      token: 'BTC',
+      symbol: 'BTCUSDT'
     },
     {
-      "exchange": "Coinbase",
-      "price": 108797.41,
-      "volume": 4468.52234056,
-      "symbol": "BTC"
+      exchange: 'Binance',
+      price: 114666.75,
+      volume: 1748.21702,
+      token: 'BTC',
+      symbol: 'BTCUSDC'
     },
     {
-      "exchange": "Crypto.com",
-      "price": 108770.91,
-      "volume": 3210.0212,
-      "symbol": "BTC"
+      exchange: 'Coinbase',
+      price: 114659.93,
+      volume: 2282.30629082,
+      token: 'BTC',
+      symbol: 'BTC-USD'
     },
     {
-      "exchange": "Bybit",
-      "price": 108778.1,
-      "volume": 6493.817362,
-      "symbol": "BTC"
+      exchange: 'Coinbase',
+      price: 114637.18,
+      volume: 40.83332326,
+      token: 'BTC',
+      symbol: 'BTC-USDT'
+    },
+    {
+      exchange: 'Crypto',
+      price: 114644,
+      volume: 2455.9773,
+      token: 'BTC',
+      symbol: 'BTC_USDT'
+    },
+    {
+      exchange: 'Bybit',
+      price: 114669.3,
+      volume: 3393.085573,
+      token: 'BTC',
+      symbol: 'BTCUSDT'
+    },
+    {
+      exchange: 'Bybit',
+      price: 114671.6,
+      volume: 446.270844,
+      token: 'BTC',
+      symbol: 'BTCUSDC'
+    },
+    {
+      exchange: 'Crypto',
+      price: 114668,
+      volume: 3627.8706,
+      token: 'BTC',
+      symbol: 'BTC_USD'
     }
   ],
-  "success": true
+  success: true
 }
 ```
 

@@ -3,7 +3,7 @@
 set -e  # Exit immediately on error
 
 echo "[+] Updating package index..."
-sudo apt-get update
+sudo apt-get update -y
 
 echo "[+] Installing prerequisites..."
 sudo apt-get install -y ca-certificates curl gnupg lsb-release
@@ -25,7 +25,7 @@ echo "deb [arch=$ARCH signed-by=/etc/apt/keyrings/docker.asc] https://download.d
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 echo "[+] Updating package index (with Docker repo)..."
-sudo apt-get update
+sudo apt-get update -y
 
 echo "[+] Installing Docker packages..."
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
@@ -39,5 +39,4 @@ echo "[✓] User added to docker group."
 
 echo "[✓] Verifying Docker version:"
 docker --version
-
 

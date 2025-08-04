@@ -4,9 +4,9 @@ set -euo pipefail
 
 APP=${APP:-aleo-oracle-notarization-backend}
 
-DOCKER_DEPLOYMENT_DIR=${DOCKER_DEPLOYMENT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+DEPLOYMENT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
-ENCLAVE_ARTIFACTS_DIR=${DOCKER_ENCLAVE_ARTIFACTS_DIR:-${DOCKER_DEPLOYMENT_DIR}/enclave_artifacts}
+ENCLAVE_ARTIFACTS_DIR=${DEPLOYMENT_DIR}/enclave_artifacts
 
 mkdir -p "$ENCLAVE_ARTIFACTS_DIR"
 

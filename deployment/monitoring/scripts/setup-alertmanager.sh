@@ -9,9 +9,9 @@ CONFIG_DIR="/etc/alertmanager"
 DATA_DIR="/var/lib/alertmanager"
 SERVICE_FILE="/etc/systemd/system/alertmanager.service"
 
-SHARED_DEPLOYMENT_DIR=${SHARED_DEPLOYMENT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+MONITORING_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
-ALERTMANAGER_CONFIG_FILE=${ALERTMANAGER_CONFIG_FILE:-${SHARED_DEPLOYMENT_DIR}/configs/alertmanager.yml}
+ALERTMANAGER_CONFIG_FILE=${MONITORING_DIR}/configs/alertmanager.yml
 
 echo "🔧 Installing Alertmanager v${ALERT_VERSION}..."
 

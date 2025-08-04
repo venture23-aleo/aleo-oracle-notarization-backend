@@ -6,9 +6,9 @@ Welcome to the Aleo Oracle Notarization Backend documentation. This folder conta
 
 ### Core Documentation
 - **[Architecture & Working Flow](architecture.md)** - Detailed technical architecture, working flow, and SGX quote structure
-- **[Setup & Installation Guide](setup-guide.md)** - Complete Docker-based setup instructions, prerequisites, and troubleshooting
-- **[Native Setup Guide](native-setup-guide.md)** - Complete native (non-Docker) setup instructions using Gramine directly
-- **[Makefile Guide](makefile-guide.md)** - Comprehensive guide to all available make targets and usage examples
+- **[Deployment Guide](deployment-guide.md)** - Complete deployment instructions
+- **[Docker Deployment Guide](docker-deployment-guide.md)** - Complete docker deployment instructions
+- **[Native Deployment Guide](native-deployment-guide.md)** - Complete native deployment instructions
 - **[API Documentation](api-documentation.md)** - Complete API reference with endpoints, examples, and usage guidelines
 - **[Error Codes Reference](error-codes.md)** - Complete reference for all error codes, troubleshooting, and usage examples
 

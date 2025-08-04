@@ -48,4 +48,7 @@ echo ">> Verifying Go installation..."
 go version
 
 echo ">> Go ${GO_VERSION} installation completed successfully!"
-echo ">> Note: You may need to restart your terminal or run 'source ~/.bashrc' to use Go" 
+
+source ~/.bashrc
+
+echo ">> Note: Added Go to PATH in ~/.bashrc"
