@@ -523,65 +523,6 @@ func TestPadStringToLength(t *testing.T) {
 	}
 }
 
-func TestReverseBytes(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []byte
-		expected []byte
-	}{
-		{
-			name:     "Empty slice",
-			input:    []byte{},
-			expected: []byte{},
-		},
-		{
-			name:     "Single byte",
-			input:    []byte{1},
-			expected: []byte{1},
-		},
-		{
-			name:     "Two bytes",
-			input:    []byte{1, 2},
-			expected: []byte{2, 1},
-		},
-		{
-			name:     "Multiple bytes",
-			input:    []byte{1, 2, 3, 4, 5},
-			expected: []byte{5, 4, 3, 2, 1},
-		},
-		{
-			name:     "Bytes with zeros",
-			input:    []byte{0, 1, 0, 2},
-			expected: []byte{2, 0, 1, 0},
-		},
-		{
-			name:     "All same bytes",
-			input:    []byte{1, 1, 1, 1},
-			expected: []byte{1, 1, 1, 1},
-		},
-		{
-			name:     "Large slice",
-			input:    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
-			expected: []byte{10, 9, 8, 7, 6, 5, 4, 3, 2, 1},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := ReverseBytes(tt.input)
-			assert.Equal(t, tt.expected, result)
-
-			// Test that original slice is not modified
-			if len(tt.input) > 0 {
-				original := make([]byte, len(tt.input))
-				copy(original, tt.input)
-				ReverseBytes(tt.input)
-				assert.Equal(t, original, tt.input)
-			}
-		})
-	}
-}
-
 // Helper function to check if a string contains only hex characters
 func isHexString(s string) bool {
 	for _, c := range s {
@@ -590,37 +531,4 @@ func isHexString(s string) bool {
 		}
 	}
 	return true
-}
-
-// Test constants are properly defined
-
-// Benchmark tests for performance-critical functions
-func BenchmarkGenerateShortRequestID(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		GenerateShortRequestID()
-	}
-}
-
-func BenchmarkReverseBytes(b *testing.B) {
-	testData := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		ReverseBytes(testData)
-	}
-}
-
-func BenchmarkIsAcceptedHeader(b *testing.B) {
-	header := "Accept"
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		IsAcceptedHeader(header)
-	}
-}
-
-func BenchmarkIsPriceFeedURL(b *testing.B) {
-	url := constants.PriceFeedBTCURL
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		IsPriceFeedURL(url)
-	}
 }

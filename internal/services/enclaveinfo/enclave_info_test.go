@@ -73,7 +73,8 @@ func TestFormatSGXReport_Valid(t *testing.T) {
 			copy(parsedSGXReport.Body.ISVSVN[:], testCase.isvsvn)
 			parsedSGXReport.Body.Attributes.Flags = uint64(testCase.debugFlag)
 			t.Logf("Parsed SGX Report: %+v", parsedSGXReport.Body.Attributes.Flags)
-			formattedSGXInfo := formatSGXReport(parsedSGXReport)
+			formattedSGXInfo, err := formatSGXReport(parsedSGXReport)
+			assert.Nil(t, err, "Failed to format SGX report")
 			assert.Equal(t, testCase.expectedDebug, formattedSGXInfo.Debug)
 			assert.Equal(t, testCase.expectedSecurityVersion, formattedSGXInfo.SecurityVersion)
 			assert.NotEmpty(t, formattedSGXInfo.UniqueID)
@@ -108,7 +109,8 @@ func TestCreateAleoEncodedInfo(t *testing.T) {
 	assert.NotNil(t, parsedSGXReport, "Report data should not be nil")
 
 	// Create Aleo encoded info
-	aleoInfo := encodeForAleo(parsedSGXReport.Body)
+	aleoInfo, err := encodeForAleo(parsedSGXReport.Body)
+	assert.Nil(t, err, "Failed to encode SGX info for Aleo")
 
 	// Verify Aleo encoding
 	assert.Equal(t, aleoInfo.UniqueID, "{ chunk_1: 1u128, chunk_2: 1u128 }")
@@ -125,7 +127,8 @@ func TestCreateAleoEncodedInfo_ZeroValues(t *testing.T) {
 	assert.NotNil(t, parsedSGXReport, "Report data should not be nil")
 
 	// Create Aleo encoded info
-	aleoInfo := encodeForAleo(parsedSGXReport.Body)
+	aleoInfo, err := encodeForAleo(parsedSGXReport.Body)
+	assert.Nil(t, err, "Failed to encode SGX info for Aleo")
 
 	// Verify zero values are handled correctly
 	assert.Equal(t, aleoInfo.UniqueID, "{ chunk_1: 0u128, chunk_2: 0u128 }")

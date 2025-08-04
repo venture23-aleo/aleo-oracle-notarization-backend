@@ -154,6 +154,7 @@ var (
 	ErrWrittingRequestHeaders  = NewAppError(5015, "encoding error: failed to write request headers to buffer")
 	ErrWrittingOptionalFields  = NewAppError(5016, "encoding error: failed to write optional headers to buffer")
 	ErrUserDataTooShort        = NewAppError(5017, "encoding error: userData too short for expected zeroing")
+	ErrSliceToU128             = NewAppError(5018, "encoding error: failed to convert slice to u128")
 
 	// =============================================================================
 	// PRICE FEED ERRORS (6000-6999)
