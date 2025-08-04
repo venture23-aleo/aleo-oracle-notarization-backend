@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"math/big"
 	"sync"
 
 	common "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
@@ -39,14 +38,18 @@ type EnclaveInfoResponse struct {
 }
 
 // formatSgxReport formats the SGX report
-func formatSGXReport(sgxReport *sgx.SGXReport) SGXEnclaveInfo {
+func formatSGXReport(sgxReport *sgx.SGXReport) (SGXEnclaveInfo, *appErrors.AppError) {
 
 	// Convert ProductID to 16-byte array for base64 encoding
 	rawProdID := make([]byte, 16)
 	copy(rawProdID, sgxReport.Body.ISVProdID[:])
 
 	// Create Aleo-encoded values
-	aleoInfo := encodeForAleo(sgxReport.Body)
+	aleoInfo, err := encodeForAleo(sgxReport.Body)
+	if err != nil {
+		logger.Error("Failed to encode SGX info for Aleo", "error", err)
+		return SGXEnclaveInfo{}, err
+	}
 
 	// Create the SGX info
 	formattedSGXInfo := SGXEnclaveInfo{
@@ -58,19 +61,35 @@ func formatSGXReport(sgxReport *sgx.SGXReport) SGXEnclaveInfo {
 		Aleo:            aleoInfo,
 	}
 
-	return formattedSGXInfo
+	return formattedSGXInfo, nil
 }
 
 // encodeForAleo encodes the SGX info for Aleo
-func encodeForAleo(reportBody sgx.ReportBody) AleoEncodedSGXInfo {
+func encodeForAleo(reportBody sgx.ReportBody) (AleoEncodedSGXInfo, *appErrors.AppError) {
 
-	// Convert MRENCLAVE to two uint128 chunks
-	mrEnclaveChunk1 := new(big.Int).SetBytes(common.ReverseBytes(reportBody.MREnclave[:len(reportBody.MREnclave)/2]))
-	mrEnclaveChunk2 := new(big.Int).SetBytes(common.ReverseBytes(reportBody.MREnclave[len(reportBody.MREnclave)/2:]))
+	mrEnclaveChunk1, err := common.SliceToU128(reportBody.MREnclave[0:16])
+	if err != nil {
+		logger.Error("Failed to convert MRENCLAVE to uint128", "error", err)
+		return AleoEncodedSGXInfo{}, err
+	}
 
-	// Convert MRSIGNER to two uint128 chunks
-	mrSignerChunk1 := new(big.Int).SetBytes(common.ReverseBytes(reportBody.MRSigner[:len(reportBody.MRSigner)/2]))
-	mrSignerChunk2 := new(big.Int).SetBytes(common.ReverseBytes(reportBody.MRSigner[len(reportBody.MRSigner)/2:]))
+	mrEnclaveChunk2, err := common.SliceToU128(reportBody.MREnclave[16:32])
+	if err != nil {
+		logger.Error("Failed to convert MRSIGNER to uint128", "error", err)
+		return AleoEncodedSGXInfo{}, err
+	}
+
+	mrSignerChunk1, err := common.SliceToU128(reportBody.MRSigner[0:16])
+	if err != nil {
+		logger.Error("Failed to convert MRSIGNER to uint128", "error", err)
+		return AleoEncodedSGXInfo{}, err
+	}
+
+	mrSignerChunk2, err := common.SliceToU128(reportBody.MRSigner[16:32])
+	if err != nil {
+		logger.Error("Failed to convert MRSIGNER to uint128", "error", err)
+		return AleoEncodedSGXInfo{}, err
+	}
 
 	// Create Aleo info
 	aleoInfo := AleoEncodedSGXInfo{
@@ -79,7 +98,7 @@ func encodeForAleo(reportBody sgx.ReportBody) AleoEncodedSGXInfo {
 		ProductID: fmt.Sprintf("%du128", binary.LittleEndian.Uint16(reportBody.ISVProdID[:])),
 	}
 
-	return aleoInfo
+	return aleoInfo, nil
 }
 
 // Global singleton instances with lazy initialization
@@ -106,7 +125,10 @@ func initializeSGXEnclaveInfo() (SGXEnclaveInfo, *appErrors.AppError) {
 	}
 
 	// Format SGX info from parsed enclave info
-	formattedSgxInfo := formatSGXReport(parsedSGXReport)
+	formattedSgxInfo, err := formatSGXReport(parsedSGXReport)
+	if err != nil {
+		return SGXEnclaveInfo{}, err
+	}
 
 	logger.Debug("SGX info initialized successfully")
 	return formattedSgxInfo, nil

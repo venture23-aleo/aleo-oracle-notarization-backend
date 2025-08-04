@@ -228,6 +228,7 @@ func TestPredefinedErrors(t *testing.T) {
 		ErrWrittingRequestHeaders,
 		ErrWrittingOptionalFields,
 		ErrUserDataTooShort,
+		ErrSliceToU128,
 		ErrTokenNotSupported,
 		ErrExchangeNotConfigured,
 		ErrSymbolNotConfigured,

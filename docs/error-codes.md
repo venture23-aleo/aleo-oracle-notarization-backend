@@ -286,11 +286,12 @@ Encoding errors occur during data encoding, buffer writing, and format conversio
 | `5011` | `ErrWrittingSelector` | Failed to write selector to buffer | 500 |
 | `5013` | `ErrWrittingRequestMethod` | Failed to write request method to buffer | 500 |
 
-### User Data Validation
+### Data Validation
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
 | `5017` | `ErrUserDataTooShort` | User data too short for expected zeroing | 400 |
+| `5018` | `ErrSliceToU128` | Failed to convert slice to u128 | 500 |
 
 ## 6. PRICE FEED ERRORS (6000-6999)
 

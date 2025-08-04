@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"math/big"
 	"net/url"
 	"strings"
 
@@ -125,11 +126,18 @@ func PadStringToLength(str string, paddingChar byte, targetLength int) (string, 
 	return str + strings.Repeat(string(paddingChar), targetLength-len(str)), nil
 }
 
-// Reverses the bytes of a byte slice.
-func ReverseBytes(b []byte) []byte {
-	reversed := make([]byte, len(b))
-	for i := range b {
-		reversed[i] = b[len(b)-1-i]
+func SliceToU128(buf []byte) (*big.Int, *appErrors.AppError) {
+	if len(buf) != 16 {
+		return nil, appErrors.ErrSliceToU128
 	}
-	return reversed
+
+	result := big.NewInt(0)
+
+	for idx, b := range buf {
+		bigByte := big.NewInt(int64(b))
+		bigByte.Lsh(bigByte, 8*uint(idx))
+		result.Add(result, bigByte)
+	}
+
+	return result, nil
 }

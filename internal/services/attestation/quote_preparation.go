@@ -3,7 +3,6 @@ package attestation
 import (
 	"encoding/binary"
 	"fmt"
-	"math/big"
 
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	aleoUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/aleoutil"
@@ -213,8 +212,17 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 	timestampedRequestHashInput := append(requestHash, timestampBytes...)
 
 	// Step 4: Create the timestamped request hash input chunks.
-	timestampedRequestHashInputChunk1 := new(big.Int).SetBytes(common.ReverseBytes(timestampedRequestHashInput[:encoding.TARGET_ALIGNMENT]))
-	timestampedRequestHashInputChunk2 := new(big.Int).SetBytes(common.ReverseBytes(timestampedRequestHashInput[encoding.TARGET_ALIGNMENT : 2*encoding.TARGET_ALIGNMENT]))
+	timestampedRequestHashInputChunk1, err := common.SliceToU128(timestampedRequestHashInput[:encoding.TARGET_ALIGNMENT])
+	if err != nil {
+		logger.Error("Failed to create timestamped request hash input chunk 1: ", "error", err)
+		return "", err
+	}
+
+	timestampedRequestHashInputChunk2, err := common.SliceToU128(timestampedRequestHashInput[encoding.TARGET_ALIGNMENT : 2*encoding.TARGET_ALIGNMENT])
+	if err != nil {
+		logger.Error("Failed to create timestamped request hash input chunk 2: ", "error", err)
+		return "", err
+	}
 
 	// Step 5: Create the timestamped request hash format message.
 	timestampedRequestHashFormatMessage := fmt.Sprintf("{ request_hash: %su128, attestation_timestamp: %su128 }", timestampedRequestHashInputChunk1, timestampedRequestHashInputChunk2)
