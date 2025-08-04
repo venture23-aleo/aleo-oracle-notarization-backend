@@ -1,7 +1,7 @@
 DOCKER_DEPLOYMENT_DIR := $(shell cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 DOCKER_SCRIPTS_DIR=$(DOCKER_DEPLOYMENT_DIR)/scripts
 
-DEPLOYMENT_DIR = $(DOCKER_DEPLOYMENT_DIR)/..
+DEPLOYMENT_DIR = $(shell cd "$(DOCKER_DEPLOYMENT_DIR)/.." && pwd)
 
 export SECRETS_DIR = $(DEPLOYMENT_DIR)/secrets
 export ENCLAVE_SIGNING_KEY_FILE ?= "$(SECRETS_DIR)/enclave-signing-key.pem"
@@ -46,7 +46,7 @@ docker-setup: install-docker generate-enclave-signing-key
 	@echo ">> Docker deployment setup completed successfully!"
 
 # Build
-docker-build: generate-manifest-template
+docker-build: generate-manifest-template generate-enclave-signing-key
 	@DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_DEPLOYMENT_INPUTS_DIR="$(DOCKER_DEPLOYMENT_INPUTS_DIR)" ENCLAVE_SIGNING_KEY_FILE="$(ENCLAVE_SIGNING_KEY_FILE)" docker compose -f $(DOCKER_COMPOSE_FILE) build $(APP)
 	@docker tag $(APP):latest $(APP):$(COMMIT)
 
