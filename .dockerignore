@@ -36,11 +36,6 @@ test/
 tests/
 *_test.go
 
-# Deployment scripts (not needed in container)
-deployment/scripts/
-deployment/native/
-deployment/common/
-
 # Configuration files (if not needed)
 .env
 .env.local
@@ -66,3 +61,7 @@ go.work
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+deployment/secrets/
+deployment/native/
+deployment/monitoring/

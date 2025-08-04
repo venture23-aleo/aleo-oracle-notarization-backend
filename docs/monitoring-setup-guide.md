@@ -2,7 +2,7 @@
 
 ## Overview
 
-Setup monitoring for the SGX Go application using Prometheus for metrics collection and Alertmanager for alerting. Works with both Docker and Native deployments.
+Setup monitoring for the SGX Go application using Prometheus for metrics collection and Alertmanager for alerting. Works with both Docker and Native deployments. You can use your own `Discord` webhook URL to receive notifications.
 
 ## Quick Setup
 
@@ -31,6 +31,9 @@ make setup-prometheus
 ## Configuration
 
 ### Alertmanager (Discord Notifications)
+
+**Note:** Please replace `YOUR_DISCORD_WEBHOOK_URL` with your own Discord webhook URL.
+
 Located at `/etc/alertmanager/alertmanager.yml`:
 
 ```yaml
@@ -75,7 +78,7 @@ scrape_configs:
 
   - job_name: 'sgx-go-app'
     static_configs:
-      - targets: ['localhost:8002']
+      - targets: ['localhost:8001']
     metrics_path: '/metrics'
 ```
 
@@ -94,7 +97,7 @@ netstat -tlnp | grep -E '(9090|9093)'
 
 - **Prometheus UI:** http://localhost:9090
 - **Alertmanager UI:** http://localhost:9093
-- **Application Metrics:** http://localhost:8002/metrics
+- **Application Metrics:** http://localhost:8001/metrics
 
 ## Troubleshooting
 
@@ -104,7 +107,7 @@ sudo journalctl -u prometheus -f
 sudo journalctl -u alertmanager -f
 
 # Test metrics endpoint
-curl http://localhost:8002/metrics
+curl http://localhost:8001/metrics
 
 # Verify configuration
 sudo alertmanager --config.file=/etc/alertmanager/alertmanager.yml --check-config

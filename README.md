@@ -6,45 +6,20 @@ The Aleo Oracle Notarization Backend is a secure service that acts as a data ora
 
 The backend can handle different types of data, including integers, floats, and strings. Every time the backend restarts, the enclave automatically creates a new public-private key pair. The Aleo oracle contract keeps track of the current public key, so it can verify signatures from the enclave. This design guarantees that the oracle data is both trustworthy (integrity) and up-to-date (freshness), supporting decentralized and trust-minimized applications.
 
-## 🚀 Quick Start
-
-### Prerequisites
-- **Docker** (with BuildKit enabled)
-- **Intel SGX hardware** (with DCAP support and drivers installed)
-- **Access to the SGX device files** (`/dev/sgx/enclave`, `/dev/sgx/provision`)
-
-### Basic Setup
-```sh
-# Generate enclave signing key
-make generate-enclave-signing-key
-
-# Build and run the application
-make docker-build
-make docker-run
-```
-
-### Common Commands
-```sh
-make build         # Build Go binary
-make test          # Run tests
-make docker-run    # Build and run with Docker
-make help          # Show all available commands
-```
-
 ## 📚 Documentation
 
 For detailed documentation, see the [`docs/`](docs/) folder:
 
 - **[Architecture & Working Flow](docs/architecture.md)** - Technical implementation details
-- **[Setup & Installation Guide](docs/setup-guide.md)** - Complete setup instructions
-- **[Native Setup Guide](docs/native-setup-guide.md)** - Complete native setup instructions
-- **[Makefile Guide](docs/makefile-guide.md)** - All available commands and usage
+- **[Deployment Guide](docs/deployment-guide.md)** - Complete deployment instructions
+- **[Docker Deployment Guide](docs/docker-deployment-guide.md)** - Complete docker deployment instructions
+- **[Native Deployment Guide](docs/native-deployment-guide.md)** - Complete native deployment instructions
 - **[API Documentation](docs/api-documentation.md)** - Complete API reference with endpoints, examples, and usage guidelines
 - **[Error Codes Reference](docs/error-codes.md)** - Complete reference for all error codes, troubleshooting, and usage examples
 
 ## 🔧 Configuration
 
-The application contains config.json `internal/configs/config.json` files with default values. Overriding the default values will change the enclave measurement hash (MRENCLAVE).
+The application contains config.json `internal/configs/config.json` files with default values. Overriding the default values will change the enclave measurement hash (MRENCLAVE) so please be careful when overriding the values.
 
 - **PORT** - The port for the application.
 - **WHITELISTED_DOMAINS** - The domains that are whitelisted for the attestation.
@@ -59,17 +34,6 @@ This application runs inside an Intel SGX enclave for enhanced security. The enc
 - **Code integrity** - Ensures the application code hasn't been tampered with
 - **Data confidentiality** - Protects sensitive data from the host system
 - **Attestation** - Proves the application is running in a genuine enclave
-
-## 🔄 Reproducibility
-
-To reproduce the enclave measurement hash (MRENCLAVE), you can run the following commands:
-
-```sh
-make generate-enclave-signing-key
-make extract-enclave-artifacts
-``` 
-
-It will generate/update a `enclave_artifacts` directory in the root of the project. You can use this directory to verify the enclave measurement hash (MRENCLAVE) of the running enclave. Ensure that the Intel SGX driver is loaded and the device files `sgx_enclave` and `sgx_provision` are accessible.  
 
 ## 🤝 Contributing
 
