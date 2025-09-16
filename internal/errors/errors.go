@@ -87,6 +87,8 @@ var (
 	ErrInvalidEncodingOptionForPriceFeed      = NewAppError(1030, "validation error: invalid encoding option. expected: float for price feed requests")
 	ErrInvalidRequestMethodForPriceFeed       = NewAppError(1031, "validation error: requestMethod expected to be GET for price feed requests")
 	ErrInvalidSelectorForPriceFeed            = NewAppError(1032, "validation error: selector expected to be weightedAvgPrice for price feed requests")
+	ErrInvalidHeaderKey                       = NewAppError(1033, "validation error: invalid header key")
+	ErrInvalidHeaderValue                     = NewAppError(1034, "validation error: invalid header value")
 
 	// =============================================================================
 	// ENCLAVE ERRORS (2000-2999)

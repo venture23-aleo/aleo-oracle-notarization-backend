@@ -192,6 +192,16 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 		}
 	}
 
+	for key,value := range ar.RequestHeaders {
+		if strings.ContainsAny(key, "\r\n") {
+			return appErrors.ErrInvalidHeaderKey
+		}
+
+		if strings.ContainsAny(value, "\r\n") {
+			return appErrors.ErrInvalidHeaderValue
+		}
+	}
+
 	return nil
 }
 
