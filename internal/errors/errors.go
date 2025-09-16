@@ -100,7 +100,7 @@ var (
 	ErrReadingReport        = NewAppError(2007, "enclave error: failed to read the report")
 	ErrInvalidSGXReportSize = NewAppError(2008, "enclave error: invalid SGX report size")
 	ErrParsingSGXReport     = NewAppError(2009, "enclave error: failed to parse SGX report")
-	ErrEmptyQuote           = NewAppError(2010, "enclave error: empty quote")
+	ErrInvalidSGXQuoteSize  = NewAppError(2010, "enclave error: invalid SGX quote size")
 
 	// =============================================================================
 	// ATTESTATION ERRORS (3000-3999)

@@ -85,7 +85,7 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 	copy(reportData, inputData) // Copy inputData (truncates or zero-pads as needed)
 
 	// Step 3: Write the report data to the user report data path.
-	err := os.WriteFile(gramineAttestationPaths.UserReportDataPath, reportData, 0644)
+	err := os.WriteFile(gramineAttestationPaths.UserReportDataPath, reportData, SGXFilePermissions)
 	if err != nil {
 		logger.Error("Error while writing report data:", "error", err)
 		return nil, appErrors.ErrWrittingReportData
@@ -98,9 +98,9 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 		return nil, appErrors.ErrReadingQuote
 	}
 
-	if len(quote) == 0 {
-		logger.Error("Quote is empty")
-		return nil, appErrors.ErrEmptyQuote
+	if len(quote) < QuoteMinSize {
+		logger.Error("Quote is too small", "quote", len(quote))
+		return nil, appErrors.ErrInvalidSGXQuoteSize
 	}
 
 	// Step 5: Wrap the raw quote as Open Enclave evidence.

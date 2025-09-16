@@ -92,6 +92,11 @@ func GenerateSGXReport() ([]byte, *appErrors.AppError) {
 		return nil, appErrors.ErrReadingReport
 	}
 
+	if len(report) != SGXReportSize {
+		logger.Error("Error reading report: ", "error", appErrors.ErrInvalidSGXReportSize)
+		return nil, appErrors.ErrInvalidSGXReportSize
+	}
+
 	logger.Debug("Attestation environment prepared successfully")
 	return report, nil
 }

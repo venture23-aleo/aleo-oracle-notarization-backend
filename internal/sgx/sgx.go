@@ -1,6 +1,8 @@
 package sgx
 
 import (
+	"fmt"
+	"os"
 	"sync"
 )
 
@@ -19,6 +21,12 @@ const (
 
 	// File permissions
 	SGXFilePermissions = 0644
+
+	// Attestation type
+	AttestationType = "dcap"
+
+	// https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/a46ee8ab10569962c5cd7397b4babd4a47431976/QuoteVerification/QvE/Include/sgx_qve_def.h#L95
+	QuoteMinSize = 1020
 )
 
 // enclaveLock is the lock for the enclave to generate the sgx report and quote.
@@ -46,6 +54,53 @@ var gramineAttestationPaths = AttestationPaths{
 	ReportPath:          "/dev/attestation/report",
 	AttestationTypePath: "/dev/attestation/attestation_type",
 	QuotePath:           "/dev/attestation/quote",
+}
+
+func EnforceSGXStartup() error {
+	for _, path := range []string{
+		gramineAttestationPaths.MyTargetInfoPath,
+		gramineAttestationPaths.TargetInfoPath,
+		gramineAttestationPaths.UserReportDataPath,
+		gramineAttestationPaths.QuotePath,
+		gramineAttestationPaths.ReportPath,
+		gramineAttestationPaths.AttestationTypePath,
+	} {
+		if _, err := os.Stat(path); err != nil {
+			return fmt.Errorf("SGX startup check failed: device file %s is not accessible: %v", path, err)
+		}
+	}
+
+	attType, err := os.ReadFile(gramineAttestationPaths.AttestationTypePath)
+    if err != nil {
+        return fmt.Errorf("reading attestation_type: %w", err)
+    }
+
+	if string(attType) != AttestationType {
+		return fmt.Errorf("attestation type is not %s", AttestationType)
+	}
+
+	sgxReport, reportErr := GenerateSGXReport()
+	if reportErr != nil {
+		return fmt.Errorf("generating SGX report: %w", reportErr)
+	}
+
+	parsedSgxReport, reportErr := ParseSGXReport(sgxReport)
+	if reportErr != nil {
+		return fmt.Errorf("parsing SGX report: %w", reportErr)
+	}
+
+	isDebug := parsedSgxReport.Body.Attributes.Flags&DebugFlagMask == DebugFlagMask
+
+	if isDebug {
+		return fmt.Errorf("SGX is in debug mode")
+	}
+
+	_, quoteErr := GenerateQuote([]byte("test"))
+	if quoteErr != nil {
+		return fmt.Errorf("generating quote: %w", quoteErr)
+	}
+
+	return nil
 }
 
 // GetGramineAttestationPaths returns the Gramine attestation paths.

@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/sgx"
 )
 
 //go:embed config.json
@@ -197,6 +198,12 @@ func ValidateConfigs() error {
 			}
 		}
 		tokenKeys = append(tokenKeys, token)
+	}
+
+	// Enforce SGX startup check
+	err := sgx.EnforceSGXStartup()
+	if err != nil {
+		errors = append(errors, fmt.Sprintf("SGX startup check failed: %v", err))
 	}
 
 	// Return combined error if any validation failed
