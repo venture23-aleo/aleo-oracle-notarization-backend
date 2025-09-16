@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	httpUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/httputil"
@@ -82,8 +83,15 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Get the timestamp.
-	timestamp := time.Now().Unix()
+	// Get timestamp from roughtime server
+	timestamp, err := common.GetTimestampFromRoughtime()
+
+	if err != nil {
+		reqLogger.Error("Failed to get timestamp from roughtime server", "error", err)
+		metrics.RecordError("timestamp_fetch_failed", "attestation_handler")
+		httpUtil.WriteJsonError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	reqLogger.Debug("Fetching data from target URL", "url", attestationRequest.Url, "timestamp", timestamp)
 

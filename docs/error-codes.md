@@ -377,6 +377,7 @@ Internal errors occur due to unexpected system failures or configuration issues.
 | `8001` | `ErrInternal` | Unexpected failure occurred | 500 |
 | `8002` | `ErrGeneratingRandomNumber` | Failed to generate random number | 500 |
 | `8003` | `ErrJSONEncoding` | Failed to encode data to JSON | 500 |
+| `8004` | `ErrRoughtimeServerError` | Failed to get timestamp from roughtime server | 500 |
 
 ## Usage Examples
 

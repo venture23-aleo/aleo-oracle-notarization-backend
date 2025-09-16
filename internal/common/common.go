@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cloudflare/roughtime/client"
 	configs "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
@@ -140,4 +141,22 @@ func SliceToU128(buf []byte) (*big.Int, *appErrors.AppError) {
 	}
 
 	return result, nil
+}
+
+func GetTimestampFromRoughtime() (int64, *appErrors.AppError) { 
+	roughtimeConfig := configs.GetRoughtimeConfig()
+
+	server := roughtimeConfig.ServerConfig.Server
+
+	// Query roughtime servers with timeout and retry settings
+	rt,err := client.Get(server, roughtimeConfig.Retries, roughtimeConfig.Timeout, nil)
+
+	if err != nil {
+		logger.Error("Roughtime query failed: %s\n", err)
+		return 0, appErrors.ErrRoughtimeServerError
+	}
+
+	t := rt.Midpoint.UTC()
+
+	return t.Unix(), nil
 }
