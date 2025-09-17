@@ -68,7 +68,7 @@ type DebugAttestationResponse struct {
 
 	ResponseStatusCode int `json:"responseStatusCode"` // The response status code.
 
-	AttestationData string `json:"attestationData"` // The attestation data.
+	ExtractedData string `json:"extractedData"` // The extracted data.
 }
 
 // Validate validates the attestation request and checks if target is whitelisted.

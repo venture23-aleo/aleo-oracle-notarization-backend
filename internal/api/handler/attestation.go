@@ -114,7 +114,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 			AttestationRequest:   attestationRequest,
 			AttestationTimestamp: timestamp,
 			ResponseBody:         extractDataResult.ResponseBody,
-			AttestationData:      extractDataResult.AttestationData,
+			ExtractedData:        extractDataResult.AttestationData,
 			ResponseStatusCode:   extractDataResult.StatusCode,
 		}
 
