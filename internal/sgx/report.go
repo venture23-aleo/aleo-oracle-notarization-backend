@@ -54,8 +54,8 @@ type ReportBody struct {
 
 type SGXReport struct {
 	Body  ReportBody
-	MAC   [16]byte
 	KeyID [32]byte
+	MAC   [16]byte
 }
 
 // GenerateSGXReport generates the SGX report.
