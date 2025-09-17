@@ -50,7 +50,7 @@ func GetTokenIDFromPriceFeedURL(url string) int {
 
 // NormalizeURL adds https:// if the scheme is missing and validates the result.
 func NormalizeURL(rawURL string) (string, *appErrors.AppError) {
-	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+	if !strings.HasPrefix(strings.ToLower(rawURL), "http://") && !strings.HasPrefix(strings.ToLower(rawURL), "https://") {
 		rawURL = "https://" + rawURL
 	}
 
@@ -64,7 +64,7 @@ func NormalizeURL(rawURL string) (string, *appErrors.AppError) {
 }
 
 func GetHostnameFromURL(rawURL string) (string, *appErrors.AppError) {
-	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+	if !strings.HasPrefix(strings.ToLower(rawURL), "http://") && !strings.HasPrefix(strings.ToLower(rawURL), "https://") {
 		rawURL = "https://" + rawURL
 	}
 
