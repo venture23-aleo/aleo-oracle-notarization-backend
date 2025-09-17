@@ -163,7 +163,7 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 	}
 
 	// Check if the URL is invalid.
-	if strings.HasPrefix(ar.Url, "http://") || strings.HasPrefix(ar.Url, "https://") {
+	if strings.HasPrefix(strings.ToLower(ar.Url), "http://") || strings.HasPrefix(strings.ToLower(ar.Url), "https://") {
 		return appErrors.ErrInvalidTargetURL
 	}
 
