@@ -1,11 +1,16 @@
 package data_extraction
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -66,6 +71,56 @@ func NewPriceFeedClient() *PriceFeedClient {
 	}
 }
 
+func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryablehttp.Client {
+	// Create a new HTTP client with the TLS configuration
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false,
+		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			if len(verifiedChains) == 0 {
+				return fmt.Errorf("no verified chains")
+			}
+
+			// Take root of the verified chain
+			rootCert := verifiedChains[0][len(verifiedChains[0])-1]
+
+			rootCAFile := fmt.Sprintf("/rootCAs/%s.pem", exchange)
+
+			rootCertPem, err := os.ReadFile(rootCAFile)
+
+			if err != nil {
+				return fmt.Errorf("failed to read root CA file for %s: %w", exchange, err)
+			}
+
+			block, _ := pem.Decode(rootCertPem)
+			if block == nil || block.Type != "CERTIFICATE" {
+				return fmt.Errorf("failed to decode PEM block for %s", exchange)
+			}
+
+    		// block.Bytes contains the DER
+    		derData := block.Bytes
+
+			if !bytes.Equal(derData, rootCert.Raw) {
+				return fmt.Errorf("root CA mismatch for %s", exchange)
+			}
+
+			return nil
+		},
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+	}
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.HTTPClient = client
+	retryClient.Logger = logger.Logger
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 3 * time.Second
+	retryClient.RetryMax = maxRetries
+
+	return retryClient
+}
+
 // FetchPriceFromExchange fetches price and volume data from a specific exchange.
 //
 // This function performs the following steps sequentially:
@@ -112,7 +167,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 	}
 
 	// Step 4: Create retryable HTTP client.
-	httpClient := httpUtil.GetRetryableHTTPClient(1)
+	httpClient := GetRetryableHTTPClientForExchange(exchange, 1)
 
 	// Step 5: Create request with context.
 	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)
