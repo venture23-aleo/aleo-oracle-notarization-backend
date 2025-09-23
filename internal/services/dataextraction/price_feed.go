@@ -179,10 +179,24 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice) (*big.Rat, *big.Rat,
 	weightedSum := big.NewRat(0, 1)
 	exchanges := make(map[string]bool)
 
+	type ExchangeSymbol struct {
+		exchange string
+		symbol   string
+	}
+
+	exchangeSymbols := make(map[ExchangeSymbol]bool)
+
 	for _, p := range prices {
 		if p.Price == "" || p.Volume == "" {
 			continue
 		}
+
+		if _, exists := exchangeSymbols[ExchangeSymbol{exchange: p.Exchange, symbol: p.Symbol}]; exists {
+			logger.Error("Duplicate exchange and symbol", "exchange", p.Exchange, "symbol", p.Symbol)
+			continue
+		}
+
+		exchangeSymbols[ExchangeSymbol{exchange: p.Exchange, symbol: p.Symbol}] = true
 
 		volumeRat, ok := new(big.Rat).SetString(p.Volume)
 		if !ok || volumeRat.Sign() <= 0 {
