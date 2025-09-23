@@ -230,7 +230,7 @@ func TestPriceFeed_AllValidExchangeResponse(t *testing.T) {
 	}
 
 	for token, exchanges := range tokenExchanges {
-		price, err := priceFeedClient.GetPriceFeed(context.Background(), token)
+		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, 12)
 		assert.Nil(t, err)
 		assert.NotNil(t, price)
 		assert.Equal(t, token, price.Token)
@@ -258,7 +258,7 @@ func TestPriceFeed_WithInternalServerError(t *testing.T) {
 	}
 
 	for token := range tokenExchanges {
-		price, err := priceFeedClient.GetPriceFeed(context.Background(), token)
+		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, 12)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)
 	}
@@ -282,7 +282,7 @@ func TestPriceFeed_With404Error(t *testing.T) {
 	}
 
 	for token := range tokenExchanges {
-		price, err := priceFeedClient.GetPriceFeed(context.Background(), token)
+		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, 12)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)
 	}
@@ -444,7 +444,7 @@ func TestPriceFeed_PartialValidExchangeResponse(t *testing.T) {
 	}
 
 	for token := range tokenExchanges {
-		price, err := priceFeedClient.GetPriceFeed(context.Background(), token)
+		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, 12)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)
 	}
@@ -632,7 +632,7 @@ func TestGetPriceFeed_ErrorScenarios(t *testing.T) {
 				tokenExchanges:    tokenExchanges,
 				tokenTradingPairs: tokenTradingPairs,
 			}
-			result, err := client.GetPriceFeed(context.Background(), testCase.testToken)
+			result, err := client.GetPriceFeed(context.Background(), testCase.testToken, 12)
 			assert.Error(t, err)
 			assert.Equal(t, testCase.expectedError, err)
 			assert.Nil(t, result)
@@ -641,7 +641,7 @@ func TestGetPriceFeed_ErrorScenarios(t *testing.T) {
 }
 
 // TestCalculateVolumeWeightedAverage tests the volume weighted average calculation
-func TestCalculateVolumeWeightedAverage(t *testing.T) {
+func TestCalculateVolumeWeightedAveragePrice(t *testing.T) {
 	tests := []struct {
 		name           string
 		prices         []ExchangePrice
@@ -652,8 +652,8 @@ func TestCalculateVolumeWeightedAverage(t *testing.T) {
 		{
 			name: "Normal case",
 			prices: []ExchangePrice{
-				{Exchange: "Binance", Price: 50000.0, Volume: 1000.0, Symbol: "BTC"},
-				{Exchange: "Bybit", Price: 50100.0, Volume: 800.0, Symbol: "BTC"},
+				{Exchange: "Binance", Price: "50000.0", Volume: "1000.0", Symbol: "BTC"},
+				{Exchange: "Bybit", Price: "50100.0", Volume: "800.0", Symbol: "BTC"},
 			},
 			expectedAvg:    50044.44, // (50000*1000 + 50100*800) / (1000 + 800)
 			expectedVolume: 1800.0,
@@ -669,8 +669,8 @@ func TestCalculateVolumeWeightedAverage(t *testing.T) {
 		{
 			name: "Partial zero volume",
 			prices: []ExchangePrice{
-				{Exchange: "Binance", Price: 50000.0, Volume: 0.0, Symbol: "BTC"},
-				{Exchange: "Bybit", Price: 50100.0, Volume: 800, Symbol: "BTC"},
+				{Exchange: "Binance", Price: "50000.0", Volume: "0.0", Symbol: "BTC"},
+				{Exchange: "Bybit", Price: "50100.0", Volume: "800", Symbol: "BTC"},
 			},
 			expectedAvg:    50100.0, // Only Bybit contributes
 			expectedVolume: 800.0,
@@ -679,8 +679,8 @@ func TestCalculateVolumeWeightedAverage(t *testing.T) {
 		{
 			name: "All zero volume",
 			prices: []ExchangePrice{
-				{Exchange: "Binance", Price: 50000.0, Volume: 0.0, Symbol: "BTC"},
-				{Exchange: "Bybit", Price: 50100.0, Volume: 0, Symbol: "BTC"},
+				{Exchange: "Binance", Price: "50000.0", Volume: "0.0", Symbol: "BTC"},
+				{Exchange: "Bybit", Price: "50100.0", Volume: "0", Symbol: "BTC"},
 			},
 			expectedAvg:    0.0,
 			expectedVolume: 0.0,
@@ -689,10 +689,10 @@ func TestCalculateVolumeWeightedAverage(t *testing.T) {
 		{
 			name: "All exchanges",
 			prices: []ExchangePrice{
-				{Exchange: "Binance", Price: 50000.0, Volume: 1000.5, Symbol: "BTC"},
-				{Exchange: "Bybit", Price: 50100.0, Volume: 800.25, Symbol: "BTC"},
-				{Exchange: "Coinbase", Price: 50200.0, Volume: 1200.75, Symbol: "BTC"},
-				{Exchange: "Crypto.com", Price: 50300.0, Volume: 900.3, Symbol: "BTC"},
+				{Exchange: "Binance", Price: "50000.0", Volume: "1000.5", Symbol: "BTC"},
+				{Exchange: "Bybit", Price: "50100.0", Volume: "800.25", Symbol: "BTC"},
+				{Exchange: "Coinbase", Price: "50200.0", Volume: "1200.75", Symbol: "BTC"},
+				{Exchange: "Crypto.com", Price: "50300.0", Volume: "900.3", Symbol: "BTC"},
 			},
 			expectedAvg:    50151.2801737921,
 			expectedVolume: 1000.5 + 800.25 + 1200.75 + 900.3,
@@ -705,8 +705,8 @@ func TestCalculateVolumeWeightedAverage(t *testing.T) {
 			avg, volume, count := CalculateVolumeWeightedAverage(tt.prices)
 
 			tolerance := 0.01
-			assert.InDelta(t, tt.expectedAvg, avg, tolerance)
-			assert.InDelta(t, tt.expectedVolume, volume, tolerance)
+			assert.InDelta(t, tt.expectedAvg, avg.FloatString(12), tolerance)
+			assert.InDelta(t, tt.expectedVolume, volume.FloatString(12), tolerance)
 			assert.Equal(t, tt.expectedCount, count)
 		})
 	}
