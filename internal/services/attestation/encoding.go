@@ -99,7 +99,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write attestation data to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingAttestationData
+		return nil, nil, appErrors.ErrWritingAttestationData
 	}
 
 	// Write the timestamp to the buffer.
@@ -107,7 +107,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write timestamp to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingTimestamp
+		return nil, nil, appErrors.ErrWritingTimestamp
 	}
 
 	// Write the status code to the buffer.
@@ -115,7 +115,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write status code to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingStatusCode
+		return nil, nil, appErrors.ErrWritingStatusCode
 	}
 
 	// Write the URL to the buffer.
@@ -123,7 +123,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write URL to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingUrl
+		return nil, nil, appErrors.ErrWritingUrl
 	}
 
 	// Write the selector to the buffer.
@@ -131,7 +131,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write selector to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingSelector
+		return nil, nil, appErrors.ErrWritingSelector
 	}
 
 	// Encode the response format.
@@ -146,7 +146,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write response format to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingResponseFormat
+		return nil, nil, appErrors.ErrWritingResponseFormat
 	}
 
 	// Write the request method to the buffer.
@@ -154,7 +154,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write request method to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingRequestMethod
+		return nil, nil, appErrors.ErrWritingRequestMethod
 	}
 
 	// Encode the encoding options.
@@ -169,7 +169,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write encoding options to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingEncodingOptions
+		return nil, nil, appErrors.ErrWritingEncodingOptions
 	}
 
 	// Encode the request headers.
@@ -180,7 +180,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write request headers to buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingRequestHeaders
+		return nil, nil, appErrors.ErrWritingRequestHeaders
 	}
 
 	// write optional fields:
@@ -200,7 +200,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	if err != nil {
 		logger.Error("Failed to write optional fields buffer: ", "error", err)
-		return nil, nil, appErrors.ErrWrittingOptionalFields
+		return nil, nil, appErrors.ErrWritingOptionalFields
 	}
 
 	result := buf.Bytes()

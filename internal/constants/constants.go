@@ -8,7 +8,7 @@ var AllowedHeaders = []string{
 	"Accept-Encoding",
 	"Accept-Language",
 	"Access-Control-Request-Method",
-	"Access-Control-Request-Header",
+	"Access-Control-Request-Headers",
 	"Cache-Control",
 	"Connection",
 	"Content-Encoding",
