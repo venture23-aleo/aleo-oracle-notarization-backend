@@ -1,0 +1,49 @@
+server {
+    listen       ${NGINX_LISTEN_PORT} ssl;
+    server_name  _;
+
+    # mTLS configuration
+    ssl_certificate           /etc/nginx/certs/server.crt;
+    ssl_certificate_key       /etc/nginx/certs/server.key;
+    ssl_client_certificate    /etc/nginx/certs/ca.crt;
+    ssl_verify_client         on; # require client certificate
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       10m;
+    ssl_protocols             TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers               HIGH:!aNULL:!MD5:!RC4;
+
+    # Security / hardening headers (basic set)
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options DENY;
+    add_header X-XSS-Protection "1; mode=block";
+
+    # Health endpoint can be hit by load balancers
+    location = /health {
+        proxy_pass http://${UPSTREAM_HOST}:${UPSTREAM_PORT}/health;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /metrics {
+        proxy_pass http://${UPSTREAM_HOST}:8001/metrics; # metrics exposed separately
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location / {
+        proxy_pass http://${UPSTREAM_HOST}:${UPSTREAM_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Basic request size limits (adjust if needed)
+    client_max_body_size 2m;
+}
