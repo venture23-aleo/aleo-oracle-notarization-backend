@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -223,6 +224,9 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, ti
 	// Buffer size matches the number of trading pairs to prevent blocking
 	results := make(chan fetchResult, totalTradingPairs)
 
+	// Create a wait group to wait for all goroutines to complete
+	var wg sync.WaitGroup
+
 	// Launch concurrent goroutines to fetch prices from each exchange
 	// Each goroutine fetches data independently and sends results through the channel
 	for _, exchange := range exchanges {
@@ -247,17 +251,38 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, ti
 		}
 
 		for _, symbol := range symbolList {
+			wg.Add(1)
 			go func(ex string, tk string, sym string) {
+				defer wg.Done()
+
+				defer func() {
+					if r := recover(); r != nil {
+						reqLogger.Error("Recovered from panic in FetchPriceFromExchange",
+							"exchange", ex, "token", tk, "symbol", sym, "panic", r)
+						results <- fetchResult{
+							price:    nil,
+							err:      appErrors.ErrInternal.WithDetails(fmt.Sprintf("panic in fetch goroutine: %v", r)),
+							exchange: ex,
+						}
+					}
+				}()
+
 				price, err := c.FetchPriceFromExchange(ctx, ex, tk, sym, timestamp)
 				results <- fetchResult{price: price, err: err, exchange: ex}
 			}(exchange, token, symbol)
 		}
 	}
 
+	// closer goroutine
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+
 	// Collect results from all goroutines
 	// Process results in the order they complete, not necessarily the order of exchanges
-	for i := 0; i < totalTradingPairs; i++ {
-		result := <-results
+	for result := range results {
 		if result.err != nil {
 			metrics.RecordExchangeApiError(result.exchange, strconv.Itoa(int(result.err.Code)))
 			// Log the error but continue processing other exchanges
@@ -271,7 +296,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, ti
 		}
 	}
 
-	reqLogger.Debug("Total trading pairs", "totalTradingPairs", totalTradingPairs)
+	reqLogger.Debug("Finished collecting results", "pairs", totalTradingPairs, "success", len(exchangePrices))
 
 	// Calculate volume-weighted average
 	volumeWeightedAvg, totalVolume, exchangeCount := CalculateVolumeWeightedAverage(exchangePrices)
