@@ -3,7 +3,10 @@ package data_extraction
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 )
@@ -11,14 +14,18 @@ import (
 type BinanceResponse struct {
 	Price  string `json:"lastPrice"`
 	Volume string `json:"volume"`
+	Symbol string `json:"symbol"`
+	Timestamp int64 `json:"closeTime"`
 }
 
 type BybitListItem struct {
 	Price  string `json:"lastPrice"`
 	Volume string `json:"volume24h"`
+	Symbol string `json:"symbol"`
 }
 
 type BybitResponse struct {
+	Timestamp int64 `json:"time"`
 	Result struct {
 		List []BybitListItem `json:"list"`
 	} `json:"result"`
@@ -27,11 +34,14 @@ type BybitResponse struct {
 type CoinbaseResponse struct {
 	Price  string `json:"price"`
 	Volume string `json:"volume"`
+	Timestamp string `json:"time"`
 }
 
 type CryptoListItem struct {
 	Price  string `json:"k"`
 	Volume string `json:"v"`
+	Symbol string `json:"i"`
+	Timestamp int64 `json:"t"`
 }
 
 type CryptoResponse struct {
@@ -43,6 +53,8 @@ type CryptoResponse struct {
 type XTResponseItem struct {
 	Price  string `json:"c"`
 	Volume string `json:"q"`
+	Timestamp int64 `json:"t"`
+	Symbol string `json:"s"`
 }
 
 type XTResponse struct {
@@ -52,6 +64,7 @@ type XTResponse struct {
 type GateResponseItem struct {
 	Price  string `json:"last"`
 	Volume string `json:"base_volume"`
+	Symbol string `json:"currency_pair"`
 }
 
 type GateResponse []GateResponseItem
@@ -59,10 +72,40 @@ type GateResponse []GateResponseItem
 type MEXCResponse struct {
 	Price  string `json:"lastPrice"`
 	Volume string `json:"volume"`
+	Symbol string `json:"symbol"`
+	Timestamp int64 `json:"closeTime"`
+}
+
+func validateTimestamp(exchange string, timestamp int64, attestationTimestamp int64) *appErrors.AppError {
+	timestampInUnix := timestamp / 1000
+	timeDiff := timestampInUnix - attestationTimestamp
+	if timeDiff < 0 {
+		timeDiff = -timeDiff
+	}
+
+	if timeDiff > constants.MaxAllowedTimeDiff {
+		logger.Error("Timestamp difference too large: ", "exchange", exchange, "expected", attestationTimestamp, "got", timestamp, "diff_seconds", timeDiff)
+		return appErrors.ErrTimestampTooOld
+	}
+	return nil
+}
+
+
+func validateSymbol(exchange, parsedSymbol, symbol string) *appErrors.AppError {
+	if parsedSymbol == "" {
+		logger.Error("Symbol is empty: ", "exchange", exchange)
+		return appErrors.ErrSymbolMismatch
+	}
+
+	if !strings.EqualFold(parsedSymbol, symbol) {
+		logger.Error("Symbol mismatch: ", "exchange", exchange, "expected", symbol, "got", parsedSymbol)
+		return appErrors.ErrSymbolMismatch
+	}
+	return nil
 }
 
 // parseBinanceResponse parses the response from Binance
-func parseBinanceResponse(data []byte) (price, volume float64, err *appErrors.AppError) {
+func parseBinanceResponse(data []byte, symbol string, timestamp int64) (price, volume float64, err *appErrors.AppError) {
 	var binanceResponse BinanceResponse
 	if err := json.Unmarshal(data, &binanceResponse); err != nil {
 		logger.Error("Error unmarshalling data: ", "exchange", "binance", "error", err)
@@ -81,17 +124,27 @@ func parseBinanceResponse(data []byte) (price, volume float64, err *appErrors.Ap
 		return 0, 0, appErrors.ErrParsingVolume
 	}
 
+	err = validateSymbol("binance", binanceResponse.Symbol, symbol)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = validateTimestamp("binance", binanceResponse.Timestamp, timestamp)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	return price, volume, nil
 }
 
 // parseBybitResponse parses the response from Bybit
-func parseBybitResponse(data []byte) (price, volume float64, err *appErrors.AppError) {
+func parseBybitResponse(data []byte, symbol string, timestamp int64) (price, volume float64, err *appErrors.AppError) {
 	var bybitResponse BybitResponse
 	if err := json.Unmarshal(data, &bybitResponse); err != nil {
 		logger.Error("Error unmarshalling data: ", "exchange", "bybit", "error", err)
 		return 0, 0, appErrors.ErrDecodingExchangeResponse
 	}
-
+	
 	list := bybitResponse.Result.List
 	if len(list) == 0 {
 		logger.Error("No data in response", "exchange", "bybit")
@@ -112,11 +165,22 @@ func parseBybitResponse(data []byte) (price, volume float64, err *appErrors.AppE
 		return 0, 0, appErrors.ErrParsingVolume
 	}
 
+	err = validateSymbol("bybit", item.Symbol, symbol)
+	if err != nil {
+		return 0, 0, err
+	}
+	
+	err = validateTimestamp("bybit", bybitResponse.Timestamp, timestamp)
+	if err != nil {
+		return 0, 0, err
+	}
+
+
 	return price, volume, nil
 }
 
 // parseCoinbaseResponse parses the response from Coinbase
-func parseCoinbaseResponse(data []byte) (price, volume float64, err *appErrors.AppError) {
+func parseCoinbaseResponse(data []byte, _ string, timestamp int64) (price, volume float64, err *appErrors.AppError) {
 	exchange := "coinbase"
 	var coinbaseResponse CoinbaseResponse
 	if err := json.Unmarshal(data, &coinbaseResponse); err != nil {
@@ -136,11 +200,22 @@ func parseCoinbaseResponse(data []byte) (price, volume float64, err *appErrors.A
 		return 0, 0, appErrors.ErrParsingVolume
 	}
 
+	t, parseErr := time.Parse(time.RFC3339Nano, coinbaseResponse.Timestamp)
+	if parseErr != nil {
+		logger.Error("Error parsing timestamp: ", "exchange", exchange, "error", err)
+		return 0, 0, appErrors.ErrParsingTimestamp
+	}
+
+	err = validateTimestamp("coinbase", t.UnixMilli(), timestamp)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	return price, volume, nil
 }
 
 // parseCryptoResponse parses the response from Crypto.com
-func parseCryptoResponse(data []byte) (price, volume float64, err *appErrors.AppError) {
+func parseCryptoResponse(data []byte, symbol string, timestamp int64) (price, volume float64, err *appErrors.AppError) {
 	exchange := "crypto"
 	var cryptoResponse CryptoResponse
 	if err := json.Unmarshal(data, &cryptoResponse); err != nil {
@@ -168,11 +243,21 @@ func parseCryptoResponse(data []byte) (price, volume float64, err *appErrors.App
 		return 0, 0, appErrors.ErrParsingVolume
 	}
 
+	err = validateSymbol("crypto", item.Symbol, symbol)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = validateTimestamp("crypto", item.Timestamp, timestamp)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	return price, volume, nil
 }
 
 // parseXTResponse parses the response from XT
-func parseXTResponse(data []byte) (price, volume float64, err *appErrors.AppError) {
+func parseXTResponse(data []byte, symbol string, timestamp int64) (price, volume float64, err *appErrors.AppError) {
 	exchange := "xt"
 	var xtResponse XTResponse
 	if err := json.Unmarshal(data, &xtResponse); err != nil {
@@ -200,11 +285,21 @@ func parseXTResponse(data []byte) (price, volume float64, err *appErrors.AppErro
 		return 0, 0, appErrors.ErrParsingVolume
 	}
 
+	err = validateSymbol("xt", item.Symbol, symbol)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = validateTimestamp("xt", item.Timestamp, timestamp)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	return price, volume, nil
 }
 
 // parseGateIOResponse parses the response from Gate.io
-func parseGateResponse(data []byte) (price, volume float64, err *appErrors.AppError) {
+func parseGateResponse(data []byte, symbol string, _ int64) (price, volume float64, err *appErrors.AppError) {
 	exchange := "gate"
 	var gateResponse GateResponse
 	if err := json.Unmarshal(data, &gateResponse); err != nil {
@@ -232,11 +327,16 @@ func parseGateResponse(data []byte) (price, volume float64, err *appErrors.AppEr
 		return 0, 0, appErrors.ErrParsingVolume
 	}
 
+	err = validateSymbol("gate", item.Symbol, symbol)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	return price, volume, nil
 }
 
 // parseMEXCResponse parses the response from MEXC
-func parseMEXCResponse(data []byte) (price, volume float64, err *appErrors.AppError) {
+func parseMEXCResponse(data []byte, symbol string, timestamp int64) (price, volume float64, err *appErrors.AppError) {
 	exchange := "mexc"
 	var mexcResponse MEXCResponse
 	if err := json.Unmarshal(data, &mexcResponse); err != nil {
@@ -256,26 +356,36 @@ func parseMEXCResponse(data []byte) (price, volume float64, err *appErrors.AppEr
 		return 0, 0, appErrors.ErrParsingVolume
 	}
 
+	err = validateSymbol("mexc", mexcResponse.Symbol, symbol)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = validateTimestamp("mexc", mexcResponse.Timestamp, timestamp)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	return price, volume, nil
 }
 
 // parseExchangeResponse parses the response from different exchanges
-func (c *PriceFeedClient) parseExchangeResponse(exchange string, data []byte) (price, volume float64, err *appErrors.AppError) {
+func (c *PriceFeedClient) parseExchangeResponse(exchange string, data []byte, symbol string, timestamp int64) (price, volume float64, err *appErrors.AppError) {
 	switch exchange {
 	case "binance":
-		return parseBinanceResponse(data)
+		return parseBinanceResponse(data, symbol, timestamp)
 	case "bybit":
-		return parseBybitResponse(data)
+		return parseBybitResponse(data, symbol, timestamp)
 	case "coinbase":
-		return parseCoinbaseResponse(data)
+		return parseCoinbaseResponse(data, symbol, timestamp)
 	case "crypto":
-		return parseCryptoResponse(data)
+		return parseCryptoResponse(data, symbol, timestamp)
 	case "xt":
-		return parseXTResponse(data)
+		return parseXTResponse(data, symbol, timestamp)
 	case "gate":
-		return parseGateResponse(data)
+		return parseGateResponse(data, symbol, timestamp)
 	case "mexc":
-		return parseMEXCResponse(data)
+		return parseMEXCResponse(data, symbol, timestamp)
 	default:
 		logger.Error("Unsupported exchange: ", "exchange", exchange)
 		return 0, 0, appErrors.ErrExchangeNotSupported
