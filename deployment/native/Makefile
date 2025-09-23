@@ -26,7 +26,7 @@ install-sgx-dcap-aesm:
 	@echo "NATIVE_DEPLOYMENT_SCRIPTS_DIR: $(NATIVE_DEPLOYMENT_SCRIPTS_DIR)"
 	@chmod +x $(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-sgx-dcap-aesm.sh
 	@$(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-sgx-dcap-aesm.sh
-	
+
 # Install Gramine
 install-gramine:
 	@chmod +x $(NATIVE_DEPLOYMENT_SCRIPTS_DIR)/install-gramine.sh

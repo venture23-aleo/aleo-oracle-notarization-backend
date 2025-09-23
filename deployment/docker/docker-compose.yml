@@ -2,7 +2,7 @@ services:
   aleo-oracle-notarization-backend:
     image: ${APP}:latest
     container_name: aleo-oracle-notarization-backend
-    build: 
+    build:
       context: ../..
       dockerfile: deployment/docker/Dockerfile
       secrets:
@@ -10,13 +10,39 @@ services:
       args:
         APP: ${APP}
     platform: linux/amd64
-    ports:
-      - 8000:8000
-      - 8001:8001
+    expose:
+      - 8000
+      - 8001
     devices:
       - /dev/sgx_enclave:/dev/sgx_enclave
       - /dev/sgx_provision:/dev/sgx_provision
-      
+
+  nginx:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.nginx
+    container_name: nginx-mtls-proxy
+    depends_on:
+      - aleo-oracle-notarization-backend
+    environment:
+      - UPSTREAM_HOST=aleo-oracle-notarization-backend
+      - UPSTREAM_PORT=8000
+      - NGINX_LISTEN_PORT=8443
+    ports:
+      - 8443:8443
+    volumes:
+      - ../secrets/mtls/server.crt:/etc/nginx/certs/server.crt:ro
+      - ../secrets/mtls/server.key:/etc/nginx/certs/server.key:ro
+      - ../secrets/mtls/ca.crt:/etc/nginx/certs/ca.crt:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+
 secrets:
   gramine-private-key:
     file: ${ENCLAVE_SIGNING_KEY_FILE}
