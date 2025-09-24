@@ -6,6 +6,17 @@ echo ">> Nginx mTLS proxy starting..."
 : "${UPSTREAM_HOST:=aleo-oracle-notarization-backend}"
 : "${UPSTREAM_PORT:=8000}"
 : "${NGINX_LISTEN_PORT:=8443}"
+# Rate/connection/timeouts defaults (applied here so template uses simple ${VAR})
+: "${RATE_LIMIT_ZONE_SIZE:=10m}"
+: "${RATE_LIMIT_PER_SECOND:=10}"
+: "${RATE_LIMIT_BURST:=20}"
+: "${RATE_LIMIT_BURST_API:=30}"
+: "${CONN_LIMIT_ZONE_SIZE:=10m}"
+: "${CONN_LIMIT_PER_KEY:=20}"
+: "${CLIENT_MAX_BODY_SIZE:=2m}"
+: "${PROXY_CONNECT_TIMEOUT:=5s}"
+: "${PROXY_SEND_TIMEOUT:=60s}"
+: "${PROXY_READ_TIMEOUT:=60s}"
 
 echo ">> Using upstream http://${UPSTREAM_HOST}:${UPSTREAM_PORT} (listen ${NGINX_LISTEN_PORT})"
 
