@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Guard: ensure we are running under bash (arrays required). If someone invokes with sh, bail early.
-if [[ -z ${BASH_VERSINFO:-} ]]; then
-  echo "[ERROR] This script requires bash. Re-run as: bash $0 <command>" >&2
-  exit 1
-fi
-
 # Unified mTLS certificate management script
 # Commands:
 #   init                - Generate CA + server cert (if not exist) and optionally a default client
@@ -85,10 +79,10 @@ CN = ${server_cn}
 
 [ v3_ext ]
 subjectAltName = ${san_csv}
-authorityKeyIdentifier=keyid,issuer
-basicConstraints=CA:FALSE
-keyUsage = digitalSignature, keyEncipherment
-extendedKeyUsage=serverAuth,clientAuth
+subjectKeyIdentifier   = hash
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth,clientAuth
 EOF
 }
 
