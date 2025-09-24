@@ -35,7 +35,8 @@ if [ ! -f "$CA_CRT" ]; then
 fi
 
 echo ">> Rendering Nginx configuration from template..."
-envsubst '${UPSTREAM_HOST} ${UPSTREAM_PORT} ${NGINX_LISTEN_PORT}' < "$TEMPLATE" > "$TARGET"
+# Include new tunables for rate limiting and timeouts when substituting
+envsubst '${UPSTREAM_HOST} ${UPSTREAM_PORT} ${NGINX_LISTEN_PORT} ${RATE_LIMIT_ZONE_SIZE} ${RATE_LIMIT_PER_SECOND} ${RATE_LIMIT_BURST} ${RATE_LIMIT_BURST_API} ${CONN_LIMIT_ZONE_SIZE} ${CONN_LIMIT_PER_KEY} ${CLIENT_MAX_BODY_SIZE} ${PROXY_CONNECT_TIMEOUT} ${PROXY_SEND_TIMEOUT} ${PROXY_READ_TIMEOUT}' < "$TEMPLATE" > "$TARGET"
 
 echo ">> Final rendered config:"
 grep -E 'listen|proxy_pass|ssl_' "$TARGET" || true

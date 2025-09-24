@@ -25,11 +25,21 @@ services:
     depends_on:
       - aleo-oracle-notarization-backend
     environment:
-      - UPSTREAM_HOST=aleo-oracle-notarization-backend
-      - UPSTREAM_PORT=8000
-      - NGINX_LISTEN_PORT=8443
+      - UPSTREAM_HOST=${UPSTREAM_HOST:-aleo-oracle-notarization-backend}
+      - UPSTREAM_PORT=${UPSTREAM_PORT:-8000}
+      - NGINX_LISTEN_PORT=${NGINX_LISTEN_PORT:-8443}
+      - RATE_LIMIT_PER_SECOND=${RATE_LIMIT_PER_SECOND:-10}
+      - RATE_LIMIT_BURST=${RATE_LIMIT_BURST:-20}
+      - RATE_LIMIT_BURST_API=${RATE_LIMIT_BURST_API:-30}
+      - RATE_LIMIT_ZONE_SIZE=${RATE_LIMIT_ZONE_SIZE:-10m}
+      - CONN_LIMIT_ZONE_SIZE=${CONN_LIMIT_ZONE_SIZE:-10m}
+      - CONN_LIMIT_PER_KEY=${CONN_LIMIT_PER_KEY:-20}
+      - CLIENT_MAX_BODY_SIZE=${CLIENT_MAX_BODY_SIZE:-2m}
+      - PROXY_CONNECT_TIMEOUT=${PROXY_CONNECT_TIMEOUT:-5s}
+      - PROXY_SEND_TIMEOUT=${PROXY_SEND_TIMEOUT:-60s}
+      - PROXY_READ_TIMEOUT=${PROXY_READ_TIMEOUT:-60s}
     ports:
-      - 8443:8443
+      - ${HOST_HTTPS_PORT:-8443}:${NGINX_LISTEN_PORT:-8443}
     volumes:
       - ../secrets/mtls/server.crt:/etc/nginx/certs/server.crt:ro
       - ../secrets/mtls/server.key:/etc/nginx/certs/server.key:ro

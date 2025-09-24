@@ -134,7 +134,6 @@ init() {
   if $with_default_client; then
     generate_client --cn AleoOracleClient --days 180 || true
   fi
-  echo "curl --cacert $CA_CERT --cert $CLIENTS_DIR/AleoOracleClient/client.crt --key $CLIENTS_DIR/AleoOracleClient/client.key https://localhost:8443/health" | sed 's#//.*client\.crt#//<client>.crt#'
 }
 
 regen_server() {

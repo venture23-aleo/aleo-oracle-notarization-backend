@@ -1,3 +1,9 @@
+map $binary_remote_addr $ratelimit_zone_key { default $binary_remote_addr; }
+
+# Rate limiting zones (values substituted by envsubst). Burst allows short spikes; nodelay optional.
+limit_req_zone $ratelimit_zone_key zone=req_zone:${RATE_LIMIT_ZONE_SIZE:=10m} rate=${RATE_LIMIT_PER_SECOND:=10}r/s;
+limit_conn_zone $ratelimit_zone_key zone=conn_zone:${CONN_LIMIT_ZONE_SIZE:=10m};
+
 server {
     listen       ${NGINX_LISTEN_PORT} ssl;
     server_name  _;
@@ -18,6 +24,10 @@ server {
     add_header X-Frame-Options DENY;
     add_header X-XSS-Protection "1; mode=block";
 
+    # Apply global limits (optional fine-tuning per location below)
+    limit_req zone=req_zone burst=${RATE_LIMIT_BURST:=20} nodelay;
+    limit_conn conn_zone ${CONN_LIMIT_PER_KEY:=20};
+
     # Health endpoint can be hit by load balancers
     location = /health {
         proxy_pass http://${UPSTREAM_HOST}:${UPSTREAM_PORT}/health;
@@ -33,6 +43,8 @@ server {
     }
 
     location / {
+        # Slightly higher burst allowance for general API
+        limit_req zone=req_zone burst=${RATE_LIMIT_BURST_API:=30} nodelay;
         proxy_pass http://${UPSTREAM_HOST}:${UPSTREAM_PORT};
         proxy_http_version 1.1;
         proxy_set_header Connection "";
@@ -45,5 +57,10 @@ server {
     }
 
     # Basic request size limits (adjust if needed)
-    client_max_body_size 2m;
+    client_max_body_size ${CLIENT_MAX_BODY_SIZE:=2m};
+
+    # Optional: tune timeouts (configurable)
+    proxy_connect_timeout  ${PROXY_CONNECT_TIMEOUT:=5s};
+    proxy_send_timeout     ${PROXY_SEND_TIMEOUT:=60s};
+    proxy_read_timeout     ${PROXY_READ_TIMEOUT:=60s};
 }
