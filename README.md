@@ -85,6 +85,10 @@ make client-cert-generate CN=web-user SAN=DNS:user.example.internal
 make client-cert-renew CN=service-a DAYS=400 SAN=URI:spiffe://oracle/service/service-a,DNS:svc-a.internal
 ```
 
+### Rate Limiting & Tuning
+
+Basic rate limiting and connection limiting have been added with sensible defaults intended to protect the backend from accidental floods while allowing normal operation.
+
 #### Managing Per-Client Certificates
 
 Additional client certificates can be managed via the helper script:

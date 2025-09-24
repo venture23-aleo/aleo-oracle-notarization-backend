@@ -27,10 +27,7 @@ generate-enclave-signing-key:
 	@$(SECRETS_DIR)/generate-enclave-signing-key.sh
 
 ## Idempotent certificate initialization (creates CA + server + default client if absent)
-generate-mtls-certs: ensure-mtls-certs ## Backwards compatible alias
-
-## Explicit target to ensure mTLS certs exist
-ensure-mtls-certs:
+generate-mtls-certs:
 	@mkdir -p $(SECRETS_DIR)
 	@if [ ! -f "$(SECRETS_DIR)/mtls/server.crt" ] || [ ! -f "$(SECRETS_DIR)/mtls/server.key" ]; then \
 	  echo ">> mTLS server certs missing – generating (CA + server + default client)"; \
@@ -81,7 +78,7 @@ docker-setup: install-docker generate-enclave-signing-key generate-mtls-certs
 	@echo ">> Docker deployment setup completed successfully!"
 
 # Build
-docker-build: generate-manifest-template generate-enclave-signing-key ensure-mtls-certs
+docker-build: generate-manifest-template generate-enclave-signing-key generate-mtls-certs
 	@DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_DEPLOYMENT_INPUTS_DIR="$(DOCKER_DEPLOYMENT_INPUTS_DIR)" ENCLAVE_SIGNING_KEY_FILE="$(ENCLAVE_SIGNING_KEY_FILE)" docker compose -f $(DOCKER_COMPOSE_FILE) build $(APP) nginx
 	@docker tag $(APP):latest $(APP):$(COMMIT)
 
