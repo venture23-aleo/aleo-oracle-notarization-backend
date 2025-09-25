@@ -17,7 +17,7 @@ type AleoPublicContext interface {
 
 type AleoContext struct {
 	Session    aleoUtils.Session // The Aleo session.
-	privateKey string            // The Aleo private key.
+	privateKey []byte            // The Aleo private key.
 	PublicKey  string            // The Aleo public key.
 	Close      func()            // The Aleo close function.
 }
