@@ -2,8 +2,8 @@ package sgx
 
 import (
 	"fmt"
-	"os"
 	"sync"
+	"syscall"
 )
 
 // SGX Constants
@@ -27,6 +27,10 @@ const (
 
 	// https://github.com/intel/SGXDataCenterAttestationPrimitives/blob/a46ee8ab10569962c5cd7397b4babd4a47431976/QuoteVerification/QvE/Include/sgx_qve_def.h#L95
 	QuoteMinSize = 1020
+
+	ModeRead               = "read"
+	ModeWrite              = "write"
+	GraminePseudoFilesRoot = "/dev"
 )
 
 // enclaveLock is the lock for the enclave to generate the sgx report and quote.
@@ -65,15 +69,17 @@ func EnforceSGXStartup() error {
 		gramineAttestationPaths.ReportPath,
 		gramineAttestationPaths.AttestationTypePath,
 	} {
-		if _, err := os.Stat(path); err != nil {
-			return fmt.Errorf("SGX startup check failed: device file %s is not accessible: %v", path, err)
+		fd, err := SecureOpenFile(GraminePseudoFilesRoot, path, ModeRead)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", path, err)
 		}
+		syscall.Close(fd)
 	}
 
-	attType, err := os.ReadFile(gramineAttestationPaths.AttestationTypePath)
-    if err != nil {
-        return fmt.Errorf("reading attestation_type: %w", err)
-    }
+	attType, err := SecureReadFile(GraminePseudoFilesRoot, gramineAttestationPaths.AttestationTypePath)
+	if err != nil {
+		return fmt.Errorf("reading attestation_type: %w", err)
+	}
 
 	if string(attType) != AttestationType {
 		return fmt.Errorf("attestation type is not %s", AttestationType)

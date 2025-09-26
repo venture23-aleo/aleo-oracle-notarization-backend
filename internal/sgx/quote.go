@@ -3,7 +3,6 @@ package sgx
 import (
 	"bytes"
 	"encoding/binary"
-	"os"
 
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
@@ -85,14 +84,14 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 	copy(reportData, inputData) // Copy inputData (truncates or zero-pads as needed)
 
 	// Step 3: Write the report data to the user report data path.
-	err := os.WriteFile(gramineAttestationPaths.UserReportDataPath, reportData, SGXFilePermissions)
+	err := SecureWriteFile(GraminePseudoFilesRoot, gramineAttestationPaths.UserReportDataPath, reportData)
 	if err != nil {
 		logger.Error("Error while writing report data:", "error", err)
 		return nil, appErrors.ErrWrittingReportData
 	}
 
 	// Step 4: Read the raw quote from the Gramine quote path.
-	quote, err := os.ReadFile(gramineAttestationPaths.QuotePath)
+	quote, err := SecureReadFile(GraminePseudoFilesRoot, gramineAttestationPaths.QuotePath)
 	if err != nil {
 		logger.Error("Error while reading quote: ", "error", err)
 		return nil, appErrors.ErrReadingQuote

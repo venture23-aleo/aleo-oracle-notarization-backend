@@ -29,6 +29,7 @@ func main() {
 	if err := sgx.EnforceSGXStartup(); err != nil {
 		log.Fatalf("Failed to enforce SGX startup check: %v", err)
 	}
+	logger.Info("SGX environment verified successfully")
 
 	// 3. Validate configuration at startup
 	logger.Debug("Validating configuration...")
