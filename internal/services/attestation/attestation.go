@@ -27,7 +27,6 @@ type AttestationRequest struct {
 
 	EncodingOptions encoding.EncodingOptions `json:"encodingOptions"` // The encoding options.
 
-	DebugRequest bool `json:"debugRequest,omitempty"` // The debug request.
 }
 
 // AttestationResponse is the response body for the attestation service.
@@ -69,6 +68,31 @@ type DebugAttestationResponse struct {
 	ResponseStatusCode int `json:"responseStatusCode"` // The response status code.
 
 	AttestationData string `json:"attestationData"` // The attestation data.
+}
+
+func (ar *AttestationRequest) Normalize() AttestationRequest {
+
+	clone := *ar;
+
+	clone.Url = strings.ToLower(strings.TrimSpace(clone.Url))
+	clone.RequestMethod = strings.ToUpper(strings.TrimSpace(clone.RequestMethod))
+	clone.ResponseFormat = strings.ToLower(strings.TrimSpace(clone.ResponseFormat))
+	clone.EncodingOptions.Value = strings.ToLower(strings.TrimSpace(clone.EncodingOptions.Value))
+
+	clone.RequestHeaders = make(map[string]string)
+
+	for headerName, headerValue := range ar.RequestHeaders {	
+		trimmedHeaderName := strings.ToLower(strings.TrimSpace(headerName))
+		trimmedHeaderValue := strings.TrimSpace(headerValue)
+		clone.RequestHeaders[trimmedHeaderName] = trimmedHeaderValue
+	}
+
+	if clone.HTMLResultType != nil {
+		htmlResultType := strings.ToLower(strings.TrimSpace(*ar.HTMLResultType))
+		clone.HTMLResultType = &htmlResultType
+	}
+
+	return clone
 }
 
 // Validate validates the attestation request and checks if target is whitelisted.

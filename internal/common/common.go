@@ -79,7 +79,7 @@ func GetHostnameFromURL(rawURL string) (string, *appErrors.AppError) {
 // IsAcceptedHeader checks if a header name is in the list of allowed headers.
 func IsAcceptedHeader(header string) bool {
 	for _, h := range constants.AllowedHeaders {
-		if strings.TrimSpace(h) == header {
+		if strings.ToLower(strings.TrimSpace(h)) == header {
 			return true
 		}
 	}
@@ -98,7 +98,7 @@ func IsTargetWhitelisted(endpoint string) bool {
 	}
 
 	for _, domainName := range configs.GetWhitelistedDomains() {
-		if strings.TrimSpace(domainName) == hostname {
+		if strings.ToLower(strings.TrimSpace(domainName)) == hostname {
 			return true
 		}
 	}

@@ -71,7 +71,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	attestationRequest := attestationRequestWithDebug.AttestationRequest
+	attestationRequest := attestationRequestWithDebug.AttestationRequest.Normalize()
 
 	reqLogger.Debug("Processing attestation request", "url", attestationRequest.Url, "debug", attestationRequestWithDebug.DebugRequest)
 
