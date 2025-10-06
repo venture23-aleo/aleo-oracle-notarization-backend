@@ -1,3 +1,4 @@
+// Package attestation prepares oracle data, hashes, and request artifacts for SGX quoting.
 package attestation
 
 import (
@@ -61,7 +62,6 @@ func PrepareOracleUserData(
 
 	// Step 2: Prepare the proof data.
 	userDataProof, encodedPositions, err = PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
-
 	if err != nil {
 		return nil, nil, nil, appErrors.ErrPreparingProofData
 	}
@@ -109,6 +109,10 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		return nil, err
+	}
+
+	if encodedPositions == nil {
+		return nil, appErrors.ErrNilEncodedPositions
 	}
 
 	// Step 2: Prepare the encoded request proof.
@@ -164,6 +168,12 @@ func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, reques
 		return nil, "", appErrors.ErrCreatingRequestHash
 	}
 
+	// Defensive check: ensure hash size is 16 bytes as expected by downstream consumers.
+	if len(requestHash) != encoding.TARGET_ALIGNMENT {
+		logger.Error("unexpected request hash length", "got", len(requestHash), "want", encoding.TARGET_ALIGNMENT)
+		return nil, "", appErrors.ErrCreatingRequestHash
+	}
+
 	// Step 3: Create the request hash string - Hash the encoded request.
 	requestHashString, hashError = aleoContext.GetSession().HashMessageToString(encodedRequest)
 	if hashError != nil {
@@ -204,6 +214,12 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 		return "", err
 	}
 
+	// Defensive check: ensure requestHash has expected size.
+	if len(requestHash) != encoding.TARGET_ALIGNMENT {
+		logger.Error("invalid request hash length for timestamped hash", "got", len(requestHash), "want", encoding.TARGET_ALIGNMENT)
+		return "", appErrors.ErrCreatingTimestampedRequestHash
+	}
+
 	// Step 2: Prepare the timestamp bytes.
 	timestampBytes := make([]byte, encoding.TARGET_ALIGNMENT)
 	binary.LittleEndian.PutUint64(timestampBytes, uint64(timestamp))
@@ -232,7 +248,7 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 
 	// Step 7: Handle error.
 	if hashError != nil {
-		logger.Error("Failed to create timestamped request hash: ", "error", err)
+		logger.Error("Failed to create timestamped request hash: ", "error", hashError)
 		return "", appErrors.ErrCreatingTimestampedRequestHash
 	}
 

@@ -34,7 +34,10 @@ func (a *AleoContext) GetPublicKey() string {
 
 // Sign signs a message.
 func (a *AleoContext) Sign(message []byte) (string, error) {
-	return a.Session.Sign(a.privateKey, message)
+	if IsAleoContextInitialized() {
+		return a.Session.Sign(a.privateKey, message)
+	}
+	return "", appErrors.ErrAleoContext.WithDetails("Aleo context is not initialized")
 }
 
 // String returns a string representation of the Aleo context.
