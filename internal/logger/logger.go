@@ -1,6 +1,6 @@
 // Package logger provides structured, context-aware logging helpers used across the service.
-// Package logger provides a thin wrapper around slog with context-aware helpers
-// and safe defaults that avoid panics when the global logger is uninitialized.
+// It is a thin wrapper around slog with context-aware helpers and safe defaults
+// that avoid panics when the global logger is uninitialized.
 package logger
 
 import (
