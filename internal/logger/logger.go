@@ -69,7 +69,7 @@ func getFunctionName() string {
 }
 
 // Info logs an informational message, enriching with the calling function name.
-// Info logs a message with optional key/value pairs.
+// It accepts a message and optional key/value pairs for structured logging.
 func Info(msg string, args ...any) {
 	if Logger != nil {
 		allArgs := append(args, []any{"function_name", getFunctionName()}...)
