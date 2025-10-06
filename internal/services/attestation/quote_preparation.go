@@ -1,6 +1,5 @@
 // Package attestation prepares oracle data, hashes, and request artifacts for SGX quoting.
 package attestation
-
 import (
 	"encoding/binary"
 	"fmt"
