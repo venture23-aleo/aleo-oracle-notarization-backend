@@ -41,6 +41,7 @@ services:
       - ../secrets/mtls/server.crt:/etc/nginx/certs/server.crt:ro
       - ../secrets/mtls/server.key:/etc/nginx/certs/server.key:ro
       - ../secrets/mtls/ca.crt:/etc/nginx/certs/ca.crt:ro
+      - ../secrets/mtls/revoked:/etc/nginx/revoked:ro
     cap_drop:
       - ALL
     cap_add:
