@@ -823,7 +823,7 @@ func TestValidateHeaderField(t *testing.T) {
 		{name: "valid header with tab in value", field: "value\twith\ttabs", expected: true},
 		{name: "invalid header with control char in value", field: "value\x02", expected: false},
 		{name: "valid header with colon in value", field: "value: value", expected: true},
-		{name: "empty header", field: "", expected: false},
+		{name: "empty header value", field: "", expected: true},
 		{name: "control character", field: "\x00", expected: false},
 		{name: "percent-encoded CRLF", field: "%0d%0a", expected: false},
 		{name: "percent-encoded CRLF", field: "%250d%250a", expected: false},
@@ -899,12 +899,15 @@ func TestValidateHeaderField(t *testing.T) {
 		{name: "unicode style escapes", field: "u000a", expected: true},
 		{name: "unicode style escapes", field: "u000d%u000a", expected: false},
 		{name: "unicode style escapes", field: "u000d%u000a", expected: false},
+		{name: "percent as a text", field: "50% completed", expected: true},
+		{name: "normal header value", field: "normal header value", expected: true},
+		{name: "invalid utf-8", field: "\xff\x61\x62", expected: false},
 	}
 
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			assert.Equal(t, testCase.expected, validateHeaderField(testCase.field))
+			assert.Equal(t, testCase.expected, validateHeaderValue(testCase.field))
 		})
 	}
 }

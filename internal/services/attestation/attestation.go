@@ -1,7 +1,6 @@
 package attestation
 
 import (
-	"net/url"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -196,11 +195,10 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 	}
 
 	for key,value := range ar.RequestHeaders {
-		if !validateHeaderField(key) {
+		if !validateHeaderKey(key) {
 			return appErrors.ErrInvalidHeaderKey
 		}
-
-		if !validateHeaderField(value) {
+		if !validateHeaderValue(value) {
 			return appErrors.ErrInvalidHeaderValue
 		}		
 	}
@@ -222,7 +220,7 @@ func (ar *AttestationRequest) MaskUnacceptedHeaders() {
 }
 
 var (
-	// exclude control characters except for HT(0x09)
+	// exclude control characters except for HT(0x09) for header value
 	reControl = regexp.MustCompile(`[\x00-\x08\x0a-\x1f]`)
 
 	// percent-encoded CR/LF with repeated %25 prefixes:
@@ -233,26 +231,46 @@ var (
 
 	// encoded slash rn: %255Cr, %255Cn, %255C%255Cr, %255C%255Cr%255Cn, %255C%255Cr%255Cn%255C%255Cr, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn%255C%255Cr, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn%255C%255Cr%255C%255Cn
 	reEncodedSlashRN = regexp.MustCompile(`(?i)%(?:25)+5C[rn]`)
+
+	// header-name token per RFC 7230 tchar: ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+	reToken = regexp.MustCompile(`^[!#$%&'*+\-.^_` + "`" + `|~0-9A-Za-z]+$`)
 )
 
-// validateHeaderField returns true if the field is safe to use as an HTTP header key or value.
-func validateHeaderField(field string) (bool) {
-	if field == "" || !utf8.ValidString(field) {
+
+// validateHeaderKey returns true if the key is safe to use as an HTTP header key.
+func validateHeaderKey(key string) (bool) {
+	// check if the key is empty
+	if key == "" {
 		return false
 	}
 
-	field = strings.ToLower(field)
-
-	if reControl.MatchString(field) || rePercentNested.MatchString(field) || reUnicodeEscape.MatchString(field) || reEncodedSlashRN.MatchString(field) {
+	// check if the key contains CR or LF
+	if strings.ContainsAny(key, "\r\n") {
 		return false
 	}
 
-	unescapedField, err := url.QueryUnescape(field)
-	if err != nil {
+	// check if the key is a valid token
+	if !reToken.MatchString(key) {
 		return false
 	}
 
-	if reControl.MatchString(unescapedField) || rePercentNested.MatchString(unescapedField) || reUnicodeEscape.MatchString(unescapedField) || reEncodedSlashRN.MatchString(unescapedField) {
+	return true
+}
+
+// validateHeaderValue returns true if the value is safe to use as an HTTP header value.
+func validateHeaderValue(value string) (bool) {
+	// check if the value contains CR or LF
+	if strings.ContainsAny(value, "\r\n") {
+		return false
+	}
+
+	// check if the value is valid UTF-8
+	if !utf8.ValidString(value) {
+		return false
+	}
+
+	// check if the value contains control characters, percent-encoded CR/LF, unicode escapes, and encoded slash rn
+	if	reControl.MatchString(value) || rePercentNested.MatchString(value) || reUnicodeEscape.MatchString(value) || reEncodedSlashRN.MatchString(value) {
 		return false
 	}
 
