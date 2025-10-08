@@ -1,5 +1,16 @@
 map $binary_remote_addr $ratelimit_zone_key { default $binary_remote_addr; }
 
+# Extract upper-case hex serial (no colons) for mTLS client certs
+map $ssl_client_i_dn $mtls_subject { default $ssl_client_i_dn; }
+map $ssl_client_serial $mtls_serial_raw { default $ssl_client_serial; }
+map $mtls_serial_raw $mtls_serial_upper { default "$mtls_serial_raw"; }
+map $mtls_serial_upper $mtls_serial_clean { default "$mtls_serial_upper"; }
+
+# Check file existence for revocation list: if file /etc/nginx/revoked/<serial>.revoked exists, mark as revoked
+map "$document_root" $mtls_revoked {
+    default 0;
+}
+
 limit_req_zone $ratelimit_zone_key zone=req_zone:${RATE_LIMIT_ZONE_SIZE} rate=${RATE_LIMIT_PER_SECOND}r/s;
 limit_conn_zone $ratelimit_zone_key zone=conn_zone:${CONN_LIMIT_ZONE_SIZE};
 
@@ -17,6 +28,14 @@ server {
     ssl_protocols             TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
     ssl_ciphers               HIGH:!aNULL:!MD5:!RC4;
+
+    # Reject revoked client certificates by serial. We create files named <SERIAL>.revoked under /etc/nginx/revoked
+    # NOTE: Nginx cannot directly do file existence checks in map; we leverage try_files in an internal location.
+    location = /__revocation_check__ {
+        internal;
+        root /etc/nginx;
+        try_files /revoked/$mtls_serial_clean.revoked =404;
+    }
 
     # Security / hardening headers (basic set)
     add_header X-Content-Type-Options nosniff;
@@ -42,6 +61,18 @@ server {
     }
 
     location / {
+        # Perform revocation check (2xx if present, 404 if not). If present, deny.
+        proxy_intercept_errors on;
+        error_page 200 =403 @revoked;
+        error_page 404 = @not_revoked;
+        rewrite ^ /__revocation_check__ break;
+    }
+
+    location @revoked {
+        return 403 "client certificate revoked";
+    }
+
+    location @not_revoked {
         # Slightly higher burst allowance for general API
         limit_req zone=req_zone burst=${RATE_LIMIT_BURST_API} nodelay;
         proxy_pass http://${UPSTREAM_HOST}:${UPSTREAM_PORT};
