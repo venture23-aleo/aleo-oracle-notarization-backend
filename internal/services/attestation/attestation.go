@@ -1,7 +1,10 @@
 package attestation
 
 import (
+	"net/url"
+	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
@@ -193,13 +196,13 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 	}
 
 	for key,value := range ar.RequestHeaders {
-		if strings.ContainsAny(key, "\r\n") {
+		if !validateHeaderField(key) {
 			return appErrors.ErrInvalidHeaderKey
 		}
 
-		if strings.ContainsAny(value, "\r\n") {
+		if !validateHeaderField(value) {
 			return appErrors.ErrInvalidHeaderValue
-		}
+		}		
 	}
 
 	return nil
@@ -216,4 +219,42 @@ func (ar *AttestationRequest) MaskUnacceptedHeaders() {
 		}
 	}
 	ar.RequestHeaders = finalHeaders
+}
+
+var (
+	// exclude control characters except for HT(0x09)
+	reControl = regexp.MustCompile(`[\x00-\x08\x0a-\x1f]`)
+
+	// percent-encoded CR/LF with repeated %25 prefixes:
+	rePercentNested = regexp.MustCompile(`(?i)%(?:25)*0[da]`)
+
+	// unicode-style escapes: %u000d, \u000d, optionally with fewer zeros
+	reUnicodeEscape = regexp.MustCompile(`(?i)(?:\\u0*0*(?:0d|0a)|%(?:25)*u0*0*(?:0d|0a))`)
+
+	// encoded slash rn: %255Cr, %255Cn, %255C%255Cr, %255C%255Cr%255Cn, %255C%255Cr%255Cn%255C%255Cr, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn%255C%255Cr, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn%255C%255Cr%255C%255Cn
+	reEncodedSlashRN = regexp.MustCompile(`(?i)%(?:25)+5C[rn]`)
+)
+
+// validateHeaderField returns true if the field is safe to use as an HTTP header key or value.
+func validateHeaderField(field string) (bool) {
+	if field == "" || !utf8.ValidString(field) {
+		return false
+	}
+
+	field = strings.ToLower(field)
+
+	if reControl.MatchString(field) || rePercentNested.MatchString(field) || reUnicodeEscape.MatchString(field) || reEncodedSlashRN.MatchString(field) {
+		return false
+	}
+
+	unescapedField, err := url.QueryUnescape(field)
+	if err != nil {
+		return false
+	}
+
+	if reControl.MatchString(unescapedField) || rePercentNested.MatchString(unescapedField) || reUnicodeEscape.MatchString(unescapedField) || reEncodedSlashRN.MatchString(unescapedField) {
+		return false
+	}
+
+	return true
 }
