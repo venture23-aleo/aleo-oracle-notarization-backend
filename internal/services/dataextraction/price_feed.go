@@ -263,13 +263,13 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice, precision uint, toke
 	tolUpper := new(big.Rat).Mul(medianPrice, new(big.Rat).Add(big.NewRat(1, 1), tokenToleranceFraction))
 
 	lower := new(big.Rat)
-	if madLower.Cmp(tolLower) < 0 {
+	if tolLower.Cmp(madLower) < 0 {
 		lower.Set(madLower)
 	} else {
 		lower.Set(tolLower)
 	}
 	upper := new(big.Rat)
-	if madUpper.Cmp(tolUpper) > 0 {
+	if tolUpper.Cmp(madUpper) > 0 {
 		upper.Set(madUpper)
 	} else {
 		upper.Set(tolUpper)
