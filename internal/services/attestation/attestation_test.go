@@ -806,7 +806,7 @@ func createMockSGXQuote(reportData []byte, debug bool) []byte {
 }
 
 
-func TestValidateHeaderField(t *testing.T) {
+func TestValidateHeaderValue(t *testing.T) {
 	testCases := []struct {
 		name     string
 		field    string
@@ -902,12 +902,40 @@ func TestValidateHeaderField(t *testing.T) {
 		{name: "percent as a text", field: "50% completed", expected: true},
 		{name: "normal header value", field: "normal header value", expected: true},
 		{name: "invalid utf-8", field: "\xff\x61\x62", expected: false},
+		{name: "html char ref cr", field: "&#13;", expected: false},
+		{name: "html char ref cr", field: "&#x0d;", expected: false},
+		{name: "html char ref cr", field: "&#x0D;", expected: false},
+		{name: "html char ref lf", field: "&#10;", expected: false},
+		{name: "html char ref lf", field: "&#x0a;", expected: false},
+		{name: "html char ref lf", field: "&#x0A;", expected: false},
+		{name: "multiple percent", field: "%3%250e", expected: true},
 	}
 
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			assert.Equal(t, testCase.expected, validateHeaderValue(testCase.field))
+			assert.Equal(t, testCase.expected, isValidHeaderValue(testCase.field))
+		})
+	}
+}
+
+
+func TestValidateHeaderKey(t *testing.T) {
+	testCases := []struct {
+		name     string
+		field    string
+		expected bool
+	}{
+		{name: "valid header key", field: "Content-Type", expected: true},
+		{name: "invalid header key", field: "Content-Type\r\n", expected: false},
+		{name: "invalid header key", field: "Content-Type\n", expected: false},
+		{name: "invalid header key", field: "Content-Type\r", expected: false},
+		{name: "invalid header key", field: "", expected: false},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.expected, isValidHeaderKey(testCase.field))
 		})
 	}
 }
