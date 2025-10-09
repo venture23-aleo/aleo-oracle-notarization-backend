@@ -271,18 +271,9 @@ revoke_client() {
   [[ -n $CN ]] || { err "--cn required"; exit 1; }
   local cert="$CLIENTS_DIR/$CN/client.crt"
   [[ -f $cert ]] || { err "Client not found"; exit 1; }
-  local fp serial
-  fp=$(fingerprint "$cert")
-  serial=$(openssl x509 -in "$cert" -noout -serial | cut -d'=' -f2 | tr '[:lower:]' '[:upper:]')
-  # Write by CN (legacy) and by SERIAL (used by nginx check)
+  local fp; fp=$(fingerprint "$cert")
   echo "$fp" > "$REVOKED_DIR/${CN}.revoked"
-  echo "$fp" > "$REVOKED_DIR/${serial}.revoked"
-  # Mark meta as revoked if present
-  local meta="$CLIENTS_DIR/$CN/meta.json"
-  if command -v jq >/dev/null 2>&1 && [[ -f $meta ]]; then
-    tmp="$meta.tmp"; jq '.revoked=true | .serial="'$serial'"' "$meta" > "$tmp" && mv "$tmp" "$meta"
-  fi
-  succ "Client $CN revoked (serial $serial, fingerprint $fp)."
+  succ "Client $CN revoked (fingerprint $fp). Implement CRL/OCSP to enforce."
 }
 
 list_clients() {

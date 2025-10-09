@@ -27,7 +27,6 @@ CERT_DIR=/etc/nginx/certs
 SERVER_CRT=$CERT_DIR/server.crt
 SERVER_KEY=$CERT_DIR/server.key
 CA_CRT=$CERT_DIR/ca.crt
-REVOKED_DIR=/etc/nginx/revoked
 
 if [ ! -f "$SERVER_CRT" ] || [ ! -f "$SERVER_KEY" ]; then
   echo "[FATAL] Missing server certificate or key in $CERT_DIR; expected server.crt & server.key" >&2
@@ -44,11 +43,6 @@ if [ ! -f "$CA_CRT" ]; then
   echo "[FATAL] Missing CA certificate (ca.crt) for client verification." >&2
   ls -l "$CERT_DIR" >&2 || true
   exit 1
-fi
-
-# Ensure revoked directory is present (read-only mount expected from compose)
-if [ ! -d "$REVOKED_DIR" ]; then
-  echo "[WARN] Revocation directory $REVOKED_DIR not found. Revocation checks will accept all clients."
 fi
 
 echo ">> Rendering Nginx configuration from template..."

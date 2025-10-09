@@ -1,0 +1,17 @@
+{
+    "name": "ts-mtls-client",
+    "version": "1.0.0",
+    "private": true,
+    "type": "commonjs",
+    "scripts": {
+        "start": "ts-node src/mtls-client.ts"
+    },
+    "dependencies": {
+        "axios": "^1.7.7"
+    },
+    "devDependencies": {
+        "@types/node": "^22.7.4",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.5.4"
+    }
+}
