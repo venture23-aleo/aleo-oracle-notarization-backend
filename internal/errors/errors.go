@@ -137,6 +137,8 @@ var (
 	ErrSymbolMismatch          = NewAppError(4014, "data extraction error: symbol mismatch")
 	ErrParsingTimestamp        = NewAppError(4015, "data extraction error: failed to parse timestamp")
 	ErrTimestampTooOld         = NewAppError(4016, "data extraction error: timestamp too old")
+	ErrMaxResponseBodySizeExceeded = NewAppError(4018, "data extraction error: response body size exceeds the allowed limit")
+	ErrReadingResponseBody         = NewAppError(4019, "data extraction error: failed to read the response body")
 
 	// =============================================================================
 	// ENCODING ERRORS (5000-5999)

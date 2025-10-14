@@ -232,6 +232,11 @@ Data extraction errors occur during HTTP requests, HTML/JSON parsing, and select
 | `4011` | `ErrParsingFloatValue` | Extracted value expected to be float but failed to parse as float | 500 |
 | `4012` | `ErrParsingIntValue` | Extracted value expected to be int but failed to parse as int | 500 |
 | `4013` | `ErrEmptyAttestationData` | Extracted attestation data is empty | 400 |
+| `4014` | `ErrSymbolMismatch` | Symbol mismatch | 400 |
+| `4015` | `ErrParsingTimestamp` | Failed to parse timestamp | 500 |
+| `4016` | `ErrTimestampTooOld` | Timestamp too old | 400 |
+| `4018` | `ErrMaxResponseBodySizeExceeded` | Response body size exceeds the allowed limit | 413 |
+| `4019` | `ErrReadingResponseBody` | Failed to read the response body | 500 |
 
 ## 5. ENCODING ERRORS (5000-5999)
 
