@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
@@ -297,7 +298,7 @@ func TestExtractDataFromTargetURL_ValidRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := ExtractDataFromTargetURL(context.Background(), testCase.request)
+			result, err := ExtractDataFromTargetURL(context.Background(), testCase.request, time.Now().Unix())
 			assert.Nil(t, err)
 			if testCase.checkAttestationData {
 				assert.Equal(t, testCase.expectedAttestationData, result)
@@ -350,7 +351,7 @@ func TestExtractDataFromTargetURL_InvalidRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := ExtractDataFromTargetURL(context.Background(), testCase.request)
+			result, err := ExtractDataFromTargetURL(context.Background(), testCase.request, time.Now().Unix())
 			assert.NotNil(t, err)
 			assert.Equal(t, testCase.expectedError, err)
 			if testCase.checkAttestationData {

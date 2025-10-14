@@ -133,7 +133,7 @@ func TestExtractDataFromHTML_WithValidRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := ExtractDataFromTargetURL(context.Background(), testCase.attestationRequest)
+			result, err := ExtractDataFromTargetURL(context.Background(), testCase.attestationRequest, 0)
 			assert.Nil(t, err)
 
 			// For JSON responses, compare the parsed structures
@@ -235,7 +235,7 @@ func TestExtractDataFromHTML_WithInvalidRequest(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := ExtractDataFromTargetURL(context.Background(), testCase.attestationRequest)
+			_, err := ExtractDataFromTargetURL(context.Background(), testCase.attestationRequest, 0)
 			assert.Equal(t, testCase.expectedPayload, err)
 		})
 	}

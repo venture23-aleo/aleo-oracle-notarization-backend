@@ -97,7 +97,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 
 	// Fetch the data from the attestation request.
 	extractStart := time.Now()
-	extractDataResult, err := data_extraction.ExtractDataFromTargetURL(ctx, attestationRequest)
+	extractDataResult, err := data_extraction.ExtractDataFromTargetURL(ctx, attestationRequest, timestamp)
 	extractDuration := time.Since(extractStart).Seconds()
 
 	// Check if the error is not nil.
