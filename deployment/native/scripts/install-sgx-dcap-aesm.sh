@@ -4,6 +4,8 @@ set -euo pipefail
 
 readonly DEPLOYMENT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 readonly QCNL_CONFIG_FILE=${DEPLOYMENT_DIR}/inputs/sgx_default_qcnl.conf
+readonly SGX_DCAP_VERSION=1.23.100.0
+readonly SGX_DCAP_VERSION_FULL=${SGX_DCAP_VERSION}-$(lsb_release -sc)1
 
 # Add Intel SGX repository
 echo "[+] Adding Intel SGX repository..."
@@ -15,8 +17,8 @@ echo "[+] Updating package list..."
 sudo apt-get update -y
 
 echo "[+] Installing Intel SGX DCAP libraries..."
-sudo apt-get install -y libsgx-dcap-default-qpl  libsgx-dcap-ql 
 
+sudo apt-get install -y libsgx-dcap-default-qpl=${SGX_DCAP_VERSION_FULL} libsgx-dcap-ql=${SGX_DCAP_VERSION_FULL}
 echo "[+] Copying default QCNL configuration file..."
 sudo cp $QCNL_CONFIG_FILE /etc/sgx_default_qcnl.conf
 
