@@ -42,6 +42,10 @@ func main() {
 	// 5. Create HTTP server
 	notarizationServer, metricsServer := server.NewServer()
 
+	// Disable keep-alive to prevent connection reuse
+	notarizationServer.SetKeepAlivesEnabled(false)
+	metricsServer.SetKeepAlivesEnabled(false)
+
 	// Create a channel to listen for server errors
 	serverErr := make(chan error, 2)
 
