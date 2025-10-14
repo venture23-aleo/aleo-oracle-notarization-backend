@@ -110,6 +110,13 @@ Validation errors occur when input data fails to meet the required format, struc
 | `1031` | `ErrInvalidRequestMethodForPriceFeed` | Request method expected to be GET for price feed requests | 400 |
 | `1032` | `ErrInvalidSelectorForPriceFeed` | Selector expected to be weightedAvgPrice for price feed requests | 400 |
 
+### Headers Validation
+
+| Code | Error Name | Description | HTTP Status |
+|------|------------|-------------|-------------|
+| `1033` | `ErrInvalidHeaderKey` | Invalid header key | 400 |
+| `1034` | `ErrInvalidHeaderValue` | Invalid header value | 400 |
+
 ## 2. ENCLAVE ERRORS (2000-2999)
 
 Enclave errors occur during SGX enclave operations, including quote generation, target info handling, and report data management.
