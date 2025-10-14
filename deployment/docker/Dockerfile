@@ -17,7 +17,7 @@ COPY . .
 
 
 # Build the statically linked Go binary
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -buildvcs=false -o ${APP} ./cmd/server
+RUN CGO_ENABLED=0 go build -gcflags=all=-spectre=all -asmflags=all=-spectre=all -trimpath -ldflags="-s -w" -buildvcs=false -o ${APP} ./cmd/server
 
 # =============================
 # Stage 2: Gramine SGX Runtime
