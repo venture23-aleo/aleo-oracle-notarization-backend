@@ -192,4 +192,5 @@ var (
 	ErrInternal               = NewAppError(8001, "internal error: unexpected failure occurred")
 	ErrGeneratingRandomNumber = NewAppError(8002, "internal error: failed to generate random number")
 	ErrJSONEncoding           = NewAppError(8003, "internal error: failed to encode data to JSON")
+	ErrRoughtimeServerError   = NewAppError(8004, "internal error: failed to get timestamp from roughtime server")
 )
