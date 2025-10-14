@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -22,8 +23,8 @@ import (
 // ExchangePrice represents a price from a single exchange
 type ExchangePrice struct {
 	Exchange string  `json:"exchange"` // Exchange name.
-	Price    float64 `json:"price"`    // Price.
-	Volume   float64 `json:"volume"`   // Volume.
+	Price    string  `json:"price"`    // Price.
+	Volume   string  `json:"volume"`   // Volume.
 	Token    string  `json:"token"`    // Token.
 	Symbol   string  `json:"symbol"`   // Symbol.
 }
@@ -169,35 +170,47 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 }
 
 // CalculateVolumeWeightedAverage calculates the volume-weighted average price
-func CalculateVolumeWeightedAverage(prices []ExchangePrice) (float64, float64, int) {
+func CalculateVolumeWeightedAverage(prices []ExchangePrice) (*big.Rat, *big.Rat, int) {
 	if len(prices) == 0 {
-		return 0, 0, 0
+		return nil, nil, 0
 	}
 
-	var totalVolume float64
-	var weightedSum float64
+	totalVolume := big.NewRat(0, 1)
+	weightedSum := big.NewRat(0, 1)
 	exchanges := make(map[string]bool)
 
-	for _, price := range prices {
-		if price.Price > 0 && price.Volume > 0 {
-			weightedSum += price.Price * price.Volume
-			totalVolume += price.Volume
-			if _, exists := exchanges[price.Exchange]; !exists {
-				exchanges[price.Exchange] = true
-			}
+	for _, p := range prices {
+		if p.Price == "" || p.Volume == "" {
+			continue
+		}
+
+		volumeRat, ok := new(big.Rat).SetString(p.Volume)
+		if !ok || volumeRat.Sign() <= 0 {
+			continue
+		}
+
+		priceRat, ok := new(big.Rat).SetString(p.Price)
+		if !ok || priceRat.Sign() <= 0 {
+			continue
+		}
+
+		weightedSum.Add(weightedSum, priceRat.Mul(priceRat, volumeRat))
+		totalVolume.Add(totalVolume, volumeRat)
+		if _, exists := exchanges[p.Exchange]; !exists {
+			exchanges[p.Exchange] = true
 		}
 	}
 
-	if totalVolume == 0 {
-		return 0, 0, 0
+	if totalVolume.Sign() <= 0 {
+		return nil, nil, 0
 	}
 
-	volumeWeightedAvg := weightedSum / totalVolume
+	volumeWeightedAvg := new(big.Rat).Quo(weightedSum, totalVolume)
 	return volumeWeightedAvg, totalVolume, len(exchanges)
 }
 
 // GetPriceFeed fetches and calculates the volume-weighted average price for a given token
-func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string) (*PriceFeedResult, *appErrors.AppError) {
+func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, precision uint) (*PriceFeedResult, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	exchanges, exists := c.tokenExchanges[strings.ToUpper(tokenName)]
@@ -285,10 +298,13 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string) (*
 		return nil, appErrors.ErrInsufficientExchangeData
 	}
 
+	volumeWeightAvgStr := Truncate(volumeWeightedAvg, int(precision))
+	totalVolumeStr := Truncate(totalVolume, int(precision))
+
 	return &PriceFeedResult{
 		Token:             strings.ToUpper(tokenName),
-		VolumeWeightedAvg: strconv.FormatFloat(volumeWeightedAvg, 'f', -1, 64),
-		TotalVolume:       strconv.FormatFloat(totalVolume, 'f', -1, 64),
+		VolumeWeightedAvg: volumeWeightAvgStr,
+		TotalVolume:       totalVolumeStr,
 		ExchangeCount:     exchangeCount,
 		Timestamp:         time.Now().Unix(),
 		ExchangePrices:    exchangePrices,
@@ -312,7 +328,7 @@ func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationR
 	reqLogger := logger.FromContext(ctx)
 
 	// Get the price feed data
-	result, appErr := c.GetPriceFeed(ctx, token)
+	result, appErr := c.GetPriceFeed(ctx, token, attestationRequest.EncodingOptions.Precision)
 
 	if appErr != nil {
 		reqLogger.Error("Error getting price feed for ", "token", token, "error", appErr)
@@ -325,19 +341,13 @@ func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationR
 		return ExtractDataResult{}, appErrors.ErrEncodingPriceFeedData
 	}
 
-	// For price feeds, always use weightedAvgPrice (volume-weighted average price)
-	var valueStr string = result.VolumeWeightedAvg
-
-	formattedAttestationData, appErr := formatAttestationData(ctx, valueStr, attestationRequest.EncodingOptions.Value, attestationRequest.EncodingOptions.Precision)
-	if appErr != nil {
-		return ExtractDataResult{}, appErr
-	}
+	attestationData := result.VolumeWeightedAvg
 
 	status = "success"
 
 	return ExtractDataResult{
 		ResponseBody:    string(jsonBytes),
-		AttestationData: formattedAttestationData,
+		AttestationData: attestationData,
 		StatusCode:      http.StatusOK,
 	}, nil
 }
