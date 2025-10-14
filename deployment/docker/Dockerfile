@@ -51,4 +51,3 @@ RUN --mount=type=secret,id=gramine-private-key,target=/tmp/private-key.pem \
 
 ENV APP=${APP}
 ENTRYPOINT ["./entrypoint.sh"]
-
