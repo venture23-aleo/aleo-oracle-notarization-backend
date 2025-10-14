@@ -87,6 +87,8 @@ var (
 	ErrInvalidEncodingOptionForPriceFeed      = NewAppError(1030, "validation error: invalid encoding option. expected: float for price feed requests")
 	ErrInvalidRequestMethodForPriceFeed       = NewAppError(1031, "validation error: requestMethod expected to be GET for price feed requests")
 	ErrInvalidSelectorForPriceFeed            = NewAppError(1032, "validation error: selector expected to be weightedAvgPrice for price feed requests")
+	ErrInvalidHeaderKey                       = NewAppError(1033, "validation error: invalid header key")
+	ErrInvalidHeaderValue                     = NewAppError(1034, "validation error: invalid header value")
 
 	// =============================================================================
 	// ENCLAVE ERRORS (2000-2999)
@@ -132,6 +134,9 @@ var (
 	ErrParsingFloatValue       = NewAppError(4011, "data extraction error: extracted value expected to be float but failed to parse as float")
 	ErrParsingIntValue         = NewAppError(4012, "data extraction error: extracted value expected to be int but failed to parse as int")
 	ErrEmptyAttestationData    = NewAppError(4013, "data extraction error: extracted attestation data is empty")
+	ErrSymbolMismatch          = NewAppError(4014, "data extraction error: symbol mismatch")
+	ErrParsingTimestamp        = NewAppError(4015, "data extraction error: failed to parse timestamp")
+	ErrTimestampTooOld         = NewAppError(4016, "data extraction error: timestamp too old")
 
 	// =============================================================================
 	// ENCODING ERRORS (5000-5999)
@@ -190,4 +195,5 @@ var (
 	ErrGeneratingRandomNumber = NewAppError(8002, "internal error: failed to generate random number")
 	ErrJSONEncoding           = NewAppError(8003, "internal error: failed to encode data to JSON")
 	ErrAleoContext            = NewAppError(8004, "internal error: failed to initialize Aleo context")
+	ErrRoughtimeServerError   = NewAppError(8005, "internal error: failed to get timestamp from roughtime server")
 )

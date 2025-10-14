@@ -70,6 +70,7 @@ const (
 	AleoTokenID              int    = 8
 	AttestationDataSizeLimit int    = 1024 * 3
 	PriceFeedSelector        string = "weightedAvgPrice"
+	MaxAllowedTimeDiff       int64  = 600 // 10 minutes in seconds
 
 	// Attestation Constants
 	RequestMethodGET      string = "GET"

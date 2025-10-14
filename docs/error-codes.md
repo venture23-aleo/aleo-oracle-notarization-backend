@@ -110,6 +110,13 @@ Validation errors occur when input data fails to meet the required format, struc
 | `1031` | `ErrInvalidRequestMethodForPriceFeed` | Request method expected to be GET for price feed requests | 400 |
 | `1032` | `ErrInvalidSelectorForPriceFeed` | Selector expected to be weightedAvgPrice for price feed requests | 400 |
 
+### Headers Validation
+
+| Code | Error Name | Description | HTTP Status |
+|------|------------|-------------|-------------|
+| `1033` | `ErrInvalidHeaderKey` | Invalid header key | 400 |
+| `1034` | `ErrInvalidHeaderValue` | Invalid header value | 400 |
+
 ## 2. ENCLAVE ERRORS (2000-2999)
 
 Enclave errors occur during SGX enclave operations, including quote generation, target info handling, and report data management.
@@ -373,7 +380,7 @@ Internal errors occur due to unexpected system failures or configuration issues.
 | `8002` | `ErrGeneratingRandomNumber` | Failed to generate random number | 500 |
 | `8003` | `ErrJSONEncoding` | Failed to encode data to JSON | 500 |
 | `8004` | `ErrAleoContext` | Failed to initialize Aleo context | 500 |
-
+| `8005` | `ErrRoughtimeServerError` | Failed to get timestamp from roughtime server | 500 |
 
 ## Usage Examples
 

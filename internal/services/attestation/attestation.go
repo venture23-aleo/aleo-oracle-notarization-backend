@@ -1,7 +1,10 @@
 package attestation
 
 import (
+	"net/url"
+	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
@@ -27,7 +30,6 @@ type AttestationRequest struct {
 
 	EncodingOptions encoding.EncodingOptions `json:"encodingOptions"` // The encoding options.
 
-	DebugRequest bool `json:"debugRequest,omitempty"` // The debug request.
 }
 
 // AttestationResponse is the response body for the attestation service.
@@ -69,6 +71,31 @@ type DebugAttestationResponse struct {
 	ResponseStatusCode int `json:"responseStatusCode"` // The response status code.
 
 	AttestationData string `json:"attestationData"` // The attestation data.
+}
+
+func (ar *AttestationRequest) Normalize() AttestationRequest {
+
+	clone := *ar;
+
+	clone.Url = strings.ToLower(strings.TrimSpace(clone.Url))
+	clone.RequestMethod = strings.ToUpper(strings.TrimSpace(clone.RequestMethod))
+	clone.ResponseFormat = strings.ToLower(strings.TrimSpace(clone.ResponseFormat))
+	clone.EncodingOptions.Value = strings.ToLower(strings.TrimSpace(clone.EncodingOptions.Value))
+
+	clone.RequestHeaders = make(map[string]string)
+
+	for headerName, headerValue := range ar.RequestHeaders {	
+		trimmedHeaderName := strings.ToLower(strings.TrimSpace(headerName))
+		trimmedHeaderValue := strings.TrimSpace(headerValue)
+		clone.RequestHeaders[trimmedHeaderName] = trimmedHeaderValue
+	}
+
+	if clone.HTMLResultType != nil {
+		htmlResultType := strings.ToLower(strings.TrimSpace(*ar.HTMLResultType))
+		clone.HTMLResultType = &htmlResultType
+	}
+
+	return clone
 }
 
 // Validate validates the attestation request and checks if target is whitelisted.
@@ -163,7 +190,7 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 	}
 
 	// Check if the URL is invalid.
-	if strings.HasPrefix(ar.Url, "http://") || strings.HasPrefix(ar.Url, "https://") {
+	if strings.HasPrefix(strings.ToLower(ar.Url), "http://") || strings.HasPrefix(strings.ToLower(ar.Url), "https://") {
 		return appErrors.ErrInvalidTargetURL
 	}
 
@@ -192,6 +219,15 @@ func (ar *AttestationRequest) Validate() *appErrors.AppError {
 		}
 	}
 
+	for key,value := range ar.RequestHeaders {
+		if !isValidHeaderKey(key) {
+			return appErrors.ErrInvalidHeaderKey
+		}
+		if !isValidHeaderValue(value) {
+			return appErrors.ErrInvalidHeaderValue
+		}		
+	}
+
 	return nil
 }
 
@@ -206,4 +242,84 @@ func (ar *AttestationRequest) MaskUnacceptedHeaders() {
 		}
 	}
 	ar.RequestHeaders = finalHeaders
+}
+
+var (
+	// exclude control characters except for HT(0x09) for header value
+	reControl = regexp.MustCompile(`[\x00-\x08\x0a-\x1f\x7f]`)
+
+	// percent-encoded CR/LF with repeated %25 prefixes:
+	rePercentNested = regexp.MustCompile(`(?i)%(?:25)*0[da]`)
+
+	// unicode-style escapes: %u000d, \u000d, optionally with fewer zeros
+	reUnicodeEscape = regexp.MustCompile(`(?i)(?:\\u0*0*(?:0d|0a)|%(?:25)*u0*0*(?:0d|0a))`)
+
+	// encoded slash rn: %5Cr %255Cr, %255Cn, %255C%255Cr, %255C%255Cr%255Cn, %255C%255Cr%255Cn%255C%255Cr, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn%255C%255Cr, %255C%255Cr%255Cn%255C%255Cr%255C%255Cn%255C%255Cr%255C%255Cn
+	reEncodedSlashRN = regexp.MustCompile(`(?i)%(?:25)*5C[rn]`)
+
+	// Single regex to match HTML character references for carriage return (&#13;, &#x0d;, &#x0D;) and line feed (&#10;, &#x0a;, &#x0A;)
+	reHTMLCharRefCRLF = regexp.MustCompile(`(?i)&#(?:0*13|x0*0d|0*10|x0*0a);`)
+
+	// header-name token per RFC 7230 tchar: ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+	reHeaderKey = regexp.MustCompile(`^[!#$%&'*+\-.^_` + "`" + `|~0-9A-Za-z]+$`)
+)
+
+
+// isValidHeaderKey returns true if the key is safe to use as an HTTP header key.
+func isValidHeaderKey(key string) (bool) {
+	// check if the key is empty
+	if key == "" {
+		return false
+	}
+
+	// check if the key contains CR or LF
+	if strings.ContainsAny(key, "\r\n") {
+		return false
+	}
+
+	// check if the key is a valid token
+	if !reHeaderKey.MatchString(key) {
+		return false
+	}
+
+	return true
+}
+
+// isValidHeaderValue returns true if the value is safe to use as an HTTP header value.
+func isValidHeaderValue(value string) (bool) {
+	const maxUnescapeRounds = 3
+	cur := value
+
+	for i := 0; i < maxUnescapeRounds; i++ {
+
+		if strings.ContainsAny(cur, "\r\n") {
+				return false
+		}
+
+		// Reject control characters
+		if reControl.MatchString(cur) {
+			return false
+		}
+
+		// Reject obfuscation patterns (percent-nested, unicode escapes, encoded slash RN, HTML char refs)
+		if rePercentNested.MatchString(cur) ||
+			reUnicodeEscape.MatchString(cur) ||
+			reEncodedSlashRN.MatchString(cur) ||
+			reHTMLCharRefCRLF.MatchString(cur) {
+			return false
+		}
+
+		if !utf8.ValidString(cur) {
+			return false
+		}
+
+		// Attempt URL unescape for next iteration
+		unescaped, err := url.PathUnescape(cur)
+		if err != nil || unescaped == cur {
+			break // stop if unescape fails or nothing changed
+		}
+		cur = unescaped
+	}
+
+	return true
 }

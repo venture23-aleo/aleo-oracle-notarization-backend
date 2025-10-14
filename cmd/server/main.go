@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,19 +18,19 @@ func main() {
 	// 1. Initialize logger
 	appConfig, err := configs.GetAppConfigWithError()
 	if err != nil {
-		log.Fatalf("Failed to get app config: %v", err)
+		logger.Fatal("Failed to get app config: %v", err)
 	}
 	logger.InitLogger(appConfig.LogLevel)
 
 	// 2. Validate configuration at startup
 	logger.Debug("Validating configuration...")
 	if err := configs.ValidateConfigs(); err != nil {
-		log.Fatalf("Configuration validation failed: %v", err)
+		logger.Fatal("Configuration validation failed: %v", err)
 	}
 
 	// 3. Initialize Aleo context
 	if err := aleoUtil.InitAleoContext(); err != nil {
-		log.Fatalf("Failed to initialize Aleo context: %v", err)
+		logger.Fatal("Failed to initialize Aleo context: %v", err)
 	}
 
 	// 4. Start system metrics collector
@@ -41,6 +40,10 @@ func main() {
 
 	// 5. Create HTTP server
 	notarizationServer, metricsServer := server.NewServer()
+
+	// Disable keep-alive to prevent connection reuse
+	notarizationServer.SetKeepAlivesEnabled(false)
+	metricsServer.SetKeepAlivesEnabled(false)
 
 	// Create a channel to listen for server errors
 	serverErr := make(chan error, 2)
