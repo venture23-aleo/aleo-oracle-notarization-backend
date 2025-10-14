@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	configs "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-	httpUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/httputil"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
@@ -74,6 +73,7 @@ func NewPriceFeedClient() *PriceFeedClient {
 func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryablehttp.Client {
 	// Create a new HTTP client with the TLS configuration
 	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
 		InsecureSkipVerify: false,
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 			if len(verifiedChains) == 0 {

@@ -51,9 +51,7 @@ trusted_files= [
   "file:/etc/resolv.conf",
   "file:/etc/hosts",
   "file:/etc/ssl/",
-  "file:/usr/lib/ssl/"
-]
-allowed_files = [
+  "file:/usr/lib/ssl/",
   "file:${INPUTS_DIR}/rootCAs/"
 ]
 isvprodid = 1

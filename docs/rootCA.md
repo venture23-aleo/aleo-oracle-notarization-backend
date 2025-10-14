@@ -17,8 +17,9 @@
 
 ## Crypto
 
-- Root CA: ISRG Root X1
-- Certificate: https://letsencrypt.org/certificates
+- Root CA: GTS Root R4
+- Certificate: https://support.globalsign.com/ca-certificates/globalsign-root-certificates
+
 
 ## MEXC
 
