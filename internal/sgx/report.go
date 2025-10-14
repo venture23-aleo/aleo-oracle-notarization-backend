@@ -75,14 +75,14 @@ func GenerateSGXReport() ([]byte, *appErrors.AppError) {
 	// Write the target info to the target info path
 	if err := os.WriteFile(gramineAttestationPaths.TargetInfoPath, targetInfo, SGXFilePermissions); err != nil {
 		logger.Error("Error writing target info: ", "error", err)
-		return nil, appErrors.ErrWrittingTargetInfo
+		return nil, appErrors.ErrWritingTargetInfo
 	}
 
 	// Create and write report data
 	reportData := make([]byte, SGXReportDataSize)
 	if err := os.WriteFile(gramineAttestationPaths.UserReportDataPath, reportData, SGXFilePermissions); err != nil {
 		logger.Error("Error writing report data: ", "error", err)
-		return nil, appErrors.ErrWrittingReportData
+		return nil, appErrors.ErrWritingReportData
 	}
 
 	// Read the report from the report path

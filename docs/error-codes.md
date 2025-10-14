@@ -126,13 +126,13 @@ Enclave errors occur during SGX enclave operations, including quote generation, 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
 | `2001` | `ErrReadingTargetInfo` | Failed to read the target info | 500 |
-| `2005` | `ErrWrittingTargetInfo` | Failed to write the target info | 500 |
+| `2005` | `ErrWritingTargetInfo` | Failed to write the target info | 500 |
 
 ### Report Data Operations
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
-| `2002` | `ErrWrittingReportData` | Failed to write the report data | 500 |
+| `2002` | `ErrWritingReportData` | Failed to write the report data | 500 |
 | `2007` | `ErrReadingReport` | Failed to read the report | 500 |
 
 ### Quote Operations
@@ -185,11 +185,6 @@ Attestation errors occur during the process of creating and formatting attestati
 |------|------------|-------------|-------------|
 | `3010` | `ErrGeneratingSignature` | Failed to generate signature | 500 |
 
-### Aleo Context
-
-| Code | Error Name | Description | HTTP Status |
-|------|------------|-------------|-------------|
-| `7001` | `ErrAleoContext` | Failed to initialize Aleo context | 500 |
 
 ## 4. DATA EXTRACTION ERRORS (4000-4999)
 
@@ -247,35 +242,35 @@ Encoding errors occur during data encoding, buffer writing, and format conversio
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
 | `5001` | `ErrEncodingAttestationData` | Failed to encode attestation data | 500 |
-| `5007` | `ErrWrittingAttestationData` | Failed to write attestation data to buffer | 500 |
+| `5007` | `ErrWritingAttestationData` | Failed to write attestation data to buffer | 500 |
 
 ### Response Format Encoding
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
 | `5002` | `ErrEncodingResponseFormat` | Failed to encode response format | 500 |
-| `5012` | `ErrWrittingResponseFormat` | Failed to write response format to buffer | 500 |
+| `5012` | `ErrWritingResponseFormat` | Failed to write response format to buffer | 500 |
 
 ### Encoding Options
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
 | `5003` | `ErrEncodingEncodingOptions` | Failed to encode encoding options | 500 |
-| `5014` | `ErrWrittingEncodingOptions` | Failed to write encoding options to buffer | 500 |
+| `5014` | `ErrWritingEncodingOptions` | Failed to write encoding options to buffer | 500 |
 
 ### Header Encoding
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
 | `5004` | `ErrEncodingHeaders` | Failed to encode headers | 500 |
-| `5015` | `ErrWrittingRequestHeaders` | Failed to write request headers to buffer | 500 |
+| `5015` | `ErrWritingRequestHeaders` | Failed to write request headers to buffer | 500 |
 
 ### Optional Fields Encoding
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
 | `5005` | `ErrEncodingOptionalFields` | Failed to encode optional fields | 500 |
-| `5016` | `ErrWrittingOptionalFields` | Failed to write optional headers to buffer | 500 |
+| `5016` | `ErrWritingOptionalFields` | Failed to write optional headers to buffer | 500 |
 
 ### Meta Header Preparation
 
@@ -287,11 +282,11 @@ Encoding errors occur during data encoding, buffer writing, and format conversio
 
 | Code | Error Name | Description | HTTP Status |
 |------|------------|-------------|-------------|
-| `5008` | `ErrWrittingTimestamp` | Failed to write timestamp to buffer | 500 |
-| `5009` | `ErrWrittingStatusCode` | Failed to write status code to buffer | 500 |
-| `5010` | `ErrWrittingUrl` | Failed to write url to buffer | 500 |
-| `5011` | `ErrWrittingSelector` | Failed to write selector to buffer | 500 |
-| `5013` | `ErrWrittingRequestMethod` | Failed to write request method to buffer | 500 |
+| `5008` | `ErrWritingTimestamp` | Failed to write timestamp to buffer | 500 |
+| `5009` | `ErrWritingStatusCode` | Failed to write status code to buffer | 500 |
+| `5010` | `ErrWritingUrl` | Failed to write url to buffer | 500 |
+| `5011` | `ErrWritingSelector` | Failed to write selector to buffer | 500 |
+| `5013` | `ErrWritingRequestMethod` | Failed to write request method to buffer | 500 |
 
 ### Data Validation
 
@@ -384,7 +379,8 @@ Internal errors occur due to unexpected system failures or configuration issues.
 | `8001` | `ErrInternal` | Unexpected failure occurred | 500 |
 | `8002` | `ErrGeneratingRandomNumber` | Failed to generate random number | 500 |
 | `8003` | `ErrJSONEncoding` | Failed to encode data to JSON | 500 |
-| `8004` | `ErrRoughtimeServerError` | Failed to get timestamp from roughtime server | 500 |
+| `8004` | `ErrAleoContext` | Failed to initialize Aleo context | 500 |
+| `8005` | `ErrRoughtimeServerError` | Failed to get timestamp from roughtime server | 500 |
 
 ## Usage Examples
 
