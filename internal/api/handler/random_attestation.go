@@ -57,7 +57,7 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Validate the max value: must be > 1 and ≤ 2^127
-	if max.Cmp(minMaxValue) <= 0 {
+	if max.Cmp(minMaxValue) < 0 {
 		reqLogger.Error("Max must be greater than 1", "max", maxStr)
 		metrics.RecordError("max_too_small", "random_handler")
 		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrInvalidMaxValue)
