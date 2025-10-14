@@ -51,7 +51,7 @@ func GetTokenIDFromPriceFeedURL(url string) int {
 
 // NormalizeURL adds https:// if the scheme is missing and validates the result.
 func NormalizeURL(rawURL string) (string, *appErrors.AppError) {
-	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+	if !strings.HasPrefix(strings.ToLower(rawURL), "http://") && !strings.HasPrefix(strings.ToLower(rawURL), "https://") {
 		rawURL = "https://" + rawURL
 	}
 
@@ -65,7 +65,7 @@ func NormalizeURL(rawURL string) (string, *appErrors.AppError) {
 }
 
 func GetHostnameFromURL(rawURL string) (string, *appErrors.AppError) {
-	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+	if !strings.HasPrefix(strings.ToLower(rawURL), "http://") && !strings.HasPrefix(strings.ToLower(rawURL), "https://") {
 		rawURL = "https://" + rawURL
 	}
 
@@ -80,7 +80,7 @@ func GetHostnameFromURL(rawURL string) (string, *appErrors.AppError) {
 // IsAcceptedHeader checks if a header name is in the list of allowed headers.
 func IsAcceptedHeader(header string) bool {
 	for _, h := range constants.AllowedHeaders {
-		if strings.TrimSpace(h) == header {
+		if strings.ToLower(strings.TrimSpace(h)) == header {
 			return true
 		}
 	}
@@ -99,7 +99,7 @@ func IsTargetWhitelisted(endpoint string) bool {
 	}
 
 	for _, domainName := range configs.GetWhitelistedDomains() {
-		if strings.TrimSpace(domainName) == hostname {
+		if strings.ToLower(strings.TrimSpace(domainName)) == hostname {
 			return true
 		}
 	}

@@ -41,7 +41,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	contentType := req.Header.Get("Content-Type")
 
 	// Validate Content-Type
-	if !strings.Contains(contentType, "application/json") {
+	if !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
 		reqLogger.Error("Invalid Content-Type", "content_type", contentType)
 		metrics.RecordError("invalid_content_type", "attestation_handler")
 		httpUtil.WriteJsonError(w, http.StatusUnsupportedMediaType, appErrors.ErrInvalidContentType)
@@ -72,7 +72,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	attestationRequest := attestationRequestWithDebug.AttestationRequest
+	attestationRequest := attestationRequestWithDebug.AttestationRequest.Normalize()
 
 	reqLogger.Debug("Processing attestation request", "url", attestationRequest.Url, "debug", attestationRequestWithDebug.DebugRequest)
 

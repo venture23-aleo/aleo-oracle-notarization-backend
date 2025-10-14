@@ -105,7 +105,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 
 	// Step 3: Construct the full URL. Accepting protocol scheme in the base URL for unit testing.
 	var url string
-	if strings.HasPrefix(config.BaseURL, "https://") || strings.HasPrefix(config.BaseURL, "http://") {
+	if strings.HasPrefix(strings.ToLower(config.BaseURL), "https://") || strings.HasPrefix(strings.ToLower(config.BaseURL), "http://") {
 		url = fmt.Sprintf("%s%s", config.BaseURL, endpoint)
 	} else {
 		url = fmt.Sprintf("https://%s%s", config.BaseURL, endpoint)
