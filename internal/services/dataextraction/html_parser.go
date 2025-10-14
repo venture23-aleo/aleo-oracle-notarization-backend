@@ -54,7 +54,22 @@ func ExtractDataFromHTML(ctx context.Context, attestationRequest attestation.Att
 	}
 	defer resp.Body.Close()
 
-	limitReader := io.LimitReader(resp.Body, constants.MaxResponseBodySize)
+	if resp.ContentLength != -1 && resp.ContentLength > constants.MaxResponseBodySize {
+		reqLogger.Error("Response body size is too large: ", "size", resp.ContentLength)
+		return ExtractDataResult{}, appErrors.ErrMaxResponseBodySizeExceeded
+	}
+
+	limitReader := io.LimitReader(resp.Body, constants.MaxResponseBodySize + 1)
+	body, readErr := io.ReadAll(limitReader)
+	if readErr != nil {
+		reqLogger.Error("Error reading response body: ", "error", readErr)
+		return ExtractDataResult{}, appErrors.ErrReadingResponseBody
+	}
+
+	if len(body) > constants.MaxResponseBodySize {
+		reqLogger.Error("Response body size is too large: ", "size", len(body))
+		return ExtractDataResult{}, appErrors.ErrMaxResponseBodySizeExceeded
+	}
 
 	// Parse the HTML content.
 	htmlDoc, parseErr := htmlquery.Parse(limitReader)
