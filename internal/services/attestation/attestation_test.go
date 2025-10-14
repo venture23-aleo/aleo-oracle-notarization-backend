@@ -646,7 +646,7 @@ func TestDebugAttestationResponse_Structure(t *testing.T) {
 		AttestationTimestamp: 1234567890,
 		ResponseBody:         "debug-response-body",
 		ResponseStatusCode:   200,
-		AttestationData:      "debug-attestation-data",
+		ExtractedData:      "debug-attestation-data",
 	}
 
 	assert.Equal(t, "debug-report", response.ReportType)
@@ -654,7 +654,7 @@ func TestDebugAttestationResponse_Structure(t *testing.T) {
 	assert.Equal(t, int64(1234567890), response.AttestationTimestamp)
 	assert.Equal(t, "debug-response-body", response.ResponseBody)
 	assert.Equal(t, 200, response.ResponseStatusCode)
-	assert.Equal(t, "debug-attestation-data", response.AttestationData)
+	assert.Equal(t, "debug-attestation-data", response.ExtractedData)
 }
 
 func TestOracleData_Structure(t *testing.T) {
