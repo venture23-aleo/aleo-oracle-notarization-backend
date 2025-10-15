@@ -31,7 +31,8 @@ mounts = [
   { uri = "file:/usr/lib/ssl/", path = "/usr/lib/ssl/" },
   { uri = "file:static_resolv.conf", path = "/etc/resolv.conf" },
   { uri = "file:static_hosts", path = "/etc/hosts" },
-  { uri = "file:/etc/sgx_default_qcnl.conf", path = "/etc/sgx_default_qcnl.conf" }
+  { uri = "file:/etc/sgx_default_qcnl.conf", path = "/etc/sgx_default_qcnl.conf" },
+  { uri = "file:rootCAs/", path = "/rootCAs/" },
 ]
 
 [sgx]
@@ -45,7 +46,8 @@ trusted_files= [
   "file:./static_resolv.conf",
   "file:./static_hosts",
   "file:/etc/ssl/",
-  "file:/usr/lib/ssl/"
+  "file:/usr/lib/ssl/",
+  "file:./rootCAs/"
 ]
 isvprodid = 1
 isvsvn = 1
