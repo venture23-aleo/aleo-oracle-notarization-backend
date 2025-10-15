@@ -125,7 +125,10 @@ func (m *AleoContextManager) GetAleoContext() (AleoPublicContext, *appErrors.App
 // Initialize explicitly initializes the Aleo context
 func InitAleoContext() error {
     _, err := GetAleoContext()
-    return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 
