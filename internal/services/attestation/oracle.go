@@ -1,6 +1,10 @@
 package attestation
 
 import (
+	"crypto/rand"
+	"math/big"
+	"time"
+
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	aleoUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/aleoutil"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
@@ -122,7 +126,18 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 		return "", appErrors.ErrGeneratingSignature
 	}
 
-	// Step 4: Return the signature
+	// Step 4: Introduce a small random delay to mitigate timing attacks
+	
+	jm, randErr := rand.Int(rand.Reader, big.NewInt(51))
+	if randErr != nil {
+		// rare: fallback to small deterministic jitter
+		jm = big.NewInt(25)
+	}
+
+	delayMs := 50 + int(jm.Int64())
+	time.Sleep(time.Duration(delayMs) * time.Millisecond)
+
+	// Step 5: Return the signature
 	return signature, nil
 }
 

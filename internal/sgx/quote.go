@@ -87,7 +87,7 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 	err := SecureWriteFile(GraminePseudoFilesRoot, gramineAttestationPaths.UserReportDataPath, reportData)
 	if err != nil {
 		logger.Error("Error while writing report data:", "error", err)
-		return nil, appErrors.ErrWrittingReportData
+		return nil, appErrors.ErrWritingReportData
 	}
 
 	// Step 4: Read the raw quote from the Gramine quote path.

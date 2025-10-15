@@ -154,5 +154,21 @@
         "xt.com",
         "api.gateio.ws",
         "api.mexc.com"
-    ]
+    ],
+    "roughtimeConfig": {
+        "enabled": true,
+        "retries": 3,
+        "timeoutString": "1s",
+        "serverConfig": {
+            "name": "Cloudflare-Roughtime-2",
+            "addresses": [
+                {
+                    "protocol": "udp",
+                    "address": "roughtime.cloudflare.com:2003"
+                }
+            ],
+            "publicKeyType": "ed25519",
+            "publicKeyBase64": "0GD7c3yP8xEc4Zl2zeuN2SlLvDVVocjsPSL8/Rl/7zg="
+        }
+    }
 }

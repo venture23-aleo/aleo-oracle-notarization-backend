@@ -53,8 +53,8 @@ type ReportBody struct {
 
 type SGXReport struct {
 	Body  ReportBody
-	MAC   [16]byte
 	KeyID [32]byte
+	MAC   [16]byte
 }
 
 // GenerateSGXReport generates the SGX report.
@@ -74,14 +74,14 @@ func GenerateSGXReport() ([]byte, *appErrors.AppError) {
 	// Write the target info to the target info path
 	if err := SecureWriteFile(GraminePseudoFilesRoot, gramineAttestationPaths.TargetInfoPath, targetInfo); err != nil {
 		logger.Error("Error writing target info: ", "error", err)
-		return nil, appErrors.ErrWrittingTargetInfo
+		return nil, appErrors.ErrWritingTargetInfo
 	}
 
 	// Create and write report data
 	reportData := make([]byte, SGXReportDataSize)
 	if err := SecureWriteFile(GraminePseudoFilesRoot, gramineAttestationPaths.UserReportDataPath, reportData); err != nil {
 		logger.Error("Error writing report data: ", "error", err)
-		return nil, appErrors.ErrWrittingReportData
+		return nil, appErrors.ErrWritingReportData
 	}
 
 	// Read the report from the report path
