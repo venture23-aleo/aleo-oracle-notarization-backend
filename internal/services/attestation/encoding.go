@@ -82,7 +82,11 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	var buf bytes.Buffer
 
 	// Create the position recorder.
-	recorder := positionRecorder.NewPositionRecorder(&buf, encoding.TARGET_ALIGNMENT)
+	recorder, err := positionRecorder.NewPositionRecorder(&buf, encoding.TARGET_ALIGNMENT)
+	if err != nil {
+		logger.Error("Failed to create position recorder: ", "error", err)
+		return nil, nil, appErrors.ErrInternal
+	}
 
 	// Write an empty meta header.
 	encoding.WriteWithPadding(recorder, make([]byte, encoding.TARGET_ALIGNMENT*2))
