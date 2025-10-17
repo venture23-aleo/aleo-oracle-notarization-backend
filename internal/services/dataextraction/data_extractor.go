@@ -149,7 +149,7 @@ func makeHTTPRequestToTarget(ctx context.Context, attestationRequest attestation
 
 // ExtractDataFromTargetURL fetches the data from the attestation request target URL.
 // This is the main entry point that routes to specific extractors based on the request type.
-func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
+func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestation.AttestationRequest, timestamp int64) (ExtractDataResult, *appErrors.AppError) {
 	// Get logger from context (includes request ID)
 	reqLogger := logger.FromContext(ctx)
 
@@ -157,7 +157,7 @@ func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestatio
 		reqLogger.Debug("Processing price feed request", "url", attestationRequest.Url)
 		token := common.ExtractTokenFromPriceFeedURL(attestationRequest.Url)
 		priceFeedClient := NewPriceFeedClient()
-		return priceFeedClient.ExtractPriceFeedData(ctx, attestationRequest, token)
+		return priceFeedClient.ExtractPriceFeedData(ctx, attestationRequest, token, timestamp)
 	}
 
 	switch attestationRequest.ResponseFormat {

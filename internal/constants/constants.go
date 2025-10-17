@@ -8,7 +8,7 @@ var AllowedHeaders = []string{
 	"Accept-Encoding",
 	"Accept-Language",
 	"Access-Control-Request-Method",
-	"Access-Control-Request-Header",
+	"Access-Control-Request-Headers",
 	"Cache-Control",
 	"Connection",
 	"Content-Encoding",
@@ -70,6 +70,7 @@ const (
 	AleoTokenID              int    = 8
 	AttestationDataSizeLimit int    = 1024 * 3
 	PriceFeedSelector        string = "weightedAvgPrice"
+	MaxAllowedTimeDiff       int64  = 600 // 10 minutes in seconds
 
 	// Attestation Constants
 	RequestMethodGET      string = "GET"

@@ -1,7 +1,7 @@
 
 # Makefile for Aleo Oracle Notarizer Development Environment
 
-# Pointing to env. 
+# Pointing to env.
 # If .env file does not exist, create it
 ifeq ($(wildcard .env),)
     $(shell touch .env)
@@ -31,10 +31,10 @@ export SECRETS_DIR := $(DEPLOYMENT_DIR)/secrets
 # Default target
 .PHONY: all
 all:
-	@echo ">> Please specify a target. See 'make help' for available targets."	
+	@echo ">> Please specify a target. See 'make help' for available targets."
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Test 
+# Test
 # ─────────────────────────────────────────────────────────────────────────────
 .PHONY: test
 test:
@@ -109,7 +109,7 @@ docker-setup:
 	@echo ">> Setting up docker deployment..."
 	@make -C $(DOCKER_DEPLOYMENT_DIR) docker-setup
 
-.PHONY: docker-build	
+.PHONY: docker-build
 docker-build:
 	@echo ">> Building docker deployment..."
 	@make -C $(DOCKER_DEPLOYMENT_DIR) docker-build
@@ -118,6 +118,21 @@ docker-build:
 docker-run:
 	@echo ">> Running docker deployment..."
 	@make -C $(DOCKER_DEPLOYMENT_DIR) docker-run
+
+.PHONY: docker-stop
+docker-stop:
+	@echo ">> Stopping docker deployment..."
+	@make -C $(DOCKER_DEPLOYMENT_DIR) docker-stop
+
+.PHONY: docker-logs
+docker-logs:
+	@echo ">> Showing docker logs..."
+	@make -C $(DOCKER_DEPLOYMENT_DIR) docker-logs
+
+.PHONY: docker-status
+docker-status:
+	@echo ">> Showing docker status..."
+	@make -C $(DOCKER_DEPLOYMENT_DIR) docker-status
 
 .PHONY: extract-enclave-artifacts
 extract-enclave-artifacts:
