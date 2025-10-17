@@ -112,8 +112,8 @@ regen_server() {
       --server-sans) IFS=',' read -r -a server_sans <<< "$2"; shift 2 ;;
       *) err "Unknown flag: $1"; exit 1 ;;
     esac
+  done
   write_openssl_cnf "$server_cn"
-  fi
   info "Regenerating server certificate (CN=${server_cn})"
   openssl genrsa -out "$SERVER_KEY" 2048 >/dev/null 2>&1
   openssl req -new -key "$SERVER_KEY" -out "$SERVER_CSR" -config "$OPENSSL_CNF" >/dev/null 2>&1
@@ -135,7 +135,7 @@ generate_client() {
     esac
   done
   [[ -n $CN ]] || { err "--cn required"; exit 1; }
-  local dir="$CLIENTS_DIR/$CN" key csr cert meta cfg
+  local dir="$CLIENTS_DIR/$CN" key csr cert meta
   dir="$CLIENTS_DIR/$CN"; mkdir -p "$dir"
   key="$dir/client.key"; csr="$dir/client.csr"; cert="$dir/client.crt"; meta="$dir/meta.json"
   if [[ -f $cert ]]; then
@@ -143,12 +143,12 @@ generate_client() {
     exit 1
   fi
   info "Generating client cert for $CN (ORG=${ORG} COUNTRY=${COUNTRY})"
+  openssl genrsa -out "$key" 2048 >/dev/null 2>&1
   openssl req -new -key "$key" -subj "/C=${COUNTRY}/O=${ORG}/CN=${CN}" -out "$csr" >/dev/null 2>&1
   openssl x509 -req -in "$csr" -CA "$CA_CERT" -CAkey "$CA_KEY" -CAcreateserial -out "$cert" -days "$DAYS" -sha256 >/dev/null 2>&1
-  fi
-  echo '{ "cn": '""$CN""', "fingerprint_sha256": '""$fp""', "issued_at_unix": '$(date +%s)', "expires_in_days": '$DAYS', "revoked": false }' > "$meta"
+  fp=$(fingerprint "$cert")
+  echo '{ "cn": "'"$CN"'", "fingerprint_sha256": "'"$fp"'", "issued_at_unix": '$(date +%s)', "expires_in_days": '"$DAYS"', "revoked": false }' > "$meta"
   chmod 600 "$key"; rm -f "$csr"
-  chmod 600 "$key"; rm -f "$csr" "$cfg"
   succ "Client $CN created (fingerprint $fp)"
 }
 
@@ -165,20 +165,19 @@ renew_client() {
     esac
   done
   [[ -n $CN ]] || { err "--cn required"; exit 1; }
-  local dir="$CLIENTS_DIR/$CN" key csr cert meta cfg
+  local dir="$CLIENTS_DIR/$CN" key csr cert meta
   dir="$CLIENTS_DIR/$CN"; [[ -d $dir ]] || { err "Client does not exist"; exit 1; }
   key="$dir/client.key"; csr="$dir/client.csr"; cert="$dir/client.crt"; meta="$dir/meta.json"
   info "Renewing client cert for $CN"
   openssl req -new -key "$key" -subj "/C=${COUNTRY}/O=${ORG}/CN=${CN}" -out "$csr" >/dev/null 2>&1
   openssl x509 -req -in "$csr" -CA "$CA_CERT" -CAkey "$CA_KEY" -out "$cert" -days "$DAYS" -sha256 >/dev/null 2>&1
-  fi
+  fp=$(fingerprint "$cert")
   if command -v jq >/dev/null 2>&1 && [[ -f $meta ]]; then
     tmp="$meta.tmp"; jq '.fingerprint_sha256="'$fp'" | .issued_at_unix='$(date +%s)' | .expires_in_days='$DAYS' | .revoked=false | del(.sans)' "$meta" > "$tmp" && mv "$tmp" "$meta"
   else
-    echo '{ "cn": '""$CN""', "fingerprint_sha256": '""$fp""', "issued_at_unix": '$(date +%s)', "expires_in_days": '$DAYS', "revoked": false }' > "$meta"
+    echo '{ "cn": "'"$CN"'", "fingerprint_sha256": "'"$fp"'", "issued_at_unix": '"$(date +%s)"'", "expires_in_days": '"$DAYS"', "revoked": false }' > "$meta"
   fi
   chmod 600 "$key"; rm -f "$csr"
-  chmod 600 "$key"; rm -f "$csr" "$cfg"
   succ "Client $CN renewed (fingerprint $fp)"
 }
 
