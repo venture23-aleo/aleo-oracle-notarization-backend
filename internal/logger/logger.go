@@ -1,7 +1,11 @@
+// Package logger provides structured, context-aware logging helpers used across the service.
+// It is a thin wrapper around slog with context-aware helpers and safe defaults
+// that avoid panics when the global logger is uninitialized.
 package logger
 
 import (
 	"context"
+	"io"
 	"fmt"
 	"log/slog"
 	"os"
@@ -22,6 +26,18 @@ type LogHandler struct {
 	out      *os.File
 	attrs    []slog.Attr
 	groups   []string
+}
+
+// defaultNoopLogger is used when the global Logger is not initialized yet.
+// It discards all logs to avoid panics while keeping call sites simple.
+var defaultNoopLogger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+// baseLogger returns the initialized global logger or a safe no-op logger.
+func baseLogger() *slog.Logger {
+	if Logger != nil {
+		return Logger
+	}
+	return defaultNoopLogger
 }
 
 func InitLogger(logLevel string) {
@@ -125,7 +141,8 @@ func getFunctionName() string {
 	return fullName
 }
 
-// Convenience functions for easier access
+// Info logs an informational message, enriching with the calling function name.
+// It accepts a message and optional key/value pairs for structured logging.
 func Info(msg string, args ...any) {
 	if Logger != nil {
 		allArgs := append(args, []any{"function_name", getFunctionName()}...)
@@ -133,12 +150,11 @@ func Info(msg string, args ...any) {
 	}
 }
 
+// Error logs an error message, enriching with the calling function name.
 func Error(msg string, args ...any) {
 	// Add function name to error logs
-	if Logger != nil {
-		allArgs := append(args, []any{"function_name", getFunctionName()}...)
-		Logger.Error(msg, allArgs...)
-	}
+	allArgs := append(args, []any{"function_name", getFunctionName()}...)
+	baseLogger().Error(msg, allArgs...)
 }
 
 func Fatal(msg string, args ...any) {
@@ -149,63 +165,53 @@ func Fatal(msg string, args ...any) {
 	}
 }
 
+// ErrorWithContext logs an error using a logger derived from the provided context.
 func ErrorWithContext(ctx context.Context, msg string, args ...any) {
-	if Logger != nil {
-		allArgs := append(args, []any{"function_name", getFunctionName()}...)
-		FromContext(ctx).Error(msg, allArgs...)
-	}
+	allArgs := append(args, []any{"function_name", getFunctionName()}...)
+	FromContext(ctx).Error(msg, allArgs...)
 }
 
+// Warn logs a warning message, enriching with the calling function name.
 func Warn(msg string, args ...any) {
-	if Logger != nil {
-		// Add function name to warning logs
-		allArgs := append(args, []any{"function_name", getFunctionName()}...)
-		Logger.Warn(msg, allArgs...)
-	}
+	// Add function name to warning logs
+	allArgs := append(args, []any{"function_name", getFunctionName()}...)
+	baseLogger().Warn(msg, allArgs...)
 }
 
+// Debug logs a debug message, enriching with the calling function name.
 func Debug(msg string, args ...any) {
-	if Logger != nil {
-		allArgs := append(args, []any{"function_name", getFunctionName()}...)
-		Logger.Debug(msg, allArgs...)
-	}
+	allArgs := append(args, []any{"function_name", getFunctionName()}...)
+	baseLogger().Debug(msg, allArgs...)
 }
 
-// WithContext returns a logger with additional context
+// WithContext returns a logger with additional structured fields.
 func WithContext(args ...any) *slog.Logger {
-	if Logger != nil {
-		return Logger.With(args...)
-	}
-	return nil
+	return baseLogger().With(args...)
 }
 
-// WithRequestID returns a logger with request ID context
+// WithRequestID returns a logger annotated with the provided request ID.
 func WithRequestID(requestID string) *slog.Logger {
-	if Logger != nil {
-		return Logger.With("request_id", requestID)
-	}
-	return nil
+	return baseLogger().With("request_id", requestID)
 }
 
-// FromContext creates a logger with request ID from context
+// FromContext returns a logger derived from the context, annotating with request_id when present.
 func FromContext(ctx context.Context) *slog.Logger {
-	if Logger == nil {
-		return nil
+	// Guard against nil context and uninitialized logger.
+	if ctx == nil {
+		return baseLogger()
 	}
-
 	if requestID, ok := ctx.Value(RequestIDKey{}).(string); ok && requestID != "" {
-		return Logger.With("request_id", requestID)
+		return baseLogger().With("request_id", requestID)
 	}
-
-	return Logger
+	return baseLogger()
 }
 
-// ContextWithRequestID adds request ID to context
+// ContextWithRequestID returns a new context containing the provided request ID.
 func ContextWithRequestID(ctx context.Context, requestID string) context.Context {
 	return context.WithValue(ctx, RequestIDKey{}, requestID)
 }
 
-// InfoWithRequestID logs info with request ID
+// InfoWithRequestID logs an informational message annotated with the provided request ID.
 func InfoWithRequestID(requestID, msg string, args ...any) {
 	if Logger != nil {
 		allArgs := append(args, []any{"request_id", requestID, "function_name", getFunctionName()}...)
@@ -213,7 +219,7 @@ func InfoWithRequestID(requestID, msg string, args ...any) {
 	}
 }
 
-// ErrorWithRequestID logs error with request ID and function name
+// ErrorWithRequestID logs an error annotated with the provided request ID.
 func ErrorWithRequestID(requestID, msg string, args ...any) {
 	if Logger != nil {
 		allArgs := append(args, []any{"request_id", requestID, "function_name", getFunctionName()}...)
@@ -221,7 +227,7 @@ func ErrorWithRequestID(requestID, msg string, args ...any) {
 	}
 }
 
-// WarnWithRequestID logs warning with request ID and function name
+// WarnWithRequestID logs a warning annotated with the provided request ID.
 func WarnWithRequestID(requestID, msg string, args ...any) {
 	if Logger != nil {
 		allArgs := append(args, []any{"request_id", requestID, "function_name", getFunctionName()}...)
@@ -229,7 +235,7 @@ func WarnWithRequestID(requestID, msg string, args ...any) {
 	}
 }
 
-// DebugWithRequestID logs debug with request ID
+// DebugWithRequestID logs a debug message annotated with the provided request ID.
 func DebugWithRequestID(requestID, msg string, args ...any) {
 	if Logger != nil {
 		allArgs := append(args, []any{"request_id", requestID, "function_name", getFunctionName()}...)

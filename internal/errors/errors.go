@@ -102,7 +102,9 @@ var (
 	ErrReadingReport        = NewAppError(2007, "enclave error: failed to read the report")
 	ErrInvalidSGXReportSize = NewAppError(2008, "enclave error: invalid SGX report size")
 	ErrParsingSGXReport     = NewAppError(2009, "enclave error: failed to parse SGX report")
-	ErrInvalidSGXQuoteSize  = NewAppError(2010, "enclave error: invalid SGX quote size")
+	ErrEmptyQuote           = NewAppError(2010, "enclave error: empty quote")
+	ErrNilSGXReport         = NewAppError(2011, "enclave error: SGX report is nil")
+	ErrInvalidSGXQuoteSize  = NewAppError(2012, "enclave error: invalid SGX quote size")
 
 	// =============================================================================
 	// ATTESTATION ERRORS (3000-3999)
@@ -161,6 +163,8 @@ var (
 	ErrWritingOptionalFields  = NewAppError(5016, "encoding error: failed to write optional headers to buffer")
 	ErrUserDataTooShort        = NewAppError(5017, "encoding error: userData too short for expected zeroing")
 	ErrSliceToU128             = NewAppError(5018, "encoding error: failed to convert slice to u128")
+	ErrNilEncodingOptions      = NewAppError(5019, "encoding error: encoding options is empty")
+	ErrNilEncodedPositions     = NewAppError(5020, "encoding error: encoded positions is nil")
 
 	// =============================================================================
 	// PRICE FEED ERRORS (6000-6999)

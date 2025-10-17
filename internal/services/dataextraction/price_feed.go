@@ -101,6 +101,15 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 	}
 
 	// Step 2: Replace the symbol in the endpoint template.
+	if symbol == "" {
+		reqLogger.Error("Empty symbol for exchange", "exchange", exchange, "token", token)
+		return nil, appErrors.ErrSymbolNotConfigured
+	}
+	// Ensure the template includes the placeholder; config.ValidateConfigs also checks this.
+	if !strings.Contains(config.EndpointTemplate, "{symbol}") {
+		reqLogger.Error("endpointTemplate missing {symbol} placeholder", "exchange", exchange)
+		return nil, appErrors.ErrExchangeNotConfigured
+	}
 	endpoint := strings.Replace(config.EndpointTemplate, "{symbol}", symbol, 1)
 
 	// Step 3: Construct the full URL. Accepting protocol scheme in the base URL for unit testing.

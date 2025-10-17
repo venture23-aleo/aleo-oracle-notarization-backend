@@ -1,3 +1,4 @@
+// Package sgx implements SGX quote generation and Open Enclave wrapping helpers.
 package sgx
 
 import (
@@ -25,25 +26,24 @@ import (
 // Returns:
 //   - []byte: The Open Enclave evidence buffer containing the headers and the raw quote.
 func wrapRawQuoteAsOpenEnclaveEvidence(rawQuoteBuffer []byte) []byte {
-
 	const (
-		OE_VERSION     = 1 // Open Enclave evidence version
-		OE_VERSION_LEN = 4 // Length of version field in bytes
-		OE_TYPE        = 2 // Open Enclave evidence type (2 = SGX ECDSA)
-		OE_TYPE_LEN    = 4 // Length of type field in bytes
-		OE_QUOTE_LEN   = 8 // Length of quote length field in bytes
+		oeVersionConst = 1 // Open Enclave evidence version
+		oeVersionLen   = 4 // Length of version field in bytes
+		oeTypeConst    = 2 // Open Enclave evidence type (2 = SGX ECDSA)
+		oeTypeLen      = 4 // Length of type field in bytes
+		oeQuoteLen     = 8 // Length of quote length field in bytes
 	)
 
 	// Create the Open Enclave version header (4 bytes, little-endian)
-	oeVersion := make([]byte, OE_VERSION_LEN)
-	binary.LittleEndian.PutUint32(oeVersion, OE_VERSION)
+	oeVersion := make([]byte, oeVersionLen)
+	binary.LittleEndian.PutUint32(oeVersion, oeVersionConst)
 
 	// Create the Open Enclave type header (4 bytes, little-endian)
-	oeType := make([]byte, OE_TYPE_LEN)
-	binary.LittleEndian.PutUint32(oeType, OE_TYPE)
+	oeType := make([]byte, oeTypeLen)
+	binary.LittleEndian.PutUint32(oeType, oeTypeConst)
 
 	// Create the quote length header (8 bytes, little-endian, only lower 4 bytes used)
-	quoteLength := make([]byte, OE_QUOTE_LEN)
+	quoteLength := make([]byte, oeQuoteLen)
 	binary.LittleEndian.PutUint32(quoteLength, uint32(len(rawQuoteBuffer)))
 
 	// Assemble the Open Enclave evidence buffer
@@ -80,6 +80,10 @@ func GenerateQuote(inputData []byte) ([]byte, *appErrors.AppError) {
 	defer enclaveLock.Unlock()
 
 	// Step 2: Prepare the 64-byte report data buffer.
+	if len(inputData) > 64 {
+		logger.Error("input data too large for SGX report data", "max", 64, "got", len(inputData))
+		return nil, appErrors.ErrInvalidSGXReportSize
+	}
 	reportData := make([]byte, 64)
 	copy(reportData, inputData) // Copy inputData (truncates or zero-pads as needed)
 

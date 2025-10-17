@@ -1,3 +1,4 @@
+// Package configs loads and validates application configuration for the service.
 package configs
 
 import (
@@ -97,7 +98,7 @@ func GetAppConfig() AppConfig {
 	return appConfig
 }
 
-// GetExchangeConfigsWithError returns exchange configs and any loading error
+// GetAppConfigWithError returns the application configuration and any loading error.
 func GetAppConfigWithError() (AppConfig, error) {
 	GetAppConfig() // Ensure initialization
 	return appConfig, appConfigErr
@@ -223,6 +224,8 @@ func ValidateConfigs() error {
 		}
 		if config.EndpointTemplate == "" {
 			errors = append(errors, fmt.Sprintf("Exchange %s: no endpointTemplate configured", exchangeKey))
+		} else if !strings.Contains(config.EndpointTemplate, "{symbol}") {
+			errors = append(errors, fmt.Sprintf("Exchange %s: endpointTemplate must include {symbol} placeholder", exchangeKey))
 		}
 		exchangeKeys = append(exchangeKeys, exchangeKey)
 	}
@@ -241,6 +244,11 @@ func ValidateConfigs() error {
 		tokenKeys = append(tokenKeys, token)
 	}
 
+	// Ensure minExchangesRequired is not greater than the number of configured exchanges for any token
+	for token, exchanges := range tokenExchanges {
+		if len(exchanges) < minExchangesRequired {
+			errors = append(errors, fmt.Sprintf("Token %s: minExchangesRequired=%d exceeds configured exchanges=%d", token, minExchangesRequired, len(exchanges)))
+		}
 	// Validate roughtime config
 	roughtimeConfig := &appConfig.RoughtimeConfig
 

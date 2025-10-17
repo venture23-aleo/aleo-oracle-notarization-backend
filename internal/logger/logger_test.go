@@ -158,13 +158,13 @@ func TestWithContext(t *testing.T) {
 	loggerWithContext := WithContext("key1", "value1", "key2", "value2")
 	assert.NotNil(t, loggerWithContext)
 
-	// Test WithContext with nil logger
+	// Test WithContext with nil logger (should return a non-nil no-op logger)
 	originalLogger := Logger
 	Logger = nil
 	defer func() { Logger = originalLogger }()
 
 	nilLoggerWithContext := WithContext("key", "value")
-	assert.Nil(t, nilLoggerWithContext)
+	assert.NotNil(t, nilLoggerWithContext)
 }
 
 func TestWithRequestID(t *testing.T) {
@@ -176,13 +176,13 @@ func TestWithRequestID(t *testing.T) {
 	loggerWithRequestID := WithRequestID(requestID)
 	assert.NotNil(t, loggerWithRequestID)
 
-	// Test WithRequestID with nil logger
+	// Test WithRequestID with nil logger (should return a non-nil no-op logger)
 	originalLogger := Logger
 	Logger = nil
 	defer func() { Logger = originalLogger }()
 
 	nilLoggerWithRequestID := WithRequestID(requestID)
-	assert.Nil(t, nilLoggerWithRequestID)
+	assert.NotNil(t, nilLoggerWithRequestID)
 }
 
 func TestContextWithRequestID(t *testing.T) {
@@ -251,7 +251,7 @@ func TestFromContextWithNilLogger(t *testing.T) {
 	// Test FromContext with nil logger
 	ctx := ContextWithRequestID(context.Background(), "test-id")
 	logger := FromContext(ctx)
-	assert.Nil(t, logger)
+	assert.NotNil(t, logger)
 }
 
 func TestErrorWithContext(t *testing.T) {
