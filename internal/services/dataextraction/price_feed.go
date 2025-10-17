@@ -1,11 +1,17 @@
 package data_extraction
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -13,7 +19,6 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	configs "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-	httpUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/httputil"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
@@ -22,8 +27,8 @@ import (
 // ExchangePrice represents a price from a single exchange
 type ExchangePrice struct {
 	Exchange string  `json:"exchange"` // Exchange name.
-	Price    float64 `json:"price"`    // Price.
-	Volume   float64 `json:"volume"`   // Volume.
+	Price    string  `json:"price"`    // Price.
+	Volume   string  `json:"volume"`   // Volume.
 	Token    string  `json:"token"`    // Token.
 	Symbol   string  `json:"symbol"`   // Symbol.
 }
@@ -64,6 +69,57 @@ func NewPriceFeedClient() *PriceFeedClient {
 		tokenExchanges:    tokenExchanges,
 		tokenTradingPairs: tokenTradingPairs,
 	}
+}
+
+func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryablehttp.Client {
+	// Create a new HTTP client with the TLS configuration
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		InsecureSkipVerify: false,
+		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			if len(verifiedChains) == 0 {
+				return fmt.Errorf("no verified chains")
+			}
+
+			// Take root of the verified chain
+			rootCert := verifiedChains[0][len(verifiedChains[0])-1]
+
+			rootCAFile := fmt.Sprintf("/rootCAs/%s.pem", exchange)
+
+			rootCertPem, err := os.ReadFile(rootCAFile)
+
+			if err != nil {
+				return fmt.Errorf("failed to read root CA file for %s: %w", exchange, err)
+			}
+
+			block, _ := pem.Decode(rootCertPem)
+			if block == nil || block.Type != "CERTIFICATE" {
+				return fmt.Errorf("failed to decode PEM block for %s", exchange)
+			}
+
+    		// block.Bytes contains the DER
+    		derData := block.Bytes
+
+			if !bytes.Equal(derData, rootCert.Raw) {
+				return fmt.Errorf("root CA mismatch for %s", exchange)
+			}
+
+			return nil
+		},
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+	}
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.HTTPClient = client
+	retryClient.Logger = logger.Logger
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 3 * time.Second
+	retryClient.RetryMax = maxRetries
+
+	return retryClient
 }
 
 // FetchPriceFromExchange fetches price and volume data from a specific exchange.
@@ -121,7 +177,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 	}
 
 	// Step 4: Create retryable HTTP client.
-	httpClient := httpUtil.GetRetryableHTTPClient(1)
+	httpClient := GetRetryableHTTPClientForExchange(exchange, 1)
 
 	// Step 5: Create request with context.
 	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)
@@ -178,35 +234,47 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 }
 
 // CalculateVolumeWeightedAverage calculates the volume-weighted average price
-func CalculateVolumeWeightedAverage(prices []ExchangePrice) (float64, float64, int) {
+func CalculateVolumeWeightedAverage(prices []ExchangePrice) (*big.Rat, *big.Rat, int) {
 	if len(prices) == 0 {
-		return 0, 0, 0
+		return nil, nil, 0
 	}
 
-	var totalVolume float64
-	var weightedSum float64
+	totalVolume := big.NewRat(0, 1)
+	weightedSum := big.NewRat(0, 1)
 	exchanges := make(map[string]bool)
 
-	for _, price := range prices {
-		if price.Price > 0 && price.Volume > 0 {
-			weightedSum += price.Price * price.Volume
-			totalVolume += price.Volume
-			if _, exists := exchanges[price.Exchange]; !exists {
-				exchanges[price.Exchange] = true
-			}
+	for _, p := range prices {
+		if p.Price == "" || p.Volume == "" {
+			continue
+		}
+
+		volumeRat, ok := new(big.Rat).SetString(p.Volume)
+		if !ok || volumeRat.Sign() <= 0 {
+			continue
+		}
+
+		priceRat, ok := new(big.Rat).SetString(p.Price)
+		if !ok || priceRat.Sign() <= 0 {
+			continue
+		}
+
+		weightedSum.Add(weightedSum, priceRat.Mul(priceRat, volumeRat))
+		totalVolume.Add(totalVolume, volumeRat)
+		if _, exists := exchanges[p.Exchange]; !exists {
+			exchanges[p.Exchange] = true
 		}
 	}
 
-	if totalVolume == 0 {
-		return 0, 0, 0
+	if totalVolume.Sign() <= 0 {
+		return nil, nil, 0
 	}
 
-	volumeWeightedAvg := weightedSum / totalVolume
+	volumeWeightedAvg := new(big.Rat).Quo(weightedSum, totalVolume)
 	return volumeWeightedAvg, totalVolume, len(exchanges)
 }
 
 // GetPriceFeed fetches and calculates the volume-weighted average price for a given token
-func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, timestamp int64) (*PriceFeedResult, *appErrors.AppError) {
+func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, timestamp int64, precision uint) (*PriceFeedResult, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	exchanges, exists := c.tokenExchanges[strings.ToUpper(tokenName)]
@@ -294,10 +362,13 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, ti
 		return nil, appErrors.ErrInsufficientExchangeData
 	}
 
+	volumeWeightAvgStr := Truncate(volumeWeightedAvg, int(precision))
+	totalVolumeStr := Truncate(totalVolume, int(precision))
+
 	return &PriceFeedResult{
 		Token:             strings.ToUpper(tokenName),
-		VolumeWeightedAvg: strconv.FormatFloat(volumeWeightedAvg, 'f', -1, 64),
-		TotalVolume:       strconv.FormatFloat(totalVolume, 'f', -1, 64),
+		VolumeWeightedAvg: volumeWeightAvgStr,
+		TotalVolume:       totalVolumeStr,
 		ExchangeCount:     exchangeCount,
 		Timestamp:         time.Now().Unix(),
 		ExchangePrices:    exchangePrices,
@@ -321,7 +392,7 @@ func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationR
 	reqLogger := logger.FromContext(ctx)
 
 	// Get the price feed data
-	result, appErr := c.GetPriceFeed(ctx, token, timestamp)
+	result, appErr := c.GetPriceFeed(ctx, token, timestamp, attestationRequest.EncodingOptions.Precision)
 
 	if appErr != nil {
 		reqLogger.Error("Error getting price feed for ", "token", token, "error", appErr)
@@ -334,19 +405,13 @@ func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationR
 		return ExtractDataResult{}, appErrors.ErrEncodingPriceFeedData
 	}
 
-	// For price feeds, always use weightedAvgPrice (volume-weighted average price)
-	var valueStr string = result.VolumeWeightedAvg
-
-	formattedAttestationData, appErr := formatAttestationData(ctx, valueStr, attestationRequest.EncodingOptions.Value, attestationRequest.EncodingOptions.Precision)
-	if appErr != nil {
-		return ExtractDataResult{}, appErr
-	}
+	attestationData := result.VolumeWeightedAvg
 
 	status = "success"
 
 	return ExtractDataResult{
 		ResponseBody:    string(jsonBytes),
-		AttestationData: formattedAttestationData,
+		AttestationData: attestationData,
 		StatusCode:      http.StatusOK,
 	}, nil
 }

@@ -33,7 +33,7 @@ WORKDIR /app
 COPY --from=builder /app/${APP} .
 
 # Copy the manifest template, static files, and the entrypoint script
-COPY deployment/docker/inputs/* ./
+COPY deployment/docker/inputs/ ./
 
 # Install SGX DCAP QPL
 RUN DEBIAN_FRONTEND=noninteractive dpkg -i /app/libsgx-dcap-default-qpl_1.23.100.0-jammy1_amd64.deb

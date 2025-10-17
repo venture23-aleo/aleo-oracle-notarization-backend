@@ -136,6 +136,7 @@ var (
 	ErrParsingFloatValue       = NewAppError(4011, "data extraction error: extracted value expected to be float but failed to parse as float")
 	ErrParsingIntValue         = NewAppError(4012, "data extraction error: extracted value expected to be int but failed to parse as int")
 	ErrEmptyAttestationData    = NewAppError(4013, "data extraction error: extracted attestation data is empty")
+	ErrInvalidRationalNumber   = NewAppError(4015, "data extraction error: invalid rational number")
 	ErrSymbolMismatch          = NewAppError(4014, "data extraction error: symbol mismatch")
 	ErrParsingTimestamp        = NewAppError(4015, "data extraction error: failed to parse timestamp")
 	ErrTimestampTooOld         = NewAppError(4016, "data extraction error: timestamp too old")

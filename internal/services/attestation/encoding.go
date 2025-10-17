@@ -269,7 +269,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	)
 
 	proofPositionalInfo := &encoding.ProofPositionalInfo{
-		Data:            *attesatationDataPositionInfo,
+		Data:            *attestationDataPositionInfo,
 		Timestamp:       *timestampPositionInfo,
 		StatusCode:      *statusCodePositionInfo,
 		Method:          *requestMethodPositionInfo,
