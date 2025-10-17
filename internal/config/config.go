@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	rtConfig "github.com/cloudflare/roughtime/config"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 )
@@ -29,10 +30,23 @@ type ExchangeConfig struct {
 
 type ExchangesConfig map[string]ExchangeConfig
 
+type TokenVWAPConfig struct {
+	Token string `json:"token"`
+	TokenTolerancePercent float64 `json:"tokenTolerancePercent"`
+	TokenMADMultiplier float64 `json:"tokenMADMultiplier"`
+	TokenMaxSpreadPercent float64 `json:"tokenMaxSpreadPercent"`
+	TokenMinVolumePerExchange float64 `json:"tokenMinVolumePerExchange"`
+	TokenMaxExchangeWeightPercent float64 `json:"tokenMaxExchangeWeightPercent"`
+}
+
+type TokenVWAPConfigMap map[string]TokenVWAPConfig
+
+
 type PriceFeedConfig struct {
 	ExchangesConfig      ExchangesConfig `json:"exchangesConfig"`
 	TokenExchanges       TokenExchanges  `json:"tokenExchanges"`
 	MinExchangesRequired int             `json:"minExchangesRequired"`
+	TokenVWAPConfig     TokenVWAPConfigMap  `json:"tokenVWAPConfig"`
 }
 
 type RoughtimeServerConfig struct {
@@ -175,6 +189,19 @@ func GetTokenTradingPairs() TokenTradingPairs {
 	return tokenTradingPairs
 }
 
+func GetTokenVWAPConfig(token string) (TokenVWAPConfig, *appErrors.AppError) {
+	tokenVWAPConfigMap := GetAppConfig().PriceFeedConfig.TokenVWAPConfig
+
+	tokenVWAPConfig, exists := tokenVWAPConfigMap[token]; 
+	
+	if !exists {
+		logger.Error("Token VWAP config not found", "token", token)
+		return TokenVWAPConfig{}, appErrors.ErrTokenVWAPConfigNotFound
+	}
+
+	return tokenVWAPConfig, nil
+}
+
 func GetRoughtimeConfig() RoughtimeConfig {
 	appConfig := GetAppConfig()
 	return appConfig.RoughtimeConfig
@@ -244,6 +271,12 @@ func ValidateConfigs() error {
 		tokenKeys = append(tokenKeys, token)
 	}
 
+	for _, token := range tokenKeys {
+		_, err := GetTokenVWAPConfig(token)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Token %s: %v", token, err))
+		}
+	}
 	// Ensure minExchangesRequired is not greater than the number of configured exchanges for any token
 	for token, exchanges := range tokenExchanges {
 		if len(exchanges) < minExchangesRequired {

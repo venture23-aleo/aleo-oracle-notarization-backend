@@ -11,6 +11,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"sort"
 	"os"
 	"strconv"
 	"strings"
@@ -26,22 +27,23 @@ import (
 
 // ExchangePrice represents a price from a single exchange
 type ExchangePrice struct {
-	Exchange string  `json:"exchange"` // Exchange name.
-	Price    string  `json:"price"`    // Price.
-	Volume   string  `json:"volume"`   // Volume.
-	Token    string  `json:"token"`    // Token.
-	Symbol   string  `json:"symbol"`   // Symbol.
+	Exchange string `json:"exchange"` // Exchange name.
+	Price    string `json:"price"`    // Price.
+	Volume   string `json:"volume"`   // Volume.
+	Token    string `json:"token"`    // Token.
+	Symbol   string `json:"symbol"`   // Symbol.
 }
 
 // PriceFeedResult represents the result of a price feed calculation
 type PriceFeedResult struct {
-	Token             string          `json:"token"`             // Token.
-	VolumeWeightedAvg string          `json:"volumeWeightedAvg"` // Volume-weighted average price.
-	TotalVolume       string          `json:"totalVolume"`       // Total volume.
-	ExchangeCount     int             `json:"exchangeCount"`     // Number of exchanges.
-	Timestamp         int64           `json:"timestamp"`         // Timestamp.
-	ExchangePrices    []ExchangePrice `json:"exchangePrices"`    // Exchange prices.
-	Success           bool            `json:"success"`           // Success.
+	Token              string          `json:"token"`              // Token.
+	VolumeWeightedAvg  string          `json:"volumeWeightedAvg"`  // Volume-weighted average price.
+	TotalVolume        string          `json:"totalVolume"`        // Total volume.
+	ExchangeCount      int             `json:"exchangeCount"`      // Number of exchanges.
+	Timestamp          int64           `json:"timestamp"`          // Timestamp.
+	ExchangePricesRaw  []ExchangePrice `json:"exchangePricesRaw"`  // Exchange prices.
+	ExchangePricesUsed []ExchangePrice `json:"exchangePricesUsed"` // Exchange prices.
+	Success            bool            `json:"success"`            // Success.
 }
 
 // Fetch prices from all exchanges concurrently
@@ -234,22 +236,58 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 }
 
 // CalculateVolumeWeightedAverage calculates the volume-weighted average price
-func CalculateVolumeWeightedAverage(prices []ExchangePrice) (*big.Rat, *big.Rat, int) {
+func CalculateVolumeWeightedAverage(prices []ExchangePrice, precision uint, token string) (string, string, int, []ExchangePrice, *appErrors.AppError) {
 	if len(prices) == 0 {
-		return nil, nil, 0
+		return "", "", 0, nil, appErrors.ErrNoPricesFound
 	}
 
-	totalVolume := big.NewRat(0, 1)
-	weightedSum := big.NewRat(0, 1)
-	exchanges := make(map[string]bool)
+	// ValidPrice represents a valid price from an exchange
+	type ValidPrice struct {
+		Exchange string   `json:"exchange"` // Exchange name.
+		Symbol   string   `json:"symbol"`   // Symbol.
+		Price    *big.Rat `json:"price"`    // Price.
+		Volume   *big.Rat `json:"volume"`   // Volume.
+		Token    string   `json:"token"`    // Token.
+	}
+
+	validPrices := []ValidPrice{}
+
+	type ExchangeSymbol struct {
+		exchange string
+		symbol   string
+	}
+
+	exchangeSymbols := make(map[ExchangeSymbol]bool)
+
+	tokenVWAPConfig, err := configs.GetTokenVWAPConfig(token)
+	if err != nil {
+		return "", "", 0, nil, err
+	}
+
+	tokenToleranceFraction := new(big.Rat).Mul(new(big.Rat).SetFloat64(tokenVWAPConfig.TokenTolerancePercent), big.NewRat(1, 100))
+	tokenMADMultiplier := new(big.Rat).SetFloat64(tokenVWAPConfig.TokenMADMultiplier)
+	tokenMaxSpreadFraction := new(big.Rat).Mul(new(big.Rat).SetFloat64(tokenVWAPConfig.TokenMaxSpreadPercent), big.NewRat(1, 100))
+	tokenMinVolumePerExchange := new(big.Rat).SetFloat64(tokenVWAPConfig.TokenMinVolumePerExchange)
+	tokenMaxExchangeWeightFraction := new(big.Rat).Mul(new(big.Rat).SetFloat64(tokenVWAPConfig.TokenMaxExchangeWeightPercent), big.NewRat(1, 100))
+
+	logger.Debug("Token VWAP Config", "token", token, "tokenToleranceFraction", tokenToleranceFraction, "tokenMADMultiplier", tokenMADMultiplier, "tokenMaxSpreadFraction", tokenMaxSpreadFraction, "tokenMinVolumePerExchange", tokenMinVolumePerExchange, "tokenMaxExchangeWeightFraction", tokenMaxExchangeWeightFraction)
 
 	for _, p := range prices {
 		if p.Price == "" || p.Volume == "" {
 			continue
 		}
 
+		key := ExchangeSymbol{exchange: p.Exchange, symbol: p.Symbol}
+
+		if _, exists := exchangeSymbols[key]; exists {
+			logger.Error("Duplicate exchange and symbol", "exchange", p.Exchange, "symbol", p.Symbol, "price", p.Price, "volume", p.Volume)
+			continue
+		}
+
+		exchangeSymbols[key] = true
+
 		volumeRat, ok := new(big.Rat).SetString(p.Volume)
-		if !ok || volumeRat.Sign() <= 0 {
+		if !ok || volumeRat.Cmp(tokenMinVolumePerExchange) < 0 {
 			continue
 		}
 
@@ -258,19 +296,136 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice) (*big.Rat, *big.Rat,
 			continue
 		}
 
-		weightedSum.Add(weightedSum, priceRat.Mul(priceRat, volumeRat))
-		totalVolume.Add(totalVolume, volumeRat)
-		if _, exists := exchanges[p.Exchange]; !exists {
-			exchanges[p.Exchange] = true
+		validPrices = append(validPrices, ValidPrice{
+			Exchange: p.Exchange,
+			Symbol:   p.Symbol,
+			Price:    priceRat,
+			Volume:   volumeRat,
+			Token:    p.Token,
+		})
+	}
+
+	if len(validPrices) == 0 {
+		return "", "", 0, nil, appErrors.ErrAllPricesBelowMinVolume
+	}
+
+	priceValues := []*big.Rat{}
+	for _, vp := range validPrices {
+		priceValues = append(priceValues, vp.Price)
+	}
+
+	// Calculate the median price
+	medianPrice := computeMedian(priceValues)
+
+	// Calculate the median absolute deviation
+	mad := computeMAD(priceValues, medianPrice)
+
+	// Compute bounds: max(MAD-based, token-tolerance-based)
+	madLower := new(big.Rat).Sub(medianPrice, new(big.Rat).Mul(tokenMADMultiplier, mad))
+	madUpper := new(big.Rat).Add(medianPrice, new(big.Rat).Mul(tokenMADMultiplier, mad))
+	tolLower := new(big.Rat).Mul(medianPrice, new(big.Rat).Sub(big.NewRat(1, 1), tokenToleranceFraction))
+	tolUpper := new(big.Rat).Mul(medianPrice, new(big.Rat).Add(big.NewRat(1, 1), tokenToleranceFraction))
+
+	lower := new(big.Rat)
+	if tolLower.Cmp(madLower) < 0 {
+		lower.Set(madLower)
+	} else {
+		lower.Set(tolLower)
+	}
+	upper := new(big.Rat)
+	if tolUpper.Cmp(madUpper) > 0 {
+		upper.Set(madUpper)
+	} else {
+		upper.Set(tolUpper)
+	}
+
+	filteredPrices := []ValidPrice{}
+	for _, vp := range validPrices {
+		if vp.Price.Cmp(lower) >= 0 && vp.Price.Cmp(upper) <= 0 {
+			filteredPrices = append(filteredPrices, vp)
+		} else {
+			logger.Error("Outlier filtered", "exchange", vp.Exchange, "symbol", vp.Symbol, "price", Truncate(vp.Price, int(precision)), "volume", Truncate(vp.Volume, int(precision)), "medianPrice", Truncate(medianPrice, int(precision)), "mad", Truncate(mad, int(precision)), "lower", Truncate(lower, int(precision)), "upper", Truncate(upper, int(precision)))
 		}
 	}
 
-	if totalVolume.Sign() <= 0 {
-		return nil, nil, 0
+	if len(filteredPrices) == 0 {
+		return "", "", 0, nil, appErrors.ErrAllPricesOutlierFiltered
 	}
 
-	volumeWeightedAvg := new(big.Rat).Quo(weightedSum, totalVolume)
-	return volumeWeightedAvg, totalVolume, len(exchanges)
+	// Calculate the total volume of the filtered prices
+	totalVolume := big.NewRat(0, 1)
+	for _, vp := range filteredPrices {
+		totalVolume.Add(totalVolume, vp.Volume)
+	}
+
+	if totalVolume.Sign() <= 0 {
+		return "", "", 0, nil, appErrors.ErrZeroVolume
+	}
+
+	// Step 6: Apply per-exchange weight cap and compute weighted sum
+	weightedSum := big.NewRat(0, 1)
+	exchangeVolumes := make(map[string]*big.Rat)
+	for _, vp := range filteredPrices {
+		if _, exists := exchangeVolumes[vp.Exchange]; !exists {
+			exchangeVolumes[vp.Exchange] = big.NewRat(0, 1)
+		}
+		exchangeVolumes[vp.Exchange].Add(exchangeVolumes[vp.Exchange], vp.Volume)
+	}
+
+	maxWeight := new(big.Rat).Mul(tokenMaxExchangeWeightFraction, totalVolume)
+
+	cappedTotalVolume := big.NewRat(0, 1)
+
+	filteredExchangesPrices := []ExchangePrice{}
+
+	for _, vp := range filteredPrices {
+		cappedVolume := vp.Volume
+		if exchangeVolumes[vp.Exchange].Cmp(maxWeight) > 0 {
+			logger.Debug("Scaling volume", "exchange", vp.Exchange, "volume", Truncate(vp.Volume, int(precision)), "maxWeight", Truncate(maxWeight, int(precision)))
+			// Scale down proportionally if total volume exceeds cap
+			scale := new(big.Rat).Quo(maxWeight, exchangeVolumes[vp.Exchange])
+			cappedVolume = new(big.Rat).Mul(vp.Volume, scale)
+		}
+		weightedSum.Add(weightedSum, new(big.Rat).Mul(vp.Price, cappedVolume))
+		cappedTotalVolume.Add(cappedTotalVolume, cappedVolume)
+		filteredExchangesPrices = append(filteredExchangesPrices, ExchangePrice{
+			Exchange: vp.Exchange,
+			Symbol:   vp.Symbol,
+			Price:    Truncate(vp.Price, int(precision)),
+			Volume:   Truncate(cappedVolume, int(precision)),
+			Token:    vp.Token,
+		})
+	}
+
+	if cappedTotalVolume.Sign() <= 0 {
+		return "", "", 0, nil, appErrors.ErrZeroCappedVolume
+	}
+
+	minPrice := filteredPrices[0].Price
+	maxPrice := filteredPrices[0].Price
+	for _, vp := range filteredPrices[1:] {
+		if vp.Price.Cmp(minPrice) < 0 {
+			minPrice = vp.Price
+		}
+		if vp.Price.Cmp(maxPrice) > 0 {
+			maxPrice = vp.Price
+		}
+	}
+
+	ratio := new(big.Rat).Quo(maxPrice, minPrice)
+	dispersionThreshold := new(big.Rat).Add(big.NewRat(1, 1), tokenMaxSpreadFraction)
+	logger.Debug("Max Price", "maxPrice", Truncate(maxPrice, int(precision)), "minPrice", Truncate(minPrice, int(precision)), "ratio", Truncate(ratio, int(precision)), "dispersionThreshold", Truncate(dispersionThreshold, int(precision)))
+
+	if ratio.Cmp(dispersionThreshold) > 0 {
+		return "", "", 0, nil, appErrors.ErrCrossVenueDispersionTooHigh
+	}
+
+	volumeWeightedAvg := new(big.Rat).Quo(weightedSum, cappedTotalVolume)
+
+	volumeWeightedAvgStr := Truncate(volumeWeightedAvg, int(precision))
+	totalVolumeStr := Truncate(cappedTotalVolume, int(precision))
+
+	return volumeWeightedAvgStr, totalVolumeStr, len(exchangeVolumes), filteredExchangesPrices, nil
 }
 
 // GetPriceFeed fetches and calculates the volume-weighted average price for a given token
@@ -351,7 +506,11 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, ti
 	reqLogger.Debug("Total trading pairs", "totalTradingPairs", totalTradingPairs)
 
 	// Calculate volume-weighted average
-	volumeWeightedAvg, totalVolume, exchangeCount := CalculateVolumeWeightedAverage(exchangePrices)
+	volumeWeightAvgStr, totalVolumeStr, exchangeCount, filteredExchangesPrices, err := CalculateVolumeWeightedAverage(exchangePrices, precision, tokenName)
+	if err != nil {
+		reqLogger.Error("Error calculating volume-weighted average", "error", err)
+		return nil, err
+	}
 
 	metrics.RecordPriceFeedExchangeCount(tokenName, exchangeCount)
 
@@ -362,17 +521,15 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, ti
 		return nil, appErrors.ErrInsufficientExchangeData
 	}
 
-	volumeWeightAvgStr := Truncate(volumeWeightedAvg, int(precision))
-	totalVolumeStr := Truncate(totalVolume, int(precision))
-
 	return &PriceFeedResult{
-		Token:             strings.ToUpper(tokenName),
-		VolumeWeightedAvg: volumeWeightAvgStr,
-		TotalVolume:       totalVolumeStr,
-		ExchangeCount:     exchangeCount,
-		Timestamp:         time.Now().Unix(),
-		ExchangePrices:    exchangePrices,
-		Success:           true,
+		Token:              strings.ToUpper(tokenName),
+		VolumeWeightedAvg:  volumeWeightAvgStr,
+		TotalVolume:        totalVolumeStr,
+		ExchangeCount:      exchangeCount,
+		Timestamp:          time.Now().Unix(),
+		ExchangePricesRaw:  exchangePrices,
+		ExchangePricesUsed: filteredExchangesPrices,
+		Success:            true,
 	}, nil
 }
 
@@ -414,4 +571,30 @@ func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationR
 		AttestationData: attestationData,
 		StatusCode:      http.StatusOK,
 	}, nil
+}
+
+// computeMedian computes the median of a slice of *big.Rat
+func computeMedian(values []*big.Rat) *big.Rat {
+	sort.Slice(values, func(i, j int) bool {
+		return values[i].Cmp(values[j]) < 0
+	})
+	n := len(values)
+	if n%2 == 1 {
+		return new(big.Rat).Set(values[n/2])
+	}
+	sum := new(big.Rat).Add(values[n/2-1], values[n/2])
+	return sum.Quo(sum, big.NewRat(2, 1))
+}
+
+// computeMAD computes the median absolute deviation of a slice of *big.Rat
+func computeMAD(values []*big.Rat, median *big.Rat) *big.Rat {
+	deviations := make([]*big.Rat, len(values))
+	for i, v := range values {
+		diff := new(big.Rat).Sub(v, median)
+		if diff.Sign() < 0 {
+			diff.Neg(diff)
+		}
+		deviations[i] = diff
+	}
+	return computeMedian(deviations)
 }

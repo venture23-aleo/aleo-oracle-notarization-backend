@@ -262,7 +262,7 @@ func TestPriceFeed_AllValidExchangeResponse(t *testing.T) {
 		assert.Equal(t, token, price.Token)
 		assert.True(t, price.Success)
 		assert.Equal(t, len(exchanges), price.ExchangeCount)
-		assert.Equal(t, len(tokenTradingPairs[token]), len(price.ExchangePrices))
+		assert.Equal(t, len(tokenTradingPairs[token]), len(price.ExchangePricesRaw))
 	}
 }
 
@@ -728,11 +728,11 @@ func TestCalculateVolumeWeightedAveragePrice(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			avg, volume, count := CalculateVolumeWeightedAverage(tt.prices)
+			avg, volume, count, _, _ := CalculateVolumeWeightedAverage(tt.prices, 3, "BTC")
 
 			tolerance := 0.01
-			assert.InDelta(t, tt.expectedAvg, avg.FloatString(12), tolerance)
-			assert.InDelta(t, tt.expectedVolume, volume.FloatString(12), tolerance)
+			assert.InDelta(t, tt.expectedAvg, avg, tolerance)
+			assert.InDelta(t, tt.expectedVolume, volume, tolerance)
 			assert.Equal(t, tt.expectedCount, count)
 		})
 	}

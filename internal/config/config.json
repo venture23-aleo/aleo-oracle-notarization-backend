@@ -117,6 +117,32 @@
                 "coinbase",
                 "crypto"
             ]
+        },
+        "tokenVWAPConfig": {
+            "BTC": {
+                "token": "BTC",
+                "tokenTolerancePercent": 0.001,
+                "tokenMADMultiplier": 4,
+                "tokenMaxSpreadPercent": 0.01,
+                "tokenMinVolumePerExchange": 100,
+                "tokenMaxExchangeWeightPercent": 50
+            },
+            "ETH": {
+                "token": "ETH",
+                "tokenTolerancePercent": 0.001,
+                "tokenMADMultiplier": 4,
+                "tokenMaxSpreadPercent": 0.01,
+                "tokenMinVolumePerExchange": 100,
+                "tokenMaxExchangeWeightPercent": 50
+            },
+            "ALEO": {
+                "token": "ALEO",
+                "tokenTolerancePercent": 0.5,
+                "tokenMADMultiplier": 7,
+                "tokenMaxSpreadPercent": 2,
+                "tokenMinVolumePerExchange": 100,
+                "tokenMaxExchangeWeightPercent": 50
+            }
         }
     },
     "logLevel": "INFO",
