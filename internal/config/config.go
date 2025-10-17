@@ -249,6 +249,7 @@ func ValidateConfigs() error {
 		if len(exchanges) < minExchangesRequired {
 			errors = append(errors, fmt.Sprintf("Token %s: minExchangesRequired=%d exceeds configured exchanges=%d", token, minExchangesRequired, len(exchanges)))
 		}
+	}
 	// Validate roughtime config
 	roughtimeConfig := &appConfig.RoughtimeConfig
 

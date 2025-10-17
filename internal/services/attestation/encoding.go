@@ -96,7 +96,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	}
 
 	// Write the attestation data to the buffer.
-	attesatationDataPositionInfo, err := encoding.WriteWithPadding(recorder, attestationDataBuffer)
+	attestationDataPositionInfo, err := encoding.WriteWithPadding(recorder, attestationDataBuffer)
 	if err != nil {
 		logger.Error("Failed to write attestation data to buffer: ", "error", err)
 		return nil, nil, appErrors.ErrWritingAttestationData

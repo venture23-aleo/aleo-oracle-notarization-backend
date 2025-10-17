@@ -114,12 +114,12 @@ func parseBinanceResponse(data []byte, symbol string, timestamp int64) (price, v
 
 	err = validateSymbol("binance", binanceResponse.Symbol, symbol)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	err = validateTimestamp("binance", binanceResponse.Timestamp, timestamp)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	return price, volume, nil
@@ -143,12 +143,12 @@ func parseBybitResponse(data []byte, symbol string, timestamp int64) (price, vol
 
 	err = validateSymbol("bybit", item.Symbol, symbol)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 	
 	err = validateTimestamp("bybit", bybitResponse.Timestamp, timestamp)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 
@@ -167,12 +167,12 @@ func parseCoinbaseResponse(data []byte, _ string, timestamp int64) (price, volum
 	t, parseErr := time.Parse(time.RFC3339Nano, coinbaseResponse.Timestamp)
 	if parseErr != nil {
 		logger.Error("Error parsing timestamp: ", "exchange", exchange, "error", err)
-		return 0, 0, appErrors.ErrParsingTimestamp
+		return "", "", appErrors.ErrParsingTimestamp
 	}
 
 	err = validateTimestamp("coinbase", t.UnixMilli(), timestamp)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	return price, volume, nil
@@ -197,12 +197,12 @@ func parseCryptoResponse(data []byte, symbol string, timestamp int64) (price, vo
 
 	err = validateSymbol("crypto", item.Symbol, symbol)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	err = validateTimestamp("crypto", item.Timestamp, timestamp)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	return price, volume, nil
@@ -227,12 +227,12 @@ func parseXTResponse(data []byte, symbol string, timestamp int64) (price, volume
 
 	err = validateSymbol("xt", item.Symbol, symbol)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	err = validateTimestamp("xt", item.Timestamp, timestamp)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	return price, volume, nil
@@ -258,7 +258,7 @@ func parseGateResponse(data []byte, symbol string, _ int64) (price, volume strin
 
 	err = validateSymbol("gate", item.Symbol, symbol)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	return price, volume, nil
@@ -275,12 +275,12 @@ func parseMEXCResponse(data []byte, symbol string, timestamp int64) (price, volu
 
 	err = validateSymbol("mexc", mexcResponse.Symbol, symbol)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	err = validateTimestamp("mexc", mexcResponse.Timestamp, timestamp)
 	if err != nil {
-		return 0, 0, err
+		return "", "", err
 	}
 
 	return price, volume, nil
