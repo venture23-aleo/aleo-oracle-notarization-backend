@@ -1,13 +1,18 @@
 package data_extraction
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"math/big"
 	"net/http"
 	"sort"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,7 +20,6 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	configs "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
-	httpUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/httputil"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
@@ -69,6 +73,57 @@ func NewPriceFeedClient() *PriceFeedClient {
 	}
 }
 
+func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryablehttp.Client {
+	// Create a new HTTP client with the TLS configuration
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		InsecureSkipVerify: false,
+		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			if len(verifiedChains) == 0 {
+				return fmt.Errorf("no verified chains")
+			}
+
+			// Take root of the verified chain
+			rootCert := verifiedChains[0][len(verifiedChains[0])-1]
+
+			rootCAFile := fmt.Sprintf("/rootCAs/%s.pem", exchange)
+
+			rootCertPem, err := os.ReadFile(rootCAFile)
+
+			if err != nil {
+				return fmt.Errorf("failed to read root CA file for %s: %w", exchange, err)
+			}
+
+			block, _ := pem.Decode(rootCertPem)
+			if block == nil || block.Type != "CERTIFICATE" {
+				return fmt.Errorf("failed to decode PEM block for %s", exchange)
+			}
+
+    		// block.Bytes contains the DER
+    		derData := block.Bytes
+
+			if !bytes.Equal(derData, rootCert.Raw) {
+				return fmt.Errorf("root CA mismatch for %s", exchange)
+			}
+
+			return nil
+		},
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+	}
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.HTTPClient = client
+	retryClient.Logger = logger.Logger
+	retryClient.RetryWaitMin = 2 * time.Second
+	retryClient.RetryWaitMax = 3 * time.Second
+	retryClient.RetryMax = maxRetries
+
+	return retryClient
+}
+
 // FetchPriceFromExchange fetches price and volume data from a specific exchange.
 //
 // This function performs the following steps sequentially:
@@ -93,7 +148,7 @@ func NewPriceFeedClient() *PriceFeedClient {
 // Returns:
 //   - *ExchangePrice: The parsed price and volume data from the exchange.
 //   - *appErrors.AppError: An application error if any step fails, otherwise nil.
-func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, token, symbol string) (*ExchangePrice, *appErrors.AppError) {
+func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, token, symbol string, timestamp int64) (*ExchangePrice, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	// Step 1: Get exchange configuration.
@@ -104,18 +159,27 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 	}
 
 	// Step 2: Replace the symbol in the endpoint template.
+	if symbol == "" {
+		reqLogger.Error("Empty symbol for exchange", "exchange", exchange, "token", token)
+		return nil, appErrors.ErrSymbolNotConfigured
+	}
+	// Ensure the template includes the placeholder; config.ValidateConfigs also checks this.
+	if !strings.Contains(config.EndpointTemplate, "{symbol}") {
+		reqLogger.Error("endpointTemplate missing {symbol} placeholder", "exchange", exchange)
+		return nil, appErrors.ErrExchangeNotConfigured
+	}
 	endpoint := strings.Replace(config.EndpointTemplate, "{symbol}", symbol, 1)
 
 	// Step 3: Construct the full URL. Accepting protocol scheme in the base URL for unit testing.
 	var url string
-	if strings.HasPrefix(config.BaseURL, "https://") || strings.HasPrefix(config.BaseURL, "http://") {
+	if strings.HasPrefix(strings.ToLower(config.BaseURL), "https://") || strings.HasPrefix(strings.ToLower(config.BaseURL), "http://") {
 		url = fmt.Sprintf("%s%s", config.BaseURL, endpoint)
 	} else {
 		url = fmt.Sprintf("https://%s%s", config.BaseURL, endpoint)
 	}
 
 	// Step 4: Create retryable HTTP client.
-	httpClient := httpUtil.GetRetryableHTTPClient(1)
+	httpClient := GetRetryableHTTPClientForExchange(exchange, 1)
 
 	// Step 5: Create request with context.
 	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)
@@ -155,7 +219,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 	}
 
 	// Step 10: Parse price and volume from the decoded response.
-	price, volume, parseErr := c.parseExchangeResponse(exchange, bodyBytes)
+	price, volume, parseErr := c.parseExchangeResponse(exchange, bodyBytes,symbol, timestamp)
 	if parseErr != nil {
 		reqLogger.Error("Error parsing exchange response", "error", parseErr, "exchange", exchange, "token", token, "symbol", symbol)
 		return nil, appErrors.ErrParsingExchangeResponse
@@ -365,7 +429,7 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice, precision uint, toke
 }
 
 // GetPriceFeed fetches and calculates the volume-weighted average price for a given token
-func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, precision uint) (*PriceFeedResult, *appErrors.AppError) {
+func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, timestamp int64, precision uint) (*PriceFeedResult, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	exchanges, exists := c.tokenExchanges[strings.ToUpper(tokenName)]
@@ -416,7 +480,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, pr
 
 		for _, symbol := range symbolList {
 			go func(ex string, tk string, sym string) {
-				price, err := c.FetchPriceFromExchange(ctx, ex, tk, sym)
+				price, err := c.FetchPriceFromExchange(ctx, ex, tk, sym, timestamp)
 				results <- fetchResult{price: price, err: err, exchange: ex}
 			}(exchange, token, symbol)
 		}
@@ -471,7 +535,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, pr
 
 // ExtractPriceFeedData handles price feed requests and always returns the volume-weighted average price (VWAP)
 // This ensures consistent and reliable price data for oracle attestations
-func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.AttestationRequest, token string) (ExtractDataResult, *appErrors.AppError) {
+func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.AttestationRequest, token string, timestamp int64) (ExtractDataResult, *appErrors.AppError) {
 
 	// Start the price feed extraction
 	priceFeedStart := time.Now()
@@ -485,7 +549,7 @@ func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationR
 	reqLogger := logger.FromContext(ctx)
 
 	// Get the price feed data
-	result, appErr := c.GetPriceFeed(ctx, token, attestationRequest.EncodingOptions.Precision)
+	result, appErr := c.GetPriceFeed(ctx, token, timestamp, attestationRequest.EncodingOptions.Precision)
 
 	if appErr != nil {
 		reqLogger.Error("Error getting price feed for ", "token", token, "error", appErr)

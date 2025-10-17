@@ -10,3 +10,4 @@ deployment/docker/inputs/*.manifest.template
 deployment/native/inputs/*.manifest.template
 deployment/docker/enclave_artifacts/
 deployment/native/enclave_artifacts/
+deployment/secrets/mtls/

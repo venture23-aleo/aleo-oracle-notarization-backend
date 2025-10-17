@@ -17,7 +17,7 @@ COPY . .
 
 
 # Build the statically linked Go binary
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -buildvcs=false -o ${APP} ./cmd/server
+RUN CGO_ENABLED=0 go build -gcflags=all=-spectre=all -asmflags=all=-spectre=all -trimpath -ldflags="-s -w" -buildvcs=false -o ${APP} ./cmd/server
 
 # =============================
 # Stage 2: Gramine SGX Runtime
@@ -33,7 +33,7 @@ WORKDIR /app
 COPY --from=builder /app/${APP} .
 
 # Copy the manifest template, static files, and the entrypoint script
-COPY deployment/docker/inputs/* ./
+COPY deployment/docker/inputs/ ./
 
 # Install SGX DCAP QPL
 RUN DEBIAN_FRONTEND=noninteractive dpkg -i /app/libsgx-dcap-default-qpl_1.23.100.0-jammy1_amd64.deb
@@ -51,4 +51,3 @@ RUN --mount=type=secret,id=gramine-private-key,target=/tmp/private-key.pem \
 
 ENV APP=${APP}
 ENTRYPOINT ["./entrypoint.sh"]
-

@@ -16,5 +16,6 @@ type HealthResponse struct {
 // GetHealthCheck handles the request to get the health check.
 func GetHealthCheck(w http.ResponseWriter, r *http.Request) {
 	// Write the JSON success response.
+	w.Header().Set("Cache-Control", "no-store")
 	httpUtil.WriteJsonSuccess(w, http.StatusOK, HealthResponse{Status: "healthy", Timestamp: time.Now().Format(time.RFC3339)})
 }

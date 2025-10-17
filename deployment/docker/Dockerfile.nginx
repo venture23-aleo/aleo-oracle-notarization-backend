@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1.4
+FROM nginx:1.27-alpine
+
+LABEL org.opencontainers.image.source="https://github.com/venture23-aleo/aleo-oracle-notarization-backend" \
+      org.opencontainers.image.description="Nginx mTLS reverse proxy for Aleo Oracle Notarization Backend" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
+RUN apk add --no-cache bash gettext openssl \
+    && mkdir -p /etc/nginx/certs \
+    && chmod 700 /etc/nginx/certs
+
+WORKDIR /app
+
+# Template + entrypoint
+COPY deployment/docker/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+COPY deployment/docker/nginx/entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+ENV UPSTREAM_HOST=aleo-oracle-notarization-backend \
+    UPSTREAM_PORT=8000 \
+    NGINX_LISTEN_PORT=8443
+
+EXPOSE 8443
+
+ENTRYPOINT ["/entrypoint.sh"]
