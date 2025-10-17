@@ -112,6 +112,9 @@ func parseBinanceResponse(data []byte, symbol string, timestamp int64) (price, v
 		return "", "", appErrors.ErrDecodingExchangeResponse
 	}
 
+	price = binanceResponse.Price
+	volume = binanceResponse.Volume
+
 	err = validateSymbol("binance", binanceResponse.Symbol, symbol)
 	if err != nil {
 		return "", "", err
@@ -140,6 +143,9 @@ func parseBybitResponse(data []byte, symbol string, timestamp int64) (price, vol
 	}
 
 	item := list[0]
+	
+	price = item.Price
+	volume = item.Volume
 
 	err = validateSymbol("bybit", item.Symbol, symbol)
 	if err != nil {
@@ -163,6 +169,9 @@ func parseCoinbaseResponse(data []byte, _ string, timestamp int64) (price, volum
 		logger.Error("Error unmarshalling data: ", "exchange", exchange, "error", err)
 		return "", "", appErrors.ErrDecodingExchangeResponse
 	}
+
+	price = coinbaseResponse.Price
+	volume = coinbaseResponse.Volume
 
 	t, parseErr := time.Parse(time.RFC3339Nano, coinbaseResponse.Timestamp)
 	if parseErr != nil {
@@ -194,6 +203,8 @@ func parseCryptoResponse(data []byte, symbol string, timestamp int64) (price, vo
 	}
 
 	item := dataArray[0]
+	price = item.Price
+	volume = item.Volume
 
 	err = validateSymbol("crypto", item.Symbol, symbol)
 	if err != nil {
@@ -224,6 +235,9 @@ func parseXTResponse(data []byte, symbol string, timestamp int64) (price, volume
 	}
 
 	item := result[0]
+
+	price = item.Price
+	volume = item.Volume
 
 	err = validateSymbol("xt", item.Symbol, symbol)
 	if err != nil {
@@ -256,6 +270,9 @@ func parseGateResponse(data []byte, symbol string, _ int64) (price, volume strin
 
 	item := list[0]
 
+	price = item.Price
+	volume = item.Volume
+
 	err = validateSymbol("gate", item.Symbol, symbol)
 	if err != nil {
 		return "", "", err
@@ -272,6 +289,9 @@ func parseMEXCResponse(data []byte, symbol string, timestamp int64) (price, volu
 		logger.Error("Error unmarshalling data: ", "exchange", exchange, "error", err)
 		return "", "", appErrors.ErrDecodingExchangeResponse
 	}
+
+	price = mexcResponse.Price
+	volume = mexcResponse.Volume
 
 	err = validateSymbol("mexc", mexcResponse.Symbol, symbol)
 	if err != nil {

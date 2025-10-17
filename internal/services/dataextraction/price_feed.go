@@ -11,8 +11,8 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"sort"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -338,6 +338,8 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice, precision uint, toke
 	} else {
 		upper.Set(tolUpper)
 	}
+	
+	logger.Info("VWAP Inputs", "mad", Truncate(mad, int(precision)), "medianPrice", Truncate(medianPrice, int(precision)), "tokenMADMultiplier", Truncate(tokenMADMultiplier, int(precision)), "tokenToleranceFraction", Truncate(tokenToleranceFraction, int(precision)), "madLower", Truncate(madLower, int(precision)), "tolLower", Truncate(tolLower, int(precision)), "madUpper", Truncate(madUpper, int(precision)), "tolUpper", Truncate(tolUpper, int(precision)), "lower", Truncate(lower, int(precision)), "upper", Truncate(upper, int(precision)))
 
 	filteredPrices := []ValidPrice{}
 	for _, vp := range validPrices {

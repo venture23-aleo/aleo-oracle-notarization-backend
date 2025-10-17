@@ -121,7 +121,7 @@
         "tokenVWAPConfig": {
             "BTC": {
                 "token": "BTC",
-                "tokenTolerancePercent": 0.001,
+                "tokenTolerancePercent": 0.005,
                 "tokenMADMultiplier": 4,
                 "tokenMaxSpreadPercent": 0.01,
                 "tokenMinVolumePerExchange": 100,
@@ -129,7 +129,7 @@
             },
             "ETH": {
                 "token": "ETH",
-                "tokenTolerancePercent": 0.001,
+                "tokenTolerancePercent": 0.005,
                 "tokenMADMultiplier": 4,
                 "tokenMaxSpreadPercent": 0.01,
                 "tokenMinVolumePerExchange": 100,
