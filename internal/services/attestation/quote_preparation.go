@@ -72,7 +72,10 @@ func PrepareOracleUserData(
 			logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)
 			return nil, nil, nil, appErrors.ErrUnsupportedPriceFeedURL
 		}
-		userDataProof[0] = byte(tokenID)
+		// MetaHeaders is 32 bytes total.
+		// - The first 21 bytes are reserved for other metadata.
+		// - The token ID is stored at byte index 21 (0-based).
+		userDataProof[21] = byte(tokenID)
 	}
 
 	// Step 4: Format the proof data into C0 - C7 chunks.

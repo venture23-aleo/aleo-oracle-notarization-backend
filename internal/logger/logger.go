@@ -6,13 +6,27 @@ package logger
 import (
 	"context"
 	"io"
+	"fmt"
 	"log/slog"
 	"os"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
 )
 
-var Logger *slog.Logger
+var (
+    Logger   *slog.Logger
+    seqCount uint64
+    loggerLock       sync.Mutex
+)
+
+type LogHandler struct {
+	logLevel slog.Level
+	out      *os.File
+	attrs    []slog.Attr
+	groups   []string
+}
 
 // defaultNoopLogger is used when the global Logger is not initialized yet.
 // It discards all logs to avoid panics while keeping call sites simple.
@@ -38,10 +52,69 @@ func InitLogger(logLevel string) {
 			level = slog.LevelError
 		}
 	}
-	Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: level,
-	}))
+
+	logHandler := LogHandler{logLevel: level, out: os.Stdout}
+
+	Logger = slog.New(&logHandler)
 	// Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
+}
+
+
+func (h *LogHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= h.logLevel
+}
+
+func (h *LogHandler) Handle(_ context.Context, r slog.Record) error {
+	groupName := strings.Join(h.groups, ".")
+
+	loggerLock.Lock()
+	defer loggerLock.Unlock()	
+
+	// Update state
+	seqCount++
+
+	var parts []string
+
+    parts = append(parts,
+        "time="+r.Time.Format(time.RFC3339),
+        "level="+r.Level.String(),
+        "seq="+fmt.Sprint(seqCount),
+        "msg="+fmt.Sprintf("%q", r.Message),
+    )
+
+
+	for _, attr := range h.attrs {
+		if groupName != "" {
+			parts = append(parts, fmt.Sprintf("%s.%s=%v", groupName, attr.Key, attr.Value.Any()))
+		} else {
+			parts = append(parts, fmt.Sprintf("%s=%v", attr.Key, attr.Value.Any()))
+		}
+	}
+
+	r.Attrs(func(a slog.Attr) bool {
+		if groupName != "" {
+			parts = append(parts, fmt.Sprintf("%s.%s=%v", groupName, a.Key, a.Value.Any()))
+		} else {
+			parts = append(parts, fmt.Sprintf("%s=%v", a.Key, a.Value.Any()))
+		}
+		return true
+	})
+
+	fmt.Fprintln(h.out, strings.Join(parts, " "))
+
+	return nil
+}
+
+func (h *LogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	newHandler := *h
+	newHandler.attrs = append(newHandler.attrs, attrs...)
+	return &newHandler
+}
+
+func (h *LogHandler) WithGroup(name string) slog.Handler {
+	newHandler := *h
+	newHandler.groups = append(newHandler.groups, name)
+	return &newHandler
 }
 
 // RequestIDKey is the context key for request ID
@@ -82,6 +155,14 @@ func Error(msg string, args ...any) {
 	// Add function name to error logs
 	allArgs := append(args, []any{"function_name", getFunctionName()}...)
 	baseLogger().Error(msg, allArgs...)
+}
+
+func Fatal(msg string, args ...any) {
+	if Logger != nil {
+		allArgs := append(args, []any{"function_name", getFunctionName()}...)
+		Logger.Error(msg, allArgs...)
+		os.Exit(1)
+	}
 }
 
 // ErrorWithContext logs an error using a logger derived from the provided context.

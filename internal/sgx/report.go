@@ -3,7 +3,6 @@ package sgx
 import (
 	"bytes"
 	"encoding/binary"
-	"os"
 
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
@@ -54,8 +53,8 @@ type ReportBody struct {
 
 type SGXReport struct {
 	Body  ReportBody
-	MAC   [16]byte
 	KeyID [32]byte
+	MAC   [16]byte
 }
 
 // GenerateSGXReport generates the SGX report.
@@ -66,30 +65,35 @@ func GenerateSGXReport() ([]byte, *appErrors.AppError) {
 	defer enclaveLock.Unlock()
 
 	// Read the target info from target info path
-	targetInfo, err := os.ReadFile(gramineAttestationPaths.MyTargetInfoPath)
+	targetInfo, err := SecureReadFile(GraminePseudoFilesRoot, gramineAttestationPaths.MyTargetInfoPath)
 	if err != nil {
 		logger.Error("Error reading target info: ", "error", err)
 		return nil, appErrors.ErrReadingTargetInfo
 	}
 
 	// Write the target info to the target info path
-	if err := os.WriteFile(gramineAttestationPaths.TargetInfoPath, targetInfo, SGXFilePermissions); err != nil {
+	if err := SecureWriteFile(GraminePseudoFilesRoot, gramineAttestationPaths.TargetInfoPath, targetInfo); err != nil {
 		logger.Error("Error writing target info: ", "error", err)
-		return nil, appErrors.ErrWrittingTargetInfo
+		return nil, appErrors.ErrWritingTargetInfo
 	}
 
 	// Create and write report data
 	reportData := make([]byte, SGXReportDataSize)
-	if err := os.WriteFile(gramineAttestationPaths.UserReportDataPath, reportData, SGXFilePermissions); err != nil {
+	if err := SecureWriteFile(GraminePseudoFilesRoot, gramineAttestationPaths.UserReportDataPath, reportData); err != nil {
 		logger.Error("Error writing report data: ", "error", err)
-		return nil, appErrors.ErrWrittingReportData
+		return nil, appErrors.ErrWritingReportData
 	}
 
 	// Read the report from the report path
-	report, err := os.ReadFile(gramineAttestationPaths.ReportPath)
+	report, err := SecureReadFile(GraminePseudoFilesRoot, gramineAttestationPaths.ReportPath)
 	if err != nil {
 		logger.Error("Error reading report: ", "error", err)
 		return nil, appErrors.ErrReadingReport
+	}
+
+	if len(report) != SGXReportSize {
+		logger.Error("Error reading report: ", "error", appErrors.ErrInvalidSGXReportSize)
+		return nil, appErrors.ErrInvalidSGXReportSize
 	}
 
 	logger.Debug("Attestation environment prepared successfully")

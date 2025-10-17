@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cloudflare/roughtime/client"
 	configs "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
@@ -50,7 +51,7 @@ func GetTokenIDFromPriceFeedURL(url string) int {
 
 // NormalizeURL adds https:// if the scheme is missing and validates the result.
 func NormalizeURL(rawURL string) (string, *appErrors.AppError) {
-	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+	if !strings.HasPrefix(strings.ToLower(rawURL), "http://") && !strings.HasPrefix(strings.ToLower(rawURL), "https://") {
 		rawURL = "https://" + rawURL
 	}
 
@@ -64,7 +65,7 @@ func NormalizeURL(rawURL string) (string, *appErrors.AppError) {
 }
 
 func GetHostnameFromURL(rawURL string) (string, *appErrors.AppError) {
-	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+	if !strings.HasPrefix(strings.ToLower(rawURL), "http://") && !strings.HasPrefix(strings.ToLower(rawURL), "https://") {
 		rawURL = "https://" + rawURL
 	}
 
@@ -79,7 +80,7 @@ func GetHostnameFromURL(rawURL string) (string, *appErrors.AppError) {
 // IsAcceptedHeader checks if a header name is in the list of allowed headers.
 func IsAcceptedHeader(header string) bool {
 	for _, h := range constants.AllowedHeaders {
-		if strings.TrimSpace(h) == header {
+		if strings.ToLower(strings.TrimSpace(h)) == header {
 			return true
 		}
 	}
@@ -98,7 +99,7 @@ func IsTargetWhitelisted(endpoint string) bool {
 	}
 
 	for _, domainName := range configs.GetWhitelistedDomains() {
-		if strings.TrimSpace(domainName) == hostname {
+		if strings.ToLower(strings.TrimSpace(domainName)) == hostname {
 			return true
 		}
 	}
@@ -140,4 +141,22 @@ func SliceToU128(buf []byte) (*big.Int, *appErrors.AppError) {
 	}
 
 	return result, nil
+}
+
+func GetTimestampFromRoughtime() (int64, *appErrors.AppError) { 
+	roughtimeConfig := configs.GetRoughtimeConfig()
+
+	server := roughtimeConfig.ServerConfig.Server
+
+	// Query roughtime servers with timeout and retry settings
+	rt,err := client.Get(server, roughtimeConfig.Retries, roughtimeConfig.Timeout, nil)
+
+	if err != nil {
+		logger.Error("Roughtime query failed: %s\n", err)
+		return 0, appErrors.ErrRoughtimeServerError
+	}
+
+	t := rt.Midpoint.UTC()
+
+	return t.Unix(), nil
 }

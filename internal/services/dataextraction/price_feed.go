@@ -90,7 +90,7 @@ func NewPriceFeedClient() *PriceFeedClient {
 // Returns:
 //   - *ExchangePrice: The parsed price and volume data from the exchange.
 //   - *appErrors.AppError: An application error if any step fails, otherwise nil.
-func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, token, symbol string) (*ExchangePrice, *appErrors.AppError) {
+func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, token, symbol string, timestamp int64) (*ExchangePrice, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	// Step 1: Get exchange configuration.
@@ -114,7 +114,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 
 	// Step 3: Construct the full URL. Accepting protocol scheme in the base URL for unit testing.
 	var url string
-	if strings.HasPrefix(config.BaseURL, "https://") || strings.HasPrefix(config.BaseURL, "http://") {
+	if strings.HasPrefix(strings.ToLower(config.BaseURL), "https://") || strings.HasPrefix(strings.ToLower(config.BaseURL), "http://") {
 		url = fmt.Sprintf("%s%s", config.BaseURL, endpoint)
 	} else {
 		url = fmt.Sprintf("https://%s%s", config.BaseURL, endpoint)
@@ -161,7 +161,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 	}
 
 	// Step 10: Parse price and volume from the decoded response.
-	price, volume, parseErr := c.parseExchangeResponse(exchange, bodyBytes)
+	price, volume, parseErr := c.parseExchangeResponse(exchange, bodyBytes,symbol, timestamp)
 	if parseErr != nil {
 		reqLogger.Error("Error parsing exchange response", "error", parseErr, "exchange", exchange, "token", token, "symbol", symbol)
 		return nil, appErrors.ErrParsingExchangeResponse
@@ -206,7 +206,7 @@ func CalculateVolumeWeightedAverage(prices []ExchangePrice) (float64, float64, i
 }
 
 // GetPriceFeed fetches and calculates the volume-weighted average price for a given token
-func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string) (*PriceFeedResult, *appErrors.AppError) {
+func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string, timestamp int64) (*PriceFeedResult, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	exchanges, exists := c.tokenExchanges[strings.ToUpper(tokenName)]
@@ -257,7 +257,7 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string) (*
 
 		for _, symbol := range symbolList {
 			go func(ex string, tk string, sym string) {
-				price, err := c.FetchPriceFromExchange(ctx, ex, tk, sym)
+				price, err := c.FetchPriceFromExchange(ctx, ex, tk, sym, timestamp)
 				results <- fetchResult{price: price, err: err, exchange: ex}
 			}(exchange, token, symbol)
 		}
@@ -307,7 +307,8 @@ func (c *PriceFeedClient) GetPriceFeed(ctx context.Context, tokenName string) (*
 
 // ExtractPriceFeedData handles price feed requests and always returns the volume-weighted average price (VWAP)
 // This ensures consistent and reliable price data for oracle attestations
-func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.AttestationRequest, token string) (ExtractDataResult, *appErrors.AppError) {
+func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationRequest attestation.AttestationRequest, token string, timestamp int64) (ExtractDataResult, *appErrors.AppError) {
+
 	// Start the price feed extraction
 	priceFeedStart := time.Now()
 
@@ -320,7 +321,7 @@ func (c *PriceFeedClient) ExtractPriceFeedData(ctx context.Context, attestationR
 	reqLogger := logger.FromContext(ctx)
 
 	// Get the price feed data
-	result, appErr := c.GetPriceFeed(ctx, token)
+	result, appErr := c.GetPriceFeed(ctx, token, timestamp)
 
 	if appErr != nil {
 		reqLogger.Error("Error getting price feed for ", "token", token, "error", appErr)

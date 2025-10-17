@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"strconv"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -213,7 +215,7 @@ func RecordDataExtraction(format, status string, duration float64) {
 
 // RecordExternalHttpRequest records external HTTP request metrics
 func RecordExternalHttpRequest(target string, statusCode int, duration float64) {
-	ExternalHttpRequestsTotal.WithLabelValues(target, string(rune(statusCode))).Inc()
+	ExternalHttpRequestsTotal.WithLabelValues(target, strconv.Itoa(statusCode)).Inc()
 	ExternalHttpRequestDuration.WithLabelValues(target).Observe(duration)
 }
 

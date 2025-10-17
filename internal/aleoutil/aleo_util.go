@@ -17,7 +17,7 @@ type AleoPublicContext interface {
 
 type AleoContext struct {
 	Session    aleoUtils.Session // The Aleo session.
-	privateKey string            // The Aleo private key.
+	privateKey []byte            // The Aleo private key.
 	PublicKey  string            // The Aleo public key.
 	Close      func()            // The Aleo close function.
 }
@@ -91,6 +91,14 @@ func GetAleoContext() (AleoPublicContext, *appErrors.AppError) {
 
 // GetAleoContext returns the singleton Aleo context, initializing it if needed
 func (m *AleoContextManager) GetAleoContext() (AleoPublicContext, *appErrors.AppError) {
+	m.mu.RLock()
+   	if m.initialized && m.context != nil {
+        ctx := m.context
+        m.mu.RUnlock()
+        return ctx, nil
+    }
+    m.mu.RUnlock()
+    
 	var initErr error
 	m.once.Do(func() {
 		// Initialize once
@@ -99,6 +107,8 @@ func (m *AleoContextManager) GetAleoContext() (AleoPublicContext, *appErrors.App
 			initErr = err
 			return
 		}
+		m.mu.Lock()
+		defer m.mu.Unlock()
 		m.context = aleoCtx
 		m.initialized = true
 		logger.Debug("Aleo context initialized successfully")
@@ -107,42 +117,45 @@ func (m *AleoContextManager) GetAleoContext() (AleoPublicContext, *appErrors.App
 	if initErr != nil {
 		return nil, appErrors.ErrAleoContext.WithDetails(initErr.Error())
 	}
-	return m.context, nil
+
+	m.mu.RLock()
+	ctx := m.context
+	m.mu.RUnlock()
+
+	return ctx, nil
 }
 
 // Initialize explicitly initializes the Aleo context
 func InitAleoContext() error {
-	var initErr error
-	aleoManager.once.Do(func() {
-		aleoCtx, err := newAleoContext()
-		if err != nil {
-			initErr = err
-			return
-		}
-		aleoManager.context = aleoCtx
-		aleoManager.initialized = true
-		logger.Debug("Aleo context initialized successfully")
-	})
-	return initErr
-}
-
-// ShutdownAleoContext properly closes the Aleo context
-func ShutdownAleoContext() error {
-	aleoManager.mu.Lock()
-	defer aleoManager.mu.Unlock()
-
-	if aleoManager.initialized && aleoManager.context != nil {
-		if aleoCtx, ok := aleoManager.context.(*AleoContext); ok && aleoCtx.Close != nil {
-			aleoCtx.Close()
-		}
-		aleoManager.initialized = false
+    _, err := GetAleoContext()
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
+
+// ShutdownAleoContext properly closes the Aleo context
+func ShutdownAleoContext() error {
+    m := aleoManager
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    if m.initialized && m.context != nil {
+        if aleoCtx, ok := m.context.(*AleoContext); ok && aleoCtx.Close != nil {
+            aleoCtx.Close()
+        }
+        m.context = nil
+        m.initialized = false
+    }
+    return nil
+
+}
+
 // IsInitialized checks if the Aleo context has been initialized
 func IsAleoContextInitialized() bool {
-	aleoManager.mu.RLock()
-	defer aleoManager.mu.RUnlock()
-	return aleoManager.initialized
+   	m := aleoManager
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+    return m.initialized
 }
