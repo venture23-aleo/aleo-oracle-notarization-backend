@@ -35,6 +35,83 @@ This application runs inside an Intel SGX enclave for enhanced security. The enc
 - **Data confidentiality** - Protects sensitive data from the host system
 - **Attestation** - Proves the application is running in a genuine enclave
 
+### mTLS Reverse Proxy (Nginx)
+
+For production / secure environments, an optional Nginx reverse proxy is provided (Docker-based) that:
+
+- Terminates TLS and enforces **mutual TLS (mTLS)** — every client must present a certificate signed by your internal Root CA.
+- Proxies validated requests to the internal notarization backend over the Docker network (plain HTTP).
+- Protects metrics and API surface (only accessible via authenticated mTLS channel).
+
+Artifacts are generated via `make generate-mtls-certs` (automatically included in `make docker-setup`). The unified script `deployment/secrets/generate-mtls-certs.sh` also manages client cert lifecycle (generate, renew, revoke, list, show). Files produced under `deployment/secrets/mtls/`:
+
+- `ca.crt` / `ca.key` – Root Certificate Authority
+- `server.crt` / `server.key` – Nginx server certificate (SAN includes `localhost`, `nginx-mtls-proxy`, and backend service name)
+- `client.crt` / `client.key` – Sample client identity certificate
+
+Default subject values:
+
+- Country (C): NP
+- Organization (O): Venture23
+
+Override per client with: `make client-cert-generate CN=alice COUNTRY=US ORG=Research`.
+
+Example secure request (default generated client `AleoOracleClient`):
+
+```bash
+curl --cacert deployment/secrets/mtls/ca.crt \
+  --cert deployment/secrets/mtls/client.crt \
+  --key deployment/secrets/mtls/client.key \
+  https://localhost:8443/health
+```
+
+You can distribute only `ca.crt` to trusted clients so they can verify your service; each client should have a unique certificate.
+
+Manage client certificates with Make targets (examples):
+
+```bash
+make client-cert-generate CN=alice DAYS=120
+make client-cert-renew CN=alice DAYS=365
+make client-cert-show CN=alice
+make client-cert-list
+make client-cert-revoke CN=alice
+```
+
+Advanced (custom subject / SAN):
+
+```bash
+make client-cert-generate CN=service-a ORG=MyOrg COUNTRY=DE SAN=URI:spiffe://oracle/service/service-a
+make client-cert-generate CN=web-user SAN=DNS:user.example.internal
+make client-cert-renew CN=service-a DAYS=400 SAN=URI:spiffe://oracle/service/service-a,DNS:svc-a.internal
+```
+
+### Rate Limiting & Tuning
+
+Basic rate limiting and connection limiting have been added with sensible defaults intended to protect the backend from accidental floods while allowing normal operation.
+
+#### Managing Per-Client Certificates
+
+Additional client certificates can be managed via the helper script:
+
+```bash
+# Generate (CN required). Optional: DAYS=365 make client-cert-generate CN=alice
+make client-cert-generate CN=alice
+
+# List issued client certs
+make client-cert-list
+
+# Show certificate details
+make client-cert-show CN=alice
+
+# Renew (re-issue) certificate with new validity
+make client-cert-renew CN=alice DAYS=400
+
+# Revoke (local record only – implement CRL/OCSP for enforcement)
+make client-cert-revoke CN=alice
+```
+
+Generated client certs are stored under `deployment/secrets/mtls/clients/<cn>/`.
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -48,4 +125,3 @@ This application runs inside an Intel SGX enclave for enhanced security. The enc
 - [Aleo Oracle Documentation](https://aleo-oracle-docs.surge.sh/)
 - [Gramine Framework](https://gramine.readthedocs.io/en/stable/)
 - [Intel SGX](https://www.intel.com/content/www/us/en/developer/tools/software-guard-extensions/overview.html)
-

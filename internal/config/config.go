@@ -1,12 +1,16 @@
+// Package configs loads and validates application configuration for the service.
 package configs
 
 import (
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
+	rtConfig "github.com/cloudflare/roughtime/config"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 )
 
@@ -20,6 +24,7 @@ type ExchangeConfig struct {
 	BaseURL          string              `json:"baseURL"`
 	Symbols          map[string][]string `json:"symbols"`
 	EndpointTemplate string              `json:"endpointTemplate"`
+	RootCAHash       string              `json:"rootCAHash"`
 }
 
 type ExchangesConfig map[string]ExchangeConfig
@@ -30,6 +35,38 @@ type PriceFeedConfig struct {
 	MinExchangesRequired int             `json:"minExchangesRequired"`
 }
 
+type RoughtimeServerConfig struct {
+	*rtConfig.Server
+	PublicKeyBase64     string   `json:"publicKeyBase64"`
+}
+
+func (s *RoughtimeServerConfig) DecodePublicKey() error {
+    key, err := base64.StdEncoding.DecodeString(s.PublicKeyBase64)
+    if err != nil {
+        return err
+    }
+    s.Server.PublicKey = key
+    return nil
+}
+
+// RoughtimeConfig holds the configuration for the roughtime server
+type RoughtimeConfig struct {
+    Enabled  bool             `json:"enabled"`
+    Retries  int              `json:"retries"`
+    TimeoutString  string    `json:"timeoutString"` // duration string like "1s"
+	Timeout  time.Duration    `json:"timeout"`
+    ServerConfig  RoughtimeServerConfig `json:"serverConfig"`
+}
+
+func (c *RoughtimeConfig) ParseTimeoutString() error {
+    timeout, err := time.ParseDuration(c.TimeoutString)
+    if err != nil {
+        return err
+    }
+    c.Timeout = timeout
+    return nil
+}
+
 // AppConfig holds application-wide configuration
 type AppConfig struct {
 	Port               int             `json:"port"`
@@ -37,6 +74,7 @@ type AppConfig struct {
 	PriceFeedConfig    PriceFeedConfig `json:"priceFeedConfig"`
 	WhitelistedDomains []string        `json:"whitelistedDomains"`
 	LogLevel           string          `json:"logLevel"`
+	RoughtimeConfig    RoughtimeConfig `json:"roughtimeConfig"`
 }
 
 type TokenTradingPairs map[string][]string
@@ -60,7 +98,7 @@ func GetAppConfig() AppConfig {
 	return appConfig
 }
 
-// GetExchangeConfigsWithError returns exchange configs and any loading error
+// GetAppConfigWithError returns the application configuration and any loading error.
 func GetAppConfigWithError() (AppConfig, error) {
 	GetAppConfig() // Ensure initialization
 	return appConfig, appConfigErr
@@ -137,6 +175,11 @@ func GetTokenTradingPairs() TokenTradingPairs {
 	return tokenTradingPairs
 }
 
+func GetRoughtimeConfig() RoughtimeConfig {
+	appConfig := GetAppConfig()
+	return appConfig.RoughtimeConfig
+}
+
 // ValidateConfigs validates that all configurations loaded correctly
 // Should be called during server startup to catch configuration errors early
 func ValidateConfigs() error {
@@ -181,6 +224,8 @@ func ValidateConfigs() error {
 		}
 		if config.EndpointTemplate == "" {
 			errors = append(errors, fmt.Sprintf("Exchange %s: no endpointTemplate configured", exchangeKey))
+		} else if !strings.Contains(config.EndpointTemplate, "{symbol}") {
+			errors = append(errors, fmt.Sprintf("Exchange %s: endpointTemplate must include {symbol} placeholder", exchangeKey))
 		}
 		exchangeKeys = append(exchangeKeys, exchangeKey)
 	}
@@ -197,6 +242,48 @@ func ValidateConfigs() error {
 			}
 		}
 		tokenKeys = append(tokenKeys, token)
+	}
+
+	// Ensure minExchangesRequired is not greater than the number of configured exchanges for any token
+	for token, exchanges := range tokenExchanges {
+		if len(exchanges) < minExchangesRequired {
+			errors = append(errors, fmt.Sprintf("Token %s: minExchangesRequired=%d exceeds configured exchanges=%d", token, minExchangesRequired, len(exchanges)))
+		}
+	// Validate roughtime config
+	roughtimeConfig := &appConfig.RoughtimeConfig
+
+	if !roughtimeConfig.Enabled {
+		errors = append(errors, "Roughtime is not enabled")
+	}
+
+	if roughtimeConfig.TimeoutString == "" {
+		errors = append(errors, "Roughtime timeout is not set")
+	}
+
+	if roughtimeConfig.ServerConfig.Server.Name == "" {
+		errors = append(errors, "Roughtime server name is not set")
+	}
+
+	if len(roughtimeConfig.ServerConfig.Server.Addresses) == 0 {
+		errors = append(errors, "No roughtime server addresses configured")
+	}
+
+	if roughtimeConfig.ServerConfig.Server.PublicKeyType == "" {
+		errors = append(errors, "Roughtime server public key type is not set")
+	}
+
+	if roughtimeConfig.ServerConfig.PublicKeyBase64 == "" {
+		errors = append(errors, "Roughtime server public key is not set")
+	}
+
+	err := roughtimeConfig.ServerConfig.DecodePublicKey()
+	if err != nil {
+		errors = append(errors, fmt.Sprintf("Failed to decode roughtime server public key: %v", err))
+	}
+
+	err = roughtimeConfig.ParseTimeoutString()
+	if err != nil {
+		errors = append(errors, fmt.Sprintf("Failed to decode roughtime timeout: %v", err))
 	}
 
 	// Return combined error if any validation failed

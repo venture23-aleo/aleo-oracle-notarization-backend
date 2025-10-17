@@ -9,6 +9,7 @@ import (
 	"time"
 
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	httpUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/httputil"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
@@ -96,7 +97,13 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	reqLogger.Debug("Generated random number", "number", randomNumber.String())
 
 	// Get the timestamp
-	timestamp := time.Now().Unix()
+	timestamp, appError := common.GetTimestampFromRoughtime()
+	if appError != nil {
+		reqLogger.Error("Failed to get timestamp from roughtime server", "error", appError)
+		metrics.RecordError("timestamp_fetch_failed", "random_handler")
+		httpUtil.WriteJsonError(w, http.StatusInternalServerError, appError)
+		return
+	}
 
 	statusCode := 200
 	attestationData := randomNumber.String()

@@ -646,7 +646,7 @@ func TestDebugAttestationResponse_Structure(t *testing.T) {
 		AttestationTimestamp: 1234567890,
 		ResponseBody:         "debug-response-body",
 		ResponseStatusCode:   200,
-		AttestationData:      "debug-attestation-data",
+		ExtractedData:      "debug-attestation-data",
 	}
 
 	assert.Equal(t, "debug-report", response.ReportType)
@@ -654,7 +654,7 @@ func TestDebugAttestationResponse_Structure(t *testing.T) {
 	assert.Equal(t, int64(1234567890), response.AttestationTimestamp)
 	assert.Equal(t, "debug-response-body", response.ResponseBody)
 	assert.Equal(t, 200, response.ResponseStatusCode)
-	assert.Equal(t, "debug-attestation-data", response.AttestationData)
+	assert.Equal(t, "debug-attestation-data", response.ExtractedData)
 }
 
 func TestOracleData_Structure(t *testing.T) {
@@ -803,4 +803,139 @@ func createMockSGXQuote(reportData []byte, debug bool) []byte {
 	copy(report[320:320+64], reportData)
 
 	return report
+}
+
+
+func TestValidateHeaderValue(t *testing.T) {
+	testCases := []struct {
+		name     string
+		field    string
+		expected bool
+	}{
+		{name: "valid header", field: "application/json", expected: true},
+		{name: "invalid header with carriage return and newline", field: "application/json\r\n", expected: false},
+		{name: "invalid header with newline", field: "application/json\n", expected: false},
+		{name: "invalid header with carriage return", field: "application/json\r", expected: false},
+		{name: "valid header with custom value", field: "test-value", expected: true},
+		{name: "valid header with numbers", field: "456", expected: true},
+		{name: "valid header with dashes and underscores", field: "value_456", expected: true},
+		{name: "valid header with spaces in value", field: "value with spaces", expected: true},
+		{name: "valid header with tab in value", field: "value\twith\ttabs", expected: true},
+		{name: "invalid header with control char in value", field: "value\x02", expected: false},
+		{name: "valid header with colon in value", field: "value: value", expected: true},
+		{name: "empty header value", field: "", expected: true},
+		{name: "control character", field: "\x00", expected: false},
+		{name: "percent-encoded CRLF", field: "%0d%0a", expected: false},
+		{name: "percent-encoded CRLF", field: "%250d%250a", expected: false},
+		{name: "percent-encoded CRLF", field: "%25250d%25250a", expected: false},
+		{name: "percent-encoded CRLF", field: "%2525250d%2525250a", expected: false},
+		{name: "percent-encoded CRLF", field: "%252525250d%252525250a", expected: false},
+		{name: "percent-encoded CRLF", field: "%25252525250d%25252525250a", expected: false},
+		{name: "percent-encoded CRLF", field: "%2525252525250d%2525252525250a", expected: false},
+		{name: "percent-encoded CRLF", field: "%252525252525250d%252525252525250a", expected: false},
+		{name: "unicode-style escapes", field: "%u000d", expected: false},
+		{name: "unicode-style escapes", field: "%u000a", expected: false},
+		{name: "unicode-style escapes", field: "%u000d%u000a", expected: false},
+		{name: "unicode-style escapes", field: "%u000d%u000a", expected: false},
+		{name: "unicode-style escapes", field: "%25u000d", expected: false},
+		{name: "unicode-style escapes", field: "%25u000a", expected: false},
+		{name: "unicode-style escapes", field: "%25u000d%25u000a", expected: false},
+		{name: "unicode-style escapes", field: "%25u000d%25u000a", expected: false},
+		{name: "unicode-style escapes", field: "%2525u000d", expected: false},
+		{name: "unicode-style escapes", field: "%2525u000a", expected: false},
+		{name: "unicode-style escapes", field: "%2525u000d%2525u000a", expected: false},
+		{name: "unicode-style escapes", field: "%2525u000d%2525u000a", expected: false},
+		{name: "unicode-style escapes", field: "%252525u000d", expected: false},
+		{name: "unicode-style escapes", field: "%252525u000a", expected: false},
+		{name: "unicode-style escapes", field: "%252525u000d%252525u000a", expected: false},
+		{name: "unicode-style escapes", field: "\u000d", expected: false},
+		{name: "unicode-style escapes", field: "\u000a", expected: false},
+		{name: "unicode-style escapes", field: "\u000d\u000a", expected: false},
+		{name: "unicode-style escapes", field: "\u000d\u000a", expected: false},
+		{name: "unicode-style escapes", field: "%25\u000d", expected: false},
+		{name: "unicode-style escapes", field: "%25\u000a", expected: false},
+		{name: "unicode-style escapes", field: "%25\u000d%25\u000a", expected: false},
+		{name: "hex style escapes", field: "\x00", expected: false},
+		{name: "hex style escapes", field: "\x01", expected: false},
+		{name: "hex style escapes", field: "\x02", expected: false},
+		{name: "hex style escapes", field: "\x03", expected: false},
+		{name: "hex style escapes", field: "\x04", expected: false},
+		{name: "hex style escapes", field: "\x05", expected: false},
+		{name: "hex style escapes", field: "\x06", expected: false},
+		{name: "hex style escapes", field: "\x07", expected: false},
+		{name: "hex style escapes", field: "\x08", expected: false},
+		{name: "hex style escapes", field: "\x09", expected: true},
+		{name: "hex style escapes", field: "\x0a", expected: false},
+		{name: "hex style escapes", field: "\x0b", expected: false},
+		{name: "hex style escapes", field: "\x0c", expected: false},
+		{name: "hex style escapes", field: "\x0d", expected: false},
+		{name: "hex style escapes", field: "\x0e", expected: false},
+		{name: "hex style escapes", field: "\x0f", expected: false},
+		{name: "hex style escapes", field: "\x10", expected: false},
+		{name: "hex style escapes", field: "\x11", expected: false},
+		{name: "hex style escapes", field: "\x12", expected: false},
+		{name: "hex style escapes", field: "\x13", expected: false},
+		{name: "hex style escapes", field: "\x14", expected: false},
+		{name: "hex style escapes", field: "\x15", expected: false},
+		{name: "hex style escapes", field: "\x16", expected: false},
+		{name: "hex style escapes", field: "\x17", expected: false},
+		{name: "hex style escapes", field: "\x18", expected: false},
+		{name: "hex style escapes", field: "\x19", expected: false},
+		{name: "hex style escapes", field: "\x1a", expected: false},
+		{name: "hex style escapes", field: "\x1b", expected: false},
+		{name: "hex style escapes", field: "\x1c", expected: false},
+		{name: "hex style escapes", field: "\x1d", expected: false},
+		{name: "hex style escapes", field: "\x1e", expected: false},
+		{name: "hex style escapes", field: "\x1f", expected: false},
+		{name: "encoded slash rn", field: "%255Cn", expected: false},
+		{name: "encoded slash rn", field: "%255C%255Cn", expected: false},
+		{name: "encoded slash rn", field: "%255C%255Cr", expected: false},
+		{name: "encoded slash rn", field: "%255C%255Cr%255Cn", expected: false},
+		{name: "encoded slash rn", field: "%255C%255Cr%255Cn%255C%255Cr", expected: false},
+		{name: "encoded slash rn", field: "%255C%255Cr%255Cn%255C%255Cr%255C%255Cn", expected: false},
+		{name: "encoded slash rn", field: "%255C%255Cr%255Cn%255C%255Cr%255C%255Cn%255C%255Cr", expected: false},
+		{name: "encoded slash rn", field: "%255C%255Cr%255Cn%255C%255Cr%255C%255Cn%255C%255Cr%255C%255Cn", expected: false},
+		{name: "unicode style escapes", field: "u000d", expected: true},
+		{name: "unicode style escapes", field: "u000a", expected: true},
+		{name: "unicode style escapes", field: "u000d%u000a", expected: false},
+		{name: "unicode style escapes", field: "u000d%u000a", expected: false},
+		{name: "percent as a text", field: "50% completed", expected: true},
+		{name: "normal header value", field: "normal header value", expected: true},
+		{name: "invalid utf-8", field: "\xff\x61\x62", expected: false},
+		{name: "html char ref cr", field: "&#13;", expected: false},
+		{name: "html char ref cr", field: "&#x0d;", expected: false},
+		{name: "html char ref cr", field: "&#x0D;", expected: false},
+		{name: "html char ref lf", field: "&#10;", expected: false},
+		{name: "html char ref lf", field: "&#x0a;", expected: false},
+		{name: "html char ref lf", field: "&#x0A;", expected: false},
+		{name: "multiple percent", field: "%3%250e", expected: true},
+	}
+
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.expected, isValidHeaderValue(testCase.field))
+		})
+	}
+}
+
+
+func TestValidateHeaderKey(t *testing.T) {
+	testCases := []struct {
+		name     string
+		field    string
+		expected bool
+	}{
+		{name: "valid header key", field: "Content-Type", expected: true},
+		{name: "invalid header key", field: "Content-Type\r\n", expected: false},
+		{name: "invalid header key", field: "Content-Type\n", expected: false},
+		{name: "invalid header key", field: "Content-Type\r", expected: false},
+		{name: "invalid header key", field: "", expected: false},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.expected, isValidHeaderKey(testCase.field))
+		})
+	}
 }

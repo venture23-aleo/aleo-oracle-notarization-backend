@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
@@ -34,6 +35,8 @@ func TestMain(m *testing.M) {
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/api/v3/ticker/24hr"):
 			response := BinanceResponse{}
+			response.Timestamp = time.Now().UnixMilli()
+			response.Symbol = r.URL.Query().Get("symbol")
 			if r.URL.Query().Get("symbol") == "BTCUSDT" {
 				response.Price = "50000.00"
 				response.Volume = "1000.50"
@@ -50,6 +53,8 @@ func TestMain(m *testing.M) {
 				response := MEXCResponse{
 					Price:  "0.24",
 					Volume: "1000.00",
+					Symbol: "ALEOUSDT",
+					Timestamp: time.Now().UnixMilli(),
 				}
 				json.NewEncoder(w).Encode(response)
 				return
@@ -62,25 +67,31 @@ func TestMain(m *testing.M) {
 
 		case strings.HasPrefix(r.URL.Path, "/v5/market/tickers"):
 			response := BybitResponse{}
+			response.Timestamp = time.Now().UnixMilli()
+			symbol := r.URL.Query().Get("symbol")
 			if r.URL.Query().Get("symbol") == "BTCUSDT" {
 				response.Result.List = append(response.Result.List, BybitListItem{
 					Price:  "50100.00",
 					Volume: "800.25",
+					Symbol: symbol,
 				})
 			} else if r.URL.Query().Get("symbol") == "BTCUSDC" {
 				response.Result.List = append(response.Result.List, BybitListItem{
 					Price:  "50100.00",
 					Volume: "800.25",
+					Symbol: symbol,
 				})
 			} else if r.URL.Query().Get("symbol") == "ETHUSDT" {
 				response.Result.List = append(response.Result.List, BybitListItem{
 					Price:  "3990.00",
 					Volume: "1500.00",
+					Symbol: symbol,
 				})
 			} else if r.URL.Query().Get("symbol") == "ETHUSDC" {
 				response.Result.List = append(response.Result.List, BybitListItem{
 					Price:  "4000.00",
 					Volume: "2000.00",
+					Symbol: symbol,
 				})
 			} else {
 				w.WriteHeader(http.StatusNotFound)
@@ -93,6 +104,7 @@ func TestMain(m *testing.M) {
 		case strings.HasPrefix(r.URL.Path, "/products/"):
 			symbol := strings.Split(r.URL.Path, "/")[2]
 			response := CoinbaseResponse{}
+			response.Timestamp = time.Now().Format(time.RFC3339Nano)
 			switch symbol {
 			case "BTC-USD":
 				response.Price = "50200.00"
@@ -124,21 +136,29 @@ func TestMain(m *testing.M) {
 				response.Result.Data = append(response.Result.Data, CryptoListItem{
 					Price:  "50300.00",
 					Volume: "900.30",
+					Symbol: instrumentName,
+					Timestamp: time.Now().UnixMilli(),
 				})
 			case "BTC_USD":
 				response.Result.Data = append(response.Result.Data, CryptoListItem{
 					Price:  "50300.00",
 					Volume: "900.30",
+					Symbol: instrumentName,
+					Timestamp: time.Now().UnixMilli(),
 				})
 			case "ETH_USDT":
 				response.Result.Data = append(response.Result.Data, CryptoListItem{
 					Price:  "4000.00",
 					Volume: "2000.00",
+					Symbol: instrumentName,
+					Timestamp: time.Now().UnixMilli(),
 				})
 			case "ETH_USD":
 				response.Result.Data = append(response.Result.Data, CryptoListItem{
 					Price:  "4000.00",
 					Volume: "2000.00",
+					Symbol: instrumentName,
+					Timestamp: time.Now().UnixMilli(),
 				})
 			default:
 				w.WriteHeader(http.StatusNotFound)
@@ -154,6 +174,7 @@ func TestMain(m *testing.M) {
 				response = append(response, GateResponseItem{
 					Price:  "0.24",
 					Volume: "1000.00",
+					Symbol: currencyPair,
 				})
 			} else {
 				w.WriteHeader(http.StatusNotFound)
@@ -163,9 +184,12 @@ func TestMain(m *testing.M) {
 			json.NewEncoder(w).Encode(response)
 		case strings.HasPrefix(r.URL.Path, "/api/v3/ticker/24hr"):
 			response := MEXCResponse{}
-			if r.URL.Query().Get("symbol") == "ALEOUSDT" {
+			response.Timestamp = time.Now().UnixMilli()
+			symbol := r.URL.Query().Get("symbol")
+			if symbol == "ALEOUSDT" {
 				response.Price = "0.24"
 				response.Volume = "1000.00"
+				response.Symbol = symbol
 			} else {
 				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte("Symbol not found"))
@@ -178,6 +202,8 @@ func TestMain(m *testing.M) {
 				response.Result = append(response.Result, XTResponseItem{
 					Price:  "0.24",
 					Volume: "1000.00",
+					Symbol: "ALEO_USDT",
+					Timestamp: time.Now().UnixMilli(),
 				})
 			} else {
 				w.WriteHeader(http.StatusNotFound)
@@ -230,7 +256,7 @@ func TestPriceFeed_AllValidExchangeResponse(t *testing.T) {
 	}
 
 	for token, exchanges := range tokenExchanges {
-		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, 12)
+		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, time.Now().Unix(),12)
 		assert.Nil(t, err)
 		assert.NotNil(t, price)
 		assert.Equal(t, token, price.Token)
@@ -258,7 +284,7 @@ func TestPriceFeed_WithInternalServerError(t *testing.T) {
 	}
 
 	for token := range tokenExchanges {
-		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, 12)
+		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, time.Now().Unix(), 12)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)
 	}
@@ -282,7 +308,7 @@ func TestPriceFeed_With404Error(t *testing.T) {
 	}
 
 	for token := range tokenExchanges {
-		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, 12)
+		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, time.Now().Unix(), 12)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)
 	}
@@ -444,7 +470,7 @@ func TestPriceFeed_PartialValidExchangeResponse(t *testing.T) {
 	}
 
 	for token := range tokenExchanges {
-		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, 12)
+		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, time.Now().Unix(),12)
 		assert.NotNil(t, err)
 		assert.Nil(t, price)
 	}
@@ -632,7 +658,7 @@ func TestGetPriceFeed_ErrorScenarios(t *testing.T) {
 				tokenExchanges:    tokenExchanges,
 				tokenTradingPairs: tokenTradingPairs,
 			}
-			result, err := client.GetPriceFeed(context.Background(), testCase.testToken, 12)
+			result, err := client.GetPriceFeed(context.Background(), testCase.testToken, time.Now().Unix(),12)
 			assert.Error(t, err)
 			assert.Equal(t, testCase.expectedError, err)
 			assert.Nil(t, result)
@@ -774,7 +800,7 @@ func TestExtractPriceFeedData(t *testing.T) {
 				},
 			}
 
-			result, err := priceFeedClient.ExtractPriceFeedData(context.Background(), attestationRequest, "BTC")
+			result, err := priceFeedClient.ExtractPriceFeedData(context.Background(), attestationRequest, "BTC", time.Now().Unix())
 			assert.Equal(t, testCase.expectedError, err)
 			assert.Equal(t, testCase.expectedAttestationData, result.AttestationData)
 		})
@@ -857,7 +883,7 @@ func TestFetchPriceFromExchange(t *testing.T) {
 				tokenExchanges:    tokenExchanges,
 				tokenTradingPairs: tokenTradingPairs,
 			}
-			_, err := priceFeedClient.FetchPriceFromExchange(context.Background(), testCase.exchange, testCase.token, testCase.symbol)
+			_, err := priceFeedClient.FetchPriceFromExchange(context.Background(), testCase.exchange, testCase.token, testCase.symbol, time.Now().Unix())
 			assert.Equal(t, testCase.expectedError, err)
 		})
 	}
