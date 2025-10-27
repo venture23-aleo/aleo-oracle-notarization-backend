@@ -2,6 +2,7 @@ package data_extraction
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,6 +74,34 @@ type MEXCResponse struct {
 	Volume string `json:"volume"`
 	Symbol string `json:"symbol"`
 	Timestamp int64 `json:"closeTime"`
+}
+
+type KrakenResponseItem struct {
+	Price  [2]string `json:"c"`
+	Volume [2]string `json:"v"`
+}
+
+type KrakenResponse struct {
+	Error  []string `json:"error"`
+	Result map[string]KrakenResponseItem `json:"result"`
+}
+
+type GeminiVolumeInfo struct {
+	USDT      string `json:"USDT,omitempty"`
+	USDC      string `json:"USDC,omitempty"`
+	USD       string `json:"USD,omitempty"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+type GeminiResponse struct {
+	Price  string           `json:"last"`
+	VolumeInfo GeminiVolumeInfo `json:"volume"`
+}
+
+type BitstampResponse struct {
+	Price  string `json:"last"`
+	Volume string `json:"volume"`
+	Timestamp string `json:"timestamp"`
 }
 
 func validateTimestamp(exchange string, timestamp int64, attestationTimestamp int64) *appErrors.AppError {
@@ -306,10 +335,84 @@ func parseMEXCResponse(data []byte, symbol string, timestamp int64) (price, volu
 	return price, volume, nil
 }
 
+func parseKrakenResponse(data []byte, symbol string) (price, volume string, err *appErrors.AppError) {
+	exchange := "kraken"
+	var krakenResponse KrakenResponse
+	if err := json.Unmarshal(data, &krakenResponse); err != nil {
+		logger.Error("Error unmarshalling data: ", "exchange", exchange, "error", err)
+		return "", "", appErrors.ErrDecodingExchangeResponse
+	}
+
+	result, ok := krakenResponse.Result[symbol]
+	if !ok {
+		logger.Error("No data in response", "exchange", exchange, "symbol", symbol)
+		return "", "", appErrors.ErrMissingDataInResponse
+	}
+
+	price = result.Price[0]
+	volume = result.Volume[0]
+
+	return price, volume, nil
+}
+
+func parseGeminiResponse(data []byte, symbol string, timestamp int64, token string) (price, volume string, err *appErrors.AppError) {
+	exchange := "gemini"
+	var geminiResponse GeminiResponse
+	if err := json.Unmarshal(data, &geminiResponse); err != nil {
+		logger.Error("Error unmarshalling data: ", "exchange", exchange, "symbol", symbol, "token", token, "error", err)
+		return "", "", appErrors.ErrDecodingExchangeResponse
+	}
+
+	price = geminiResponse.Price
+
+	switch token {
+	case "USDT":
+		volume = geminiResponse.VolumeInfo.USDT
+	case "USDC":
+		volume = geminiResponse.VolumeInfo.USDC
+	}
+
+	if volume == "" {
+		logger.Error("No volume in response", "exchange", exchange, "symbol", symbol, "token", token)
+		return "", "", appErrors.ErrMissingDataInResponse
+	}
+
+	err = validateTimestamp(exchange,geminiResponse.VolumeInfo.Timestamp, timestamp)
+	if err != nil {
+		return "", "", err
+	}
+
+	return price, volume, nil
+}
+
+func parseBitstampResponse(data []byte, symbol string, timestamp int64) (price, volume string, err *appErrors.AppError) {
+	exchange := "bitstamp"
+	var bitstampResponse BitstampResponse
+	if err := json.Unmarshal(data, &bitstampResponse); err != nil {
+		logger.Error("Error unmarshalling data: ", "exchange", exchange, "symbol", symbol, "error", err)
+		return "", "", appErrors.ErrDecodingExchangeResponse
+	}
+
+	price = bitstampResponse.Price
+	volume = bitstampResponse.Volume
+
+	parsedTimestamp, parseErr := strconv.ParseInt(bitstampResponse.Timestamp, 10, 64)
+	if parseErr != nil {
+		logger.Error("Error parsing timestamp: ", "exchange", exchange, "symbol", symbol, "error", parseErr)
+		return "", "", appErrors.ErrParsingTimestamp
+	}
+
+	err = validateTimestamp(exchange, parsedTimestamp * 1000, timestamp)
+	if err != nil {
+		return "", "", err
+	}
+	return price, volume, nil
+}
+
 // parseExchangeResponse parses the response from different exchanges
-func (c *PriceFeedClient) parseExchangeResponse(exchange string, data []byte, symbol string, timestamp int64) (price, volume string, err *appErrors.AppError) {
+func (c *PriceFeedClient) parseExchangeResponse(exchange string, data []byte, symbol string, timestamp int64, token string) (price, volume string, err *appErrors.AppError) {
 	switch exchange {
-	case "binance":
+	case "binance", "binance-us":
 		return parseBinanceResponse(data, symbol, timestamp)
 	case "bybit":
 		return parseBybitResponse(data, symbol, timestamp)
@@ -323,6 +426,12 @@ func (c *PriceFeedClient) parseExchangeResponse(exchange string, data []byte, sy
 		return parseGateResponse(data, symbol, timestamp)
 	case "mexc":
 		return parseMEXCResponse(data, symbol, timestamp)
+	case "kraken":
+		return parseKrakenResponse(data, symbol)
+	case "gemini":
+		return parseGeminiResponse(data, symbol, timestamp, token)
+	case "bitstamp":
+		return parseBitstampResponse(data, symbol, timestamp)
 	default:
 		logger.Error("Unsupported exchange: ", "exchange", exchange)
 		return "", "", appErrors.ErrExchangeNotSupported

@@ -358,7 +358,7 @@ func TestParseExchangeResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s_%s", tt.exchange, tt.name), func(t *testing.T) {
-			price, volume, err := priceFeedClient.parseExchangeResponse(tt.exchange, tt.response, tt.symbol, time.Now().Unix())
+			price, volume, err := priceFeedClient.parseExchangeResponse(tt.exchange, tt.response, tt.symbol, time.Now().Unix(), "USDT")
 			assert.Equal(t, tt.expectedPrice, price)
 			assert.Equal(t, tt.expectedVolume, volume)
 			assert.Equal(t, tt.expectedError, err)

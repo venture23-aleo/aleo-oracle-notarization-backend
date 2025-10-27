@@ -49,6 +49,9 @@
                     "ETH": [
                         "ETH-USD",
                         "ETH-USDT"
+                    ],
+                    "USDT": [
+                        "USDT-USD"
                     ]
                 }
             },
@@ -96,6 +99,58 @@
                         "ALEO_USDT"
                     ]
                 }
+            },
+            "binance-us": {
+                "name": "Binance US",
+                "baseURL": "api.binance.us",
+                "endpointTemplate": "/api/v3/ticker/24hr?symbol={symbol}",
+                "symbols": {
+                    "USDT": [
+                        "USDT_USD"
+                    ],
+                    "USDC": [
+                        "USDC_USD"
+                    ]
+                }
+            },
+            "kraken": {
+                "name": "Kraken",
+                "baseURL": "api.kraken.com",
+                "endpointTemplate": "/0/public/Ticker?pair={symbol}",
+                "symbols": {
+                    "USDT": [
+                        "USDTZUSD"
+                    ],
+                    "USDC": [
+                        "USDCUSD"
+                    ]
+                }
+            },
+            "gemini": {
+                "name": "Gemini",
+                "baseURL": "api.gemini.com",
+                "endpointTemplate": "/v1/pubticker/{symbol}",
+                "symbols": {
+                    "USDT": [
+                        "USDTUSD"
+                    ],
+                    "USDC": [
+                        "USDCUSD"
+                    ]
+                }
+            },
+            "bitstamp": {
+                "name": "Bitstamp",
+                "baseURL": "bitstamp.net",
+                "endpointTemplate": "/api/v2/ticker/{symbol}",
+                "symbols": {
+                    "USDT": [
+                        "USDTUSD"
+                    ],
+                    "USDC": [
+                        "USDCUSD"
+                    ]
+                }
             }
         },
         "tokenExchanges": {
@@ -116,6 +171,19 @@
                 "bybit",
                 "coinbase",
                 "crypto"
+            ],
+            "USDT": [
+                "binance-us",
+                "kraken",
+                "coinbase",
+                "gemini",
+                "bitstamp"
+            ],
+            "USDC": [
+                "binance-us",
+                "kraken",
+                "gemini",
+                "bitstamp"
             ]
         },
         "tokenVWAPConfig": {
@@ -124,7 +192,7 @@
                 "tokenTolerancePercent": 0.005,
                 "tokenMADMultiplier": 4,
                 "tokenMaxSpreadPercent": 0.01,
-                "tokenMinVolumePerExchange": 100,
+                "tokenMinVolumePerExchange": 1000,
                 "tokenMaxExchangeWeightPercent": 50
             },
             "ETH": {
@@ -132,7 +200,7 @@
                 "tokenTolerancePercent": 0.005,
                 "tokenMADMultiplier": 4,
                 "tokenMaxSpreadPercent": 0.01,
-                "tokenMinVolumePerExchange": 100,
+                "tokenMinVolumePerExchange": 1000,
                 "tokenMaxExchangeWeightPercent": 50
             },
             "ALEO": {
@@ -140,7 +208,23 @@
                 "tokenTolerancePercent": 0.5,
                 "tokenMADMultiplier": 7,
                 "tokenMaxSpreadPercent": 2,
-                "tokenMinVolumePerExchange": 100,
+                "tokenMinVolumePerExchange": 10000,
+                "tokenMaxExchangeWeightPercent": 50
+            },
+            "USDT": {
+                "token": "USDT",
+                "tokenTolerancePercent": 0.5,
+                "tokenMADMultiplier": 7,
+                "tokenMaxSpreadPercent": 0.5,
+                "tokenMinVolumePerExchange": 10000,
+                "tokenMaxExchangeWeightPercent": 50
+            },
+            "USDC": {
+                "token": "USDC",
+                "tokenTolerancePercent": 0.5,
+                "tokenMADMultiplier": 7,
+                "tokenMaxSpreadPercent": 0.5,
+                "tokenMinVolumePerExchange": 10000,
                 "tokenMaxExchangeWeightPercent": 50
             }
         }
