@@ -51,10 +51,7 @@ services:
       - SETUID
       - SETGID
       - CHOWN
-    tmpfs:
-      - /var/cache/nginx:uid=101,gid=101,mode=0755
-      - /var/run:uid=101,gid=101,mode=0755
-
+      - CAP_SYS_NICE
 secrets:
   gramine-private-key:
     file: ${ENCLAVE_SIGNING_KEY_FILE}
