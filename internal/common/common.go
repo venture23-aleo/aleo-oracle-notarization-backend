@@ -18,7 +18,9 @@ import (
 func IsPriceFeedURL(url string) bool {
 	return url == constants.PriceFeedBTCURL ||
 		url == constants.PriceFeedETHURL ||
-		url == constants.PriceFeedAleoURL
+		url == constants.PriceFeedAleoURL || 
+		url == constants.PriceFeedUSDTURL ||
+		url == constants.PriceFeedUSDCURL
 }
 
 // ExtractAssetFromPriceFeedURL extracts the asset name from price feed URL
@@ -30,6 +32,10 @@ func ExtractTokenFromPriceFeedURL(url string) string {
 		return "ETH"
 	case constants.PriceFeedAleoURL:
 		return "ALEO"
+	case constants.PriceFeedUSDTURL:
+		return "USDT"
+	case constants.PriceFeedUSDCURL:
+		return "USDC"
 	default:
 		return "UNKNOWN"
 	}
@@ -44,6 +50,10 @@ func GetTokenIDFromPriceFeedURL(url string) int {
 		return constants.ETHTokenID
 	case constants.PriceFeedAleoURL:
 		return constants.AleoTokenID
+	case constants.PriceFeedUSDTURL:
+		return constants.USDTTokenID
+	case constants.PriceFeedUSDCURL:
+		return constants.USDCTokenID
 	default:
 		return 0
 	}

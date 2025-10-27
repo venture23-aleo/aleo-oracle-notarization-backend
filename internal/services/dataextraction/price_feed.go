@@ -219,7 +219,7 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 	}
 
 	// Step 10: Parse price and volume from the decoded response.
-	price, volume, parseErr := c.parseExchangeResponse(exchange, bodyBytes,symbol, timestamp)
+	price, volume, parseErr := c.parseExchangeResponse(exchange, bodyBytes,symbol, timestamp, token)
 	if parseErr != nil {
 		reqLogger.Error("Error parsing exchange response", "error", parseErr, "exchange", exchange, "token", token, "symbol", symbol)
 		return nil, appErrors.ErrParsingExchangeResponse

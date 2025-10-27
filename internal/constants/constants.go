@@ -65,9 +65,13 @@ const (
 	PriceFeedBTCURL          string = "price_feed: btc"
 	PriceFeedETHURL          string = "price_feed: eth"
 	PriceFeedAleoURL         string = "price_feed: aleo"
+	PriceFeedUSDTURL         string = "price_feed: usdt"
+	PriceFeedUSDCURL         string = "price_feed: usdc"
 	BTCTokenID               int    = 12
 	ETHTokenID               int    = 11
 	AleoTokenID              int    = 8
+	USDTTokenID              int    = 9
+	USDCTokenID              int    = 10
 	AttestationDataSizeLimit int    = 1024 * 3
 	PriceFeedSelector        string = "weightedAvgPrice"
 	MaxAllowedTimeDiff       int64  = 600 // 10 minutes in seconds
