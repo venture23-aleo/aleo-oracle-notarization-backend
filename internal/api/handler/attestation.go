@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	httpUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/httputil"
@@ -40,7 +41,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	contentType := req.Header.Get("Content-Type")
 
 	// Validate Content-Type
-	if !strings.Contains(contentType, "application/json") {
+	if !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
 		reqLogger.Error("Invalid Content-Type", "content_type", contentType)
 		metrics.RecordError("invalid_content_type", "attestation_handler")
 		httpUtil.WriteJsonError(w, http.StatusUnsupportedMediaType, appErrors.ErrInvalidContentType)
@@ -71,7 +72,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	attestationRequest := attestationRequestWithDebug.AttestationRequest
+	attestationRequest := attestationRequestWithDebug.AttestationRequest.Normalize()
 
 	reqLogger.Debug("Processing attestation request", "url", attestationRequest.Url, "debug", attestationRequestWithDebug.DebugRequest)
 
@@ -82,14 +83,21 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Get the timestamp.
-	timestamp := time.Now().Unix()
+	// Get timestamp from roughtime server
+	timestamp, err := common.GetTimestampFromRoughtime()
+
+	if err != nil {
+		reqLogger.Error("Failed to get timestamp from roughtime server", "error", err)
+		metrics.RecordError("timestamp_fetch_failed", "attestation_handler")
+		httpUtil.WriteJsonError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	reqLogger.Debug("Fetching data from target URL", "url", attestationRequest.Url, "timestamp", timestamp)
 
 	// Fetch the data from the attestation request.
 	extractStart := time.Now()
-	extractDataResult, err := data_extraction.ExtractDataFromTargetURL(ctx, attestationRequest)
+	extractDataResult, err := data_extraction.ExtractDataFromTargetURL(ctx, attestationRequest, timestamp)
 	extractDuration := time.Since(extractStart).Seconds()
 
 	// Check if the error is not nil.
@@ -114,7 +122,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 			AttestationRequest:   attestationRequest,
 			AttestationTimestamp: timestamp,
 			ResponseBody:         extractDataResult.ResponseBody,
-			AttestationData:      extractDataResult.AttestationData,
+			ExtractedData:        extractDataResult.AttestationData,
 			ResponseStatusCode:   extractDataResult.StatusCode,
 		}
 

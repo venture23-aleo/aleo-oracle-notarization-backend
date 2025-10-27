@@ -39,6 +39,9 @@ type EnclaveInfoResponse struct {
 
 // formatSgxReport formats the SGX report
 func formatSGXReport(sgxReport *sgx.SGXReport) (SGXEnclaveInfo, *appErrors.AppError) {
+	if sgxReport == nil {
+		return SGXEnclaveInfo{}, appErrors.ErrNilSGXReport
+	}
 
 	// Convert ProductID to 16-byte array for base64 encoding
 	rawProdID := make([]byte, 16)
@@ -66,7 +69,6 @@ func formatSGXReport(sgxReport *sgx.SGXReport) (SGXEnclaveInfo, *appErrors.AppEr
 
 // encodeForAleo encodes the SGX info for Aleo
 func encodeForAleo(reportBody sgx.ReportBody) (AleoEncodedSGXInfo, *appErrors.AppError) {
-
 	mrEnclaveChunk1, err := common.SliceToU128(reportBody.MREnclave[0:16])
 	if err != nil {
 		logger.Error("Failed to convert MRENCLAVE to uint128", "error", err)

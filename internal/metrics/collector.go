@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
@@ -10,6 +11,8 @@ import (
 // SystemMetricsCollector collects system-level metrics
 type SystemMetricsCollector struct {
 	stopChan chan struct{}
+	mu       sync.Mutex
+	started  bool
 }
 
 // NewSystemMetricsCollector creates a new system metrics collector
@@ -21,14 +24,36 @@ func NewSystemMetricsCollector() *SystemMetricsCollector {
 
 // Start begins collecting system metrics
 func (c *SystemMetricsCollector) Start() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.started {
+		logger.Warn("System metrics collector already started")
+		return
+	}
 	logger.Info("Starting system metrics collector")
+	// Reinitialize stop channel in case of restart after Stop.
+	c.stopChan = make(chan struct{})
+	c.started = true
 	go c.collect()
 }
 
 // Stop stops collecting system metrics
 func (c *SystemMetricsCollector) Stop() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.started {
+		logger.Warn("System metrics collector not running")
+		return
+	}
 	logger.Info("Stopping system metrics collector")
-	close(c.stopChan)
+	// Make stop idempotent by closing only once.
+	select {
+	case <-c.stopChan:
+		// already closed
+	default:
+		close(c.stopChan)
+	}
+	c.started = false
 }
 
 // collect periodically collects system metrics

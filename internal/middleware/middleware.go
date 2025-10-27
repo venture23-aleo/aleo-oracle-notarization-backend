@@ -9,8 +9,17 @@ type Middleware func(http.Handler) http.Handler
 
 // Chain applies multiple middleware to a handler in order
 func Chain(handler http.Handler, middleware ...Middleware) http.Handler {
+	// Defensive checks to avoid nil-function panics.
+	if handler == nil {
+		// Return a safe default handler instead of panicking.
+		return http.NotFoundHandler()
+	}
 	// Apply middleware in reverse order (last middleware wraps first)
 	for i := len(middleware) - 1; i >= 0; i-- {
+		if middleware[i] == nil {
+			// Skip nil middleware functions.
+			continue
+		}
 		handler = middleware[i](handler)
 	}
 	return handler

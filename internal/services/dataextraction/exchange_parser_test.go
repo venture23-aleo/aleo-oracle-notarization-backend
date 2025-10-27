@@ -3,13 +3,16 @@ package data_extraction
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
+	configs "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/config"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 )
 
 func TestParseExchangeResponse(t *testing.T) {
+	responseTimestamp := time.Now().UnixMilli()
+	attestationTimestamp := time.Now().Unix()
 	tests := []struct {
 		name           string
 		exchange       string
@@ -17,46 +20,58 @@ func TestParseExchangeResponse(t *testing.T) {
 		expectedPrice  float64
 		expectedVolume float64
 		expectedError  *appErrors.AppError
+		symbol         string
+		timestamp      int64
 	}{
 		{
 			name:           "Binance valid response",
 			exchange:       "binance",
-			response:       []byte(`{"lastPrice": "1000.00", "volume": "1000.00"}`),
+			response:       []byte(fmt.Sprintf(`{"lastPrice": "1000.00", "volume": "1000.00", "symbol": "BTCUSDT", "closeTime": %d}`, responseTimestamp)),
 			expectedPrice:  1000.0,
 			expectedVolume: 1000.0,
 			expectedError:  nil,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Bybit valid response",
 			exchange:       "bybit",
-			response:       []byte(`{"result":{"list": [{"lastPrice": "1000.00", "volume24h": "1000.00"}]}}`),
+			response:       []byte(fmt.Sprintf(`{"time": %d, "result":{"list": [{"lastPrice": "1000.00", "volume24h": "1000.00", "symbol": "BTCUSDT"}]}}`, responseTimestamp)),
 			expectedPrice:  1000.0,
 			expectedVolume: 1000.0,
 			expectedError:  nil,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Gate valid response",
 			exchange:       "gate",
-			response:       []byte(`[{"last": "1000.00", "base_volume": "1000.00"}]`),
+			response:       []byte(`[{"last": "1000.00", "base_volume": "1000.00","currency_pair":"BTCUSDT"}]`),
 			expectedPrice:  1000.0,
 			expectedVolume: 1000.0,
 			expectedError:  nil,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "MEXC valid response",
 			exchange:       "mexc",
-			response:       []byte(`{"lastPrice": "1000.00", "volume": "1000.00"}`),
+			response:       []byte(fmt.Sprintf(`{"lastPrice": "1000.00", "volume": "1000.00", "symbol": "BTCUSDT", "closeTime": %d}`, responseTimestamp)),
 			expectedPrice:  1000.0,
 			expectedVolume: 1000.0,
 			expectedError:  nil,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "XT valid response",
 			exchange:       "xt",
-			response:       []byte(`{"result": [{"c": "1000.00", "q": "1000.00"}]}`),
+			response:       []byte(fmt.Sprintf(`{"result": [{"c": "1000.00", "q": "1000.00", "s": "BTCUSDT", "t": %d}]}`, responseTimestamp)),
 			expectedPrice:  1000.0,
 			expectedVolume: 1000.0,
 			expectedError:  nil,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid exchange",
@@ -65,6 +80,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrExchangeNotSupported,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid binance response with invalid price",
@@ -73,6 +90,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingPrice,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid binance response with invalid volume",
@@ -81,6 +100,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingVolume,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid bybit response with invalid price",
@@ -89,6 +110,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingPrice,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid bybit response with invalid volume",
@@ -97,6 +120,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingVolume,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid gate response with invalid price",
@@ -105,6 +130,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingPrice,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid gate response with invalid volume",
@@ -113,6 +140,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingVolume,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid mexc response with invalid price",
@@ -121,6 +150,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingPrice,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid mexc response with invalid volume",
@@ -129,6 +160,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingVolume,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid xt response with invalid price",
@@ -137,6 +170,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingPrice,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid xt response with invalid volume",
@@ -145,6 +180,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingVolume,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid coinbase response with invalid price",
@@ -153,6 +190,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingPrice,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid coinbase response with invalid volume",
@@ -161,6 +200,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingVolume,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid crypto response with invalid price",
@@ -169,6 +210,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingPrice,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid crypto response with invalid volume",
@@ -177,6 +220,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrParsingVolume,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Invalid crypto response with empty result",
@@ -185,6 +230,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrMissingDataInResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "Missing data in crypto response",
@@ -193,6 +240,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrMissingDataInResponse,
+			symbol:         "BTCUSDT",
+			timestamp: attestationTimestamp,
 		},
 		{
 			name:           "Missing data in bybit response",
@@ -201,6 +250,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrMissingDataInResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 
 		{
@@ -210,6 +261,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrMissingDataInResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "missing data in xt response",
@@ -218,6 +271,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrMissingDataInResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "malformed json response",
@@ -226,6 +281,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrDecodingExchangeResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "malformed json response",
@@ -234,6 +291,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrDecodingExchangeResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "malformed json response",
@@ -242,6 +301,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrDecodingExchangeResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "malformed json response",
@@ -250,6 +311,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrDecodingExchangeResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "malformed json response",
@@ -258,6 +321,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrDecodingExchangeResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "malformed json response",
@@ -266,6 +331,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrDecodingExchangeResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 		{
 			name:           "malformed json response",
@@ -274,6 +341,8 @@ func TestParseExchangeResponse(t *testing.T) {
 			expectedPrice:  0.0,
 			expectedVolume: 0.0,
 			expectedError:  appErrors.ErrDecodingExchangeResponse,
+			symbol:         "BTCUSDT",
+			timestamp:      attestationTimestamp,
 		},
 	}
 
@@ -289,7 +358,7 @@ func TestParseExchangeResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s_%s", tt.exchange, tt.name), func(t *testing.T) {
-			price, volume, err := priceFeedClient.parseExchangeResponse(tt.exchange, tt.response)
+			price, volume, err := priceFeedClient.parseExchangeResponse(tt.exchange, tt.response, tt.symbol, time.Now().Unix(), "USDT")
 			assert.Equal(t, tt.expectedPrice, price)
 			assert.Equal(t, tt.expectedVolume, volume)
 			assert.Equal(t, tt.expectedError, err)

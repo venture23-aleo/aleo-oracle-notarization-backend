@@ -4,12 +4,13 @@ go 1.24.4
 
 require (
 	github.com/antchfx/htmlquery v1.3.4
+	github.com/cloudflare/roughtime v0.0.0-20241210180848-8b34bf166fa6
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
-	github.com/venture23-aleo/aleo-oracle-encoding v1.0.0
-	github.com/venture23-aleo/aleo-utils-go v1.0.0
+	github.com/venture23-aleo/aleo-oracle-encoding v1.0.1-0.20251017125106-c912363229aa
+	github.com/venture23-aleo/aleo-utils-go v1.0.1-0.20251017132618-ccdd68a44f44
 )
 
 require (

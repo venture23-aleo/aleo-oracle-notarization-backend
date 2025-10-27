@@ -2,9 +2,10 @@ package data_extraction
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"math/big"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,22 +26,40 @@ type ExtractDataResult struct {
 	StatusCode      int    // The status code.
 }
 
+// Truncate returns r truncated to `prec` decimal places as a *big.Rat.
+func Truncate(r *big.Rat, prec int) string {
+	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(prec)), nil)
+
+	// numerator * 10^prec
+	numScaled := new(big.Int).Mul(r.Num(), scale)
+
+	// truncate by integer division
+	quo := new(big.Int).Quo(numScaled, r.Denom())
+
+	intPart := new(big.Int).Quo(quo, scale)
+	fracPart := new(big.Int).Mod(quo, scale)
+	fracStr := fmt.Sprintf("%0*s", prec, fracPart.String())
+
+	return fmt.Sprintf("%s.%s", intPart.String(), fracStr)
+}
+
 func formatAttestationData(ctx context.Context, attestationData string, encodingOptionValue string, precision uint) (string, *appErrors.AppError) {
 	reqLogger := logger.FromContext(ctx)
 
 	switch encodingOptionValue {
-	case constants.EncodingOptionFloat:
-		valueFloat, err := strconv.ParseFloat(attestationData, 64)
-		if err != nil {
-			return "", appErrors.ErrParsingFloatValue
-		}
-		return strconv.FormatFloat(valueFloat, 'f', int(precision), 64), nil
 	case constants.EncodingOptionInt:
-		valueInt, err := strconv.ParseInt(attestationData, 10, 64)
-		if err != nil {
-			return "", appErrors.ErrParsingIntValue
+		valueInt, ok := new(big.Int).SetString(attestationData, 10)
+		if !ok {
+			return "", appErrors.ErrInvalidRationalNumber
 		}
-		return strconv.FormatInt(valueInt, 10), nil
+		return valueInt.String(), nil
+	case constants.EncodingOptionFloat:
+		valueInt, ok := new(big.Rat).SetString(attestationData)
+		if !ok {
+			return "", appErrors.ErrInvalidRationalNumber
+		}
+		truncatedValue := Truncate(valueInt, int(precision))
+		return truncatedValue, nil
 	case constants.EncodingOptionString:
 		return attestationData, nil
 	default:
@@ -149,7 +168,7 @@ func makeHTTPRequestToTarget(ctx context.Context, attestationRequest attestation
 
 // ExtractDataFromTargetURL fetches the data from the attestation request target URL.
 // This is the main entry point that routes to specific extractors based on the request type.
-func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestation.AttestationRequest) (ExtractDataResult, *appErrors.AppError) {
+func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestation.AttestationRequest, timestamp int64) (ExtractDataResult, *appErrors.AppError) {
 	// Get logger from context (includes request ID)
 	reqLogger := logger.FromContext(ctx)
 
@@ -157,7 +176,7 @@ func ExtractDataFromTargetURL(ctx context.Context, attestationRequest attestatio
 		reqLogger.Debug("Processing price feed request", "url", attestationRequest.Url)
 		token := common.ExtractTokenFromPriceFeedURL(attestationRequest.Url)
 		priceFeedClient := NewPriceFeedClient()
-		return priceFeedClient.ExtractPriceFeedData(ctx, attestationRequest, token)
+		return priceFeedClient.ExtractPriceFeedData(ctx, attestationRequest, token, timestamp)
 	}
 
 	switch attestationRequest.ResponseFormat {
