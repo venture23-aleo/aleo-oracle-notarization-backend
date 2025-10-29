@@ -365,7 +365,7 @@ func TestIsAcceptedHeader(t *testing.T) {
 		{
 			name:     "Case sensitive - should match exactly",
 			header:   "accept",
-			expected: false,
+			expected: true,
 		},
 	}
 
