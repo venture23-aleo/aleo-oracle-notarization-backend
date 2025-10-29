@@ -90,7 +90,7 @@ func GetHostnameFromURL(rawURL string) (string, *appErrors.AppError) {
 // IsAcceptedHeader checks if a header name is in the list of allowed headers.
 func IsAcceptedHeader(header string) bool {
 	for _, h := range constants.AllowedHeaders {
-		if strings.ToLower(strings.TrimSpace(h)) == header {
+		if strings.EqualFold(h, header) {
 			return true
 		}
 	}

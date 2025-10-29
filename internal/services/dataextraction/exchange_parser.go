@@ -2,6 +2,7 @@ package data_extraction
 
 import (
 	"encoding/json"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -133,6 +134,36 @@ func validateSymbol(exchange, parsedSymbol, symbol string) *appErrors.AppError {
 }
 
 
+func validatePrice(price string) *appErrors.AppError {
+	priceRat, ok := new(big.Rat).SetString(price)
+	if !ok || priceRat.Sign() <= 0 {
+		logger.Error("Error parsing price: ", "exchange", "binance", "price", price)
+		return appErrors.ErrParsingPrice
+	}
+	return nil
+}
+
+func validateVolume(volume string) *appErrors.AppError {
+	volumeRat, ok := new(big.Rat).SetString(volume)
+	if !ok || volumeRat.Sign() <= 0 {
+		logger.Error("Error parsing volume: ", "exchange", "binance", "volume", volume)
+		return appErrors.ErrParsingVolume
+	}
+	return nil
+}
+
+func validatePriceAndVolume(price, volume string) *appErrors.AppError {
+	err := validatePrice(price)
+	if err != nil {
+		return err
+	}
+	err = validateVolume(volume)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // parseBinanceResponse parses the response from Binance
 func parseBinanceResponse(data []byte, symbol string, timestamp int64) (price, volume string, err *appErrors.AppError) {
 	var binanceResponse BinanceResponse
@@ -150,6 +181,11 @@ func parseBinanceResponse(data []byte, symbol string, timestamp int64) (price, v
 	}
 
 	err = validateTimestamp("binance", binanceResponse.Timestamp, timestamp)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = validatePriceAndVolume(price, volume)
 	if err != nil {
 		return "", "", err
 	}
@@ -186,6 +222,11 @@ func parseBybitResponse(data []byte, symbol string, timestamp int64) (price, vol
 		return "", "", err
 	}
 
+	err = validatePriceAndVolume(price, volume)
+	if err != nil {
+		return "", "", err
+	}
+
 
 	return price, volume, nil
 }
@@ -209,6 +250,11 @@ func parseCoinbaseResponse(data []byte, _ string, timestamp int64) (price, volum
 	}
 
 	err = validateTimestamp("coinbase", t.UnixMilli(), timestamp)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = validatePriceAndVolume(price, volume)
 	if err != nil {
 		return "", "", err
 	}
@@ -241,6 +287,11 @@ func parseCryptoResponse(data []byte, symbol string, timestamp int64) (price, vo
 	}
 
 	err = validateTimestamp("crypto", item.Timestamp, timestamp)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = validatePriceAndVolume(price, volume)
 	if err != nil {
 		return "", "", err
 	}
@@ -278,6 +329,11 @@ func parseXTResponse(data []byte, symbol string, timestamp int64) (price, volume
 		return "", "", err
 	}
 
+	err = validatePriceAndVolume(price, volume)
+	if err != nil {
+		return "", "", err
+	}
+
 	return price, volume, nil
 
 }
@@ -307,6 +363,11 @@ func parseGateResponse(data []byte, symbol string, _ int64) (price, volume strin
 		return "", "", err
 	}
 
+	err = validatePriceAndVolume(price, volume)
+	if err != nil {
+		return "", "", err
+	}
+
 	return price, volume, nil
 }
 
@@ -332,6 +393,11 @@ func parseMEXCResponse(data []byte, symbol string, timestamp int64) (price, volu
 		return "", "", err
 	}
 
+	err = validatePriceAndVolume(price, volume)
+	if err != nil {
+		return "", "", err
+	}
+
 	return price, volume, nil
 }
 
@@ -351,6 +417,11 @@ func parseKrakenResponse(data []byte, symbol string) (price, volume string, err 
 
 	price = result.Price[0]
 	volume = result.Volume[0]
+
+	err = validatePriceAndVolume(price, volume)
+	if err != nil {
+		return "", "", err
+	}
 
 	return price, volume, nil
 }
@@ -381,6 +452,11 @@ func parseGeminiResponse(data []byte, symbol string, timestamp int64, token stri
 	if err != nil {
 		return "", "", err
 	}
+	
+	err = validatePriceAndVolume(price, volume)
+	if err != nil {
+		return "", "", err
+	}
 
 	return price, volume, nil
 }
@@ -406,6 +482,12 @@ func parseBitstampResponse(data []byte, symbol string, timestamp int64) (price, 
 	if err != nil {
 		return "", "", err
 	}
+
+	err = validatePriceAndVolume(price, volume)
+	if err != nil {
+		return "", "", err
+	}
+	
 	return price, volume, nil
 }
 
