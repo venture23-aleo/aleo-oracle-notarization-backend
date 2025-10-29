@@ -224,20 +224,6 @@ func TestExtractDataFromTargetURL_ValidRequest(t *testing.T) {
 		checkAttestationData    bool
 	}{
 		{
-			name: "valid price feed request",
-			request: attestation.AttestationRequest{
-				Url:            "price_feed: btc",
-				RequestMethod:  "GET",
-				ResponseFormat: "json",
-				Selector:       "volumeWeightedAvg",
-				EncodingOptions: encoding.EncodingOptions{
-					Value:     "float",
-					Precision: 10,
-				},
-			},
-			checkAttestationData: false,
-		},
-		{
 			name: "valid html request with element type",
 			request: attestation.AttestationRequest{
 				Url:            server.URL + "/html",

@@ -338,11 +338,11 @@ func TestBuildCompleteOracleData(t *testing.T) {
 
 				switch testCase.attestationRequest.Url {
 				case constants.PriceFeedBTCURL:
-					assert.Equal(t, quotePreparationData.UserDataProof[0:1], []byte{0xc})
+					assert.Equal(t, quotePreparationData.UserDataProof[21], uint8(0xc))
 				case constants.PriceFeedETHURL:
-					assert.Equal(t, quotePreparationData.UserDataProof[0:1], []byte{0xb})
+					assert.Equal(t, quotePreparationData.UserDataProof[21], uint8(0xb))
 				case constants.PriceFeedAleoURL:
-					assert.Equal(t, quotePreparationData.UserDataProof[0:1], []byte{0x8})
+					assert.Equal(t, quotePreparationData.UserDataProof[21], uint8(0x8))
 				}
 
 				expectedUserData, _ := aleoContext.GetSession().FormatMessage(quotePreparationData.UserDataProof, 8)

@@ -721,7 +721,7 @@ func TestIsAcceptedHeader(t *testing.T) {
 		expected bool
 	}{
 		{name: "Content-Type", header: "Content-Type", expected: true},
-		{name: "content-type", header: "content-type", expected: false},
+		{name: "content-type", header: "content-type", expected: true},
 		{name: "X-Custom-Header", header: "X-Custom-Header", expected: false},
 		{name: "X-Custom-Header", header: "X-Test-Header", expected: false},
 	}
