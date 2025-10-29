@@ -1,6 +1,7 @@
 package data_extraction
 
 import (
+	"bytes"
 	"context"
 	"io"
 
@@ -72,7 +73,7 @@ func ExtractDataFromHTML(ctx context.Context, attestationRequest attestation.Att
 	}
 
 	// Parse the HTML content.
-	htmlDoc, parseErr := htmlquery.Parse(limitReader)
+	htmlDoc, parseErr := htmlquery.Parse(bytes.NewReader(body))
 	if parseErr != nil {
 		reqLogger.Error("Error parsing HTML content: ", "error", parseErr)
 		return ExtractDataResult{}, appErrors.ErrParsingHTMLContent
