@@ -107,9 +107,16 @@ func loadRootCA(exchange string) ([]byte, error) {
 	return block.Bytes, nil
 }
 
-func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryablehttp.Client {
+func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) (*retryablehttp.Client, error) {
 	if client, ok := clientCache.Load(exchange); ok {
-		return client.(*retryablehttp.Client)
+		return client.(*retryablehttp.Client), nil
+	}
+
+	// Load the root CA for the exchange
+	rootDer, err := loadRootCA(exchange)
+	if err != nil {
+		logger.Error("Failed to load root CA for exchange", "exchange", exchange, "error", err)
+		return nil, err
 	}
 
 	// Create a new HTTP client with the TLS configuration
@@ -124,12 +131,7 @@ func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryab
 			// Take root of the verified chain
 			rootCert := verifiedChains[0][len(verifiedChains[0])-1]
 
-			rootDER, err := loadRootCA(exchange)
-			if err != nil {
-				return fmt.Errorf("failed to load root CA for %s: %w", exchange, err)
-			}
-
-			if !bytes.Equal(rootDER, rootCert.Raw) {
+			if !bytes.Equal(rootDer, rootCert.Raw) {
 				return fmt.Errorf("root CA mismatch for %s", exchange)
 			}
 
@@ -156,7 +158,7 @@ func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryab
 
 	clientCache.Store(exchange, retryClient)
 	logger.Info("Stored retryable HTTP client in cache", "exchange", exchange)
-	return retryClient
+	return retryClient, nil
 }
 
 // FetchPriceFromExchange fetches price and volume data from a specific exchange.
@@ -214,7 +216,11 @@ func (c *PriceFeedClient) FetchPriceFromExchange(ctx context.Context, exchange, 
 	}
 
 	// Step 4: Create retryable HTTP client.
-	httpClient := GetRetryableHTTPClientForExchange(exchange, 1)
+	httpClient, err := GetRetryableHTTPClientForExchange(exchange, 1)
+	if err != nil {
+		reqLogger.Error("Failed to create retryable HTTP client", "exchange", exchange, "error", err)
+		return nil, appErrors.ErrCreatingExchangeRequest
+	}
 
 	// Step 5: Create request with context.
 	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)

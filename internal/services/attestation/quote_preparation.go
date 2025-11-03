@@ -81,7 +81,7 @@ func PrepareOracleUserData(
 
 	// Step 4: Format the proof data into C0 - C7 chunks.
 	userData, formatError := aleoContext.FormatMessage(userDataProof, constants.OracleUserDataChunkSize)
-	logger.Info("User data formatted: ")
+	logger.Debug("User data formatted: ")
 	if formatError != nil {
 		logger.Error("failed to format proof data", "error", formatError)
 		return nil, nil, nil, appErrors.ErrFormattingProofData
