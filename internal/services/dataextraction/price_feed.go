@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -73,7 +74,44 @@ func NewPriceFeedClient() *PriceFeedClient {
 	}
 }
 
+var (
+    clientCache sync.Map // map[string]*retryablehttp.Client
+	rootCACache   = make(map[string][]byte)
+	rootCACacheMu sync.RWMutex
+)
+
+func loadRootCA(exchange string) ([]byte, error) {
+	rootCACacheMu.RLock()
+	if der, ok := rootCACache[exchange]; ok {
+		rootCACacheMu.RUnlock()
+		return der, nil
+	}
+	rootCACacheMu.RUnlock()
+
+	// Load and decode from PEM
+	rootCAFile := fmt.Sprintf("/rootCAs/%s.pem", exchange)
+	rootCertPem, err := os.ReadFile(rootCAFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read root CA file for %s: %w", exchange, err)
+	}
+
+	block, _ := pem.Decode(rootCertPem)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("failed to decode PEM block for %s", exchange)
+	}
+
+	rootCACacheMu.Lock()
+	rootCACache[exchange] = block.Bytes
+	rootCACacheMu.Unlock()
+	logger.Info("Loaded root CA for exchange", "exchange", exchange)
+	return block.Bytes, nil
+}
+
 func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryablehttp.Client {
+	if client, ok := clientCache.Load(exchange); ok {
+		return client.(*retryablehttp.Client)
+	}
+
 	// Create a new HTTP client with the TLS configuration
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
@@ -86,23 +124,12 @@ func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryab
 			// Take root of the verified chain
 			rootCert := verifiedChains[0][len(verifiedChains[0])-1]
 
-			rootCAFile := fmt.Sprintf("/rootCAs/%s.pem", exchange)
-
-			rootCertPem, err := os.ReadFile(rootCAFile)
-
+			rootDER, err := loadRootCA(exchange)
 			if err != nil {
-				return fmt.Errorf("failed to read root CA file for %s: %w", exchange, err)
+				return fmt.Errorf("failed to load root CA for %s: %w", exchange, err)
 			}
 
-			block, _ := pem.Decode(rootCertPem)
-			if block == nil || block.Type != "CERTIFICATE" {
-				return fmt.Errorf("failed to decode PEM block for %s", exchange)
-			}
-
-    		// block.Bytes contains the DER
-    		derData := block.Bytes
-
-			if !bytes.Equal(derData, rootCert.Raw) {
+			if !bytes.Equal(rootDER, rootCert.Raw) {
 				return fmt.Errorf("root CA mismatch for %s", exchange)
 			}
 
@@ -111,7 +138,13 @@ func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryab
 	}
 
 	client := &http.Client{
-		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+			MaxIdleConns:        15,
+			MaxIdleConnsPerHost: 10,
+			IdleConnTimeout:     60 * time.Second,
+		},
+		Timeout: 15 * time.Second,
 	}
 
 	retryClient := retryablehttp.NewClient()
@@ -121,6 +154,8 @@ func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) *retryab
 	retryClient.RetryWaitMax = 3 * time.Second
 	retryClient.RetryMax = maxRetries
 
+	clientCache.Store(exchange, retryClient)
+	logger.Info("Stored retryable HTTP client in cache", "exchange", exchange)
 	return retryClient
 }
 

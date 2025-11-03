@@ -2,6 +2,10 @@ package aleo
 
 import (
 	"bytes"
+	"io"
+	"log"
+	"os"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -115,7 +119,7 @@ func TestFormatMessage(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			formattedMessage, formatErr := aleoCtx.GetSession().FormatMessage(testCase.message, testCase.targetChunks)
+			formattedMessage, formatErr := aleoCtx.FormatMessage(testCase.message, testCase.targetChunks)
 			if testCase.expectedError {
 				assert.NotNil(t, formatErr)
 				assert.Empty(t, formattedMessage)
@@ -158,11 +162,11 @@ func TestHashMessage(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			formattedMessage, formatErr := aleoCtx.GetSession().FormatMessage(testCase.message, 1)
+			formattedMessage, formatErr := aleoCtx.FormatMessage(testCase.message, 1)
 			assert.Nil(t, formatErr)
 			assert.NotEmpty(t, formattedMessage)
 
-			hash, hashErr := aleoCtx.GetSession().HashMessage(formattedMessage)
+			hash, hashErr := aleoCtx.HashMessage(formattedMessage)
 			assert.Nil(t, hashErr)
 			assert.NotEmpty(t, hash)
 
@@ -170,6 +174,56 @@ func TestHashMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestAleoContext_ParallelExecutionFormatMessage(t *testing.T) {
+	aleoCtx, err := GetAleoContext()
+	if err != nil {
+		t.Fatalf("Failed to get Aleo context: %v", err)
+	}
+	t.Logf("Aleo context: %v", aleoCtx)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1000)
+
+	for i := 0; i < 1000; i++ {
+		go func() {
+			defer wg.Done()
+			formattedMessage, formatErr := aleoCtx.FormatMessage(bytes.Repeat([]byte{1}, 16), 8)
+			assert.Nil(t, formatErr)
+			assert.NotEmpty(t, formattedMessage)
+		}()
+	}
+
+	wg.Wait()
+}
+
+func TestAleoContext_ParallelExecutionHashMessage(t *testing.T) {
+	aleoCtx, err := GetAleoContext()
+	if err != nil {
+		t.Fatalf("Failed to get Aleo context: %v", err)
+	}
+	t.Logf("Aleo context: %v", aleoCtx)
+
+	// var mu sync.Mutex
+
+	wg := sync.WaitGroup{}
+	wg.Add(1000)
+	
+	log.SetOutput(io.Discard)      // disable logger
+    defer log.SetOutput(os.Stderr) // restore if needed
+
+	for i := 0; i < 1000; i++ {
+		go func() {
+			defer wg.Done()
+			// mu.Lock()
+			_, _ = aleoCtx.HashMessage(bytes.Repeat([]byte{1}, 16))
+			// mu.Unlock()
+		}()
+	}
+
+	wg.Wait()
+}
+
 
 func TestAleoContext_ShutdownAleoContext(t *testing.T) {
 	assert.True(t, IsAleoContextInitialized())

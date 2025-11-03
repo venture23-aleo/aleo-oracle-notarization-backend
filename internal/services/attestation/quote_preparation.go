@@ -1,5 +1,6 @@
 // Package attestation prepares oracle data, hashes, and request artifacts for SGX quoting.
 package attestation
+
 import (
 	"encoding/binary"
 	"fmt"
@@ -79,8 +80,8 @@ func PrepareOracleUserData(
 	}
 
 	// Step 4: Format the proof data into C0 - C7 chunks.
-	userData, formatError := aleoContext.GetSession().FormatMessage(userDataProof, constants.OracleUserDataChunkSize)
-
+	userData, formatError := aleoContext.FormatMessage(userDataProof, constants.OracleUserDataChunkSize)
+	logger.Info("User data formatted: ")
 	if formatError != nil {
 		logger.Error("failed to format proof data", "error", formatError)
 		return nil, nil, nil, appErrors.ErrFormattingProofData
@@ -125,7 +126,7 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 	}
 
 	// Step 3: Format the encoded proof data into C0 - C7 chunks.
-	encodedRequest, formatError := aleoContext.GetSession().FormatMessage(encodedRequestProof, 8)
+	encodedRequest, formatError := aleoContext.FormatMessage(encodedRequestProof, 8)
 	if formatError != nil {
 		logger.Error("failed to format encoded proof data:", "error", formatError)
 		return nil, appErrors.ErrFormattingEncodedProofData
@@ -164,7 +165,7 @@ func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, reques
 	}
 
 	// Step 2: Create the request hash - Hash the encoded request.
-	requestHash, hashError := aleoContext.GetSession().HashMessage(encodedRequest)
+	requestHash, hashError := aleoContext.HashMessage(encodedRequest)
 	if hashError != nil {
 		logger.Error("failed to create request hash:", "error", hashError)
 		return nil, "", appErrors.ErrCreatingRequestHash
@@ -177,7 +178,7 @@ func PrepareOracleRequestHash(encodedRequest []byte) (requestHash []byte, reques
 	}
 
 	// Step 3: Create the request hash string - Hash the encoded request.
-	requestHashString, hashError = aleoContext.GetSession().HashMessageToString(encodedRequest)
+	requestHashString, hashError = aleoContext.HashMessageToString(encodedRequest)
 	if hashError != nil {
 		logger.Error("failed to create request hash:", "error", hashError)
 		return nil, "", appErrors.ErrCreatingRequestHash
@@ -246,7 +247,7 @@ func PrepareOracleTimestampedRequestHash(requestHash []byte, timestamp uint64) (
 	timestampedRequestHashFormatMessage := fmt.Sprintf("{ request_hash: %su128, attestation_timestamp: %su128 }", timestampedRequestHashInputChunk1, timestampedRequestHashInputChunk2)
 
 	// Step 6: Create the timestamped request hash.
-	timestampedRequestHash, hashError := aleoContext.GetSession().HashMessageToString([]byte(timestampedRequestHashFormatMessage))
+	timestampedRequestHash, hashError := aleoContext.HashMessageToString([]byte(timestampedRequestHashFormatMessage))
 
 	// Step 7: Handle error.
 	if hashError != nil {
