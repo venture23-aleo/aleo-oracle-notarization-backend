@@ -10,21 +10,39 @@ import (
 )
 
 type AleoPublicContext interface {
-	GetSession() aleoUtils.Session       // Get the Aleo session.
+	HashMessage(message []byte) ([]byte, error) // Hash a message.
+	HashMessageToString(message []byte) (string, error) // Hash a message and return a string.
+	FormatMessage(message []byte, chunkSize int) ([]byte, error) // Format a message.
 	GetPublicKey() string                // Get the Aleo public key.
 	Sign(message []byte) (string, error) // Sign a message.
 }
 
 type AleoContext struct {
-	Session    aleoUtils.Session // The Aleo session.
+	sessionLock sync.RWMutex      // Lock for thread safety.
+	session    aleoUtils.Session // The Aleo session.
 	privateKey []byte            // The Aleo private key.
 	PublicKey  string            // The Aleo public key.
 	Close      func()            // The Aleo close function.
 }
 
-// GetSession returns the Aleo session.
-func (a *AleoContext) GetSession() aleoUtils.Session {
-	return a.Session
+// FormatMessage formats a message.
+func (a *AleoContext) FormatMessage(message []byte, chunkSize int) ([]byte, error) {
+	a.sessionLock.Lock()
+	defer a.sessionLock.Unlock()
+	return a.session.FormatMessage(message, chunkSize)
+}
+
+// HashMessage hashes a message.
+func (a *AleoContext) HashMessage(message []byte) ([]byte, error) {
+	a.sessionLock.Lock()
+	defer a.sessionLock.Unlock()
+	return a.session.HashMessage(message)
+}
+
+func (a *AleoContext) HashMessageToString(message []byte) (string, error) {
+	a.sessionLock.Lock()
+	defer a.sessionLock.Unlock()
+	return a.session.HashMessageToString(message)
 }
 
 // GetPublicKey returns the Aleo public key.
@@ -35,7 +53,9 @@ func (a *AleoContext) GetPublicKey() string {
 // Sign signs a message.
 func (a *AleoContext) Sign(message []byte) (string, error) {
 	if IsAleoContextInitialized() {
-		return a.Session.Sign(a.privateKey, message)
+		a.sessionLock.Lock()
+		defer a.sessionLock.Unlock()
+		return a.session.Sign(a.privateKey, message)
 	}
 	return "", appErrors.ErrAleoContext.WithDetails("Aleo context is not initialized")
 }
@@ -66,7 +86,8 @@ func newAleoContext() (*AleoContext, error) {
 	}
 
 	return &AleoContext{
-		Session:    s,
+		sessionLock: sync.RWMutex{},
+		session:    s,
 		privateKey: privKey,
 		PublicKey:  address,
 		Close:      closeFn,

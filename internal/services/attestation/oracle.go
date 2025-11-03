@@ -74,7 +74,7 @@ func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors
 	}
 
 	// Step 2: Format the quote into 10 chunks (C0 - C9)
-	oracleReport, formatErr := aleoContext.GetSession().FormatMessage(quote, constants.OracleReportChunkSize)
+	oracleReport, formatErr := aleoContext.FormatMessage(quote, constants.OracleReportChunkSize)
 	if formatErr != nil {
 		logger.Error("Failed to format quote: ", "error", formatErr)
 		return nil, appErrors.ErrFormattingQuote
@@ -113,7 +113,7 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 	}
 
 	// Step 2: Hash the oracle report
-	hashedMessage, hashErr := aleo.GetSession().HashMessage(oracleReport)
+	hashedMessage, hashErr := aleo.HashMessage(oracleReport)
 	if hashErr != nil {
 		logger.Error("Failed to hash report", "error", hashErr)
 		return "", appErrors.ErrHashingReport
@@ -167,7 +167,7 @@ func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appE
 	}
 
 	// Step 2: Hash the user data
-	attestationHash, hashError := aleoContext.GetSession().HashMessage(userData)
+	attestationHash, hashError := aleoContext.HashMessage(userData)
 	if hashError != nil {
 		logger.Error("Failed to create attestation hash: ", "error", hashError)
 		return nil, appErrors.ErrCreatingAttestationHash

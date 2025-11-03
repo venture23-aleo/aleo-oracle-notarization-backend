@@ -28,7 +28,7 @@ func TestPrepareOracleReport(t *testing.T) {
 			expectedError: nil,
 			expectedOracleReport: func() []byte {
 				aleoContext, _ := aleoUtil.GetAleoContext()
-				oracleReport, _ := aleoContext.GetSession().FormatMessage([]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a}, constants.OracleReportChunkSize)
+				oracleReport, _ := aleoContext.FormatMessage([]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a}, constants.OracleReportChunkSize)
 				return oracleReport
 			}(),
 			expectPanic: false,
@@ -40,7 +40,7 @@ func TestPrepareOracleReport(t *testing.T) {
 			expectPanic:   false,
 			expectedOracleReport: func() []byte {
 				aleoContext, _ := aleoUtil.GetAleoContext()
-				oracleReport, _ := aleoContext.GetSession().FormatMessage([]byte(strings.Repeat("0", 1000)), constants.OracleReportChunkSize)
+				oracleReport, _ := aleoContext.FormatMessage([]byte(strings.Repeat("0", 1000)), constants.OracleReportChunkSize)
 				return oracleReport
 			}(),
 		},
@@ -51,7 +51,7 @@ func TestPrepareOracleReport(t *testing.T) {
 			expectPanic:   false,
 			expectedOracleReport: func() []byte {
 				aleoContext, _ := aleoUtil.GetAleoContext()
-				oracleReport, _ := aleoContext.GetSession().FormatMessage([]byte(strings.Repeat("0", 5120)), constants.OracleReportChunkSize)
+				oracleReport, _ := aleoContext.FormatMessage([]byte(strings.Repeat("0", 5120)), constants.OracleReportChunkSize)
 				return oracleReport
 			}(),
 		},
@@ -62,7 +62,7 @@ func TestPrepareOracleReport(t *testing.T) {
 			expectPanic:   false,
 			expectedOracleReport: func() []byte {
 				aleoContext, _ := aleoUtil.GetAleoContext()
-				oracleReport, _ := aleoContext.GetSession().FormatMessage([]byte(strings.Repeat("0", 5120)), constants.OracleReportChunkSize)
+				oracleReport, _ := aleoContext.FormatMessage([]byte(strings.Repeat("0", 5120)), constants.OracleReportChunkSize)
 				return oracleReport
 			}(),
 		},
@@ -345,10 +345,10 @@ func TestBuildCompleteOracleData(t *testing.T) {
 					assert.Equal(t, quotePreparationData.UserDataProof[21], uint8(0x8))
 				}
 
-				expectedUserData, _ := aleoContext.GetSession().FormatMessage(quotePreparationData.UserDataProof, 8)
+				expectedUserData, _ := aleoContext.FormatMessage(quotePreparationData.UserDataProof, 8)
 				assert.Equal(t, expectedUserData, quotePreparationData.UserData)
 
-				expectedAttestationHash, _ := aleoContext.GetSession().HashMessage(quotePreparationData.UserData)
+				expectedAttestationHash, _ := aleoContext.HashMessage(quotePreparationData.UserData)
 				assert.Equal(t, expectedAttestationHash, quotePreparationData.AttestationHash)
 
 				quote := createMockSGXQuote(quotePreparationData.AttestationHash, false)
@@ -364,17 +364,17 @@ func TestBuildCompleteOracleData(t *testing.T) {
 				assert.NotEmpty(t, oracleData.Address)
 				assert.NotEmpty(t, oracleData.Report)
 
-				expectedOracleReport, _ := aleoContext.GetSession().FormatMessage(quote, 10)
+				expectedOracleReport, _ := aleoContext.FormatMessage(quote, 10)
 				assert.Equal(t, string(expectedOracleReport), oracleData.Report)
 
-				expectedRequestHashString, _ := aleoContext.GetSession().HashMessageToString([]byte(oracleData.EncodedRequest))
+				expectedRequestHashString, _ := aleoContext.HashMessageToString([]byte(oracleData.EncodedRequest))
 				assert.Equal(t, expectedRequestHashString, oracleData.RequestHash)
 
-				expectedRequestHash, _ := aleoContext.GetSession().HashMessage([]byte(oracleData.EncodedRequest))
+				expectedRequestHash, _ := aleoContext.HashMessage([]byte(oracleData.EncodedRequest))
 				expectedTimestampedRequestHash, _ := PrepareOracleTimestampedRequestHash(expectedRequestHash, quotePreparationData.Timestamp)
 				assert.Equal(t, expectedTimestampedRequestHash, oracleData.TimestampedRequestHash)
 
-				oracleReportHash, _ := aleoContext.GetSession().HashMessage(expectedOracleReport)
+				oracleReportHash, _ := aleoContext.HashMessage(expectedOracleReport)
 
 				_, signError := aleoContext.Sign(oracleReportHash)
 				assert.Nil(t, signError)
