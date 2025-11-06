@@ -416,7 +416,7 @@ func parseKrakenResponse(data []byte, symbol string) (price, volume string, err 
 	}
 
 	price = result.Price[0]
-	volume = result.Volume[0]
+	volume = result.Volume[1] // volume is in the second position
 
 	err = validatePriceAndVolume(price, volume)
 	if err != nil {
