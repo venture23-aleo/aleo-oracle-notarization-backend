@@ -1,0 +1,55 @@
+name: Deploy Aleo Notarization Backend - Prod
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH for Ansible
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_HOST_KEY_PROD }}" | base64 -d > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Install Ansible
+        run: |
+          sudo apt update -y
+          sudo apt install -y ansible
+      - name: Generate Ansible inventory
+        env:
+          HOSTS: ${{ secrets.PROD_SSH_HOSTS }}
+        run: |
+          mkdir -p deployment/ansible
+          echo "[aleo_backend]" > deployment/ansible/inventory.ini
+          IFS=',' read -ra ADDR <<< "$HOSTS"
+          for ip in "${ADDR[@]}"; do
+            echo "$ip" >> deployment/ansible/inventory.ini
+          done
+          cat >> deployment/ansible/inventory.ini <<'EOF'
+
+[aleo_backend:vars]
+ansible_user=azureuser
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+EOF
+
+          echo "✅ Generated inventory:"
+          cat deployment/ansible/inventory.ini
+
+      - name: Run Ansible playbook
+        env:
+          APP: ${{ vars.APP }}
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          ansible-playbook deployment/ansible/deploy-aleo-notorization-be.yaml \
+            -i deployment/ansible/inventory.ini
