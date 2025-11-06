@@ -56,7 +56,7 @@ trusted_files= [
 ]
 isvprodid = 1
 isvsvn = 1
-max_threads = 16
+max_threads = 32
 enclave_size = "2G"
 remote_attestation = "dcap"
 use_exinfo = true
