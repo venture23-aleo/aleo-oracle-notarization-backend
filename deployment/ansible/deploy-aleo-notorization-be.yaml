@@ -58,6 +58,6 @@
 
     - name: Fetch enclave artifacts to local machine
       fetch:
-        src: "{{ deploy_dir }}/enclave_artifacts/"
+        src: "{{ deploy_dir }}/deployment/docker/enclave_artifacts/"
         dest: "{{ local_artifacts_dir }}/"
         flat: yes
