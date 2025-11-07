@@ -37,7 +37,7 @@ mounts = [
 
 [sgx]
 debug = false
-edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+edmm_enable = true
 trusted_files= [
   "file:{{ gramine.runtimedir() }}/",
   "file:${LD_LIBRARY_PATH}",
