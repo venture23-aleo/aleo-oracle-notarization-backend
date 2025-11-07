@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,6 +24,7 @@ jobs:
         run: |
           sudo apt update -y
           sudo apt install -y ansible
+
       - name: Generate Ansible inventory
         env:
           HOSTS: ${{ secrets.PROD_SSH_HOSTS }}
@@ -33,8 +35,8 @@ jobs:
           for ip in "${ADDR[@]}"; do
             echo "$ip" >> deployment/ansible/inventory.ini
           done
-          cat >> deployment/ansible/inventory.ini <<'EOF'
 
+          cat <<EOF >> deployment/ansible/inventory.ini
 [aleo_backend:vars]
 ansible_user=azureuser
 ansible_ssh_private_key_file=~/.ssh/id_rsa
@@ -53,7 +55,7 @@ EOF
         run: |
           ansible-playbook deployment/ansible/deploy-aleo-notorization-be.yaml \
             -i deployment/ansible/inventory.ini
-            
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -72,4 +74,4 @@ EOF
           tag_name: ${{ github.ref_name }}
           files: ./enclave_artifacts/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}      
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
