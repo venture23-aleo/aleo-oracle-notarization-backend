@@ -53,3 +53,23 @@ EOF
         run: |
           ansible-playbook deployment/ansible/deploy-aleo-notorization-be.yaml \
             -i deployment/ansible/inventory.ini
+            
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Aleo Notarization Backend ${{ github.ref_name }}"
+          body: |
+            🚀 Release ${{ github.ref_name }}
+            - Automated production deployment completed successfully.
+            - Enclave artifacts are included below.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload enclave artifacts to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ./enclave_artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}      

@@ -7,6 +7,7 @@
     app_name: "{{ lookup('env', 'APP') }}"
     tag_name: "{{ lookup('env', 'GITHUB_REF_NAME') }}"
     repository: "{{ lookup('env', 'GITHUB_REPOSITORY') }}"
+    local_artifacts_dir: "{{ lookup('env', 'LOCAL_ARTIFACTS_DIR') | default('./enclave_artifacts') }}"
 
   tasks:
     - name: Ensure deploy directory exists
@@ -21,6 +22,12 @@
         version: "{{ tag_name }}"
         force: yes
         accept_hostkey: yes
+
+    - name: Stash local tracked changes in deploy directory
+      command: git stash push -m "ansible-deploy-stash"
+      args:
+        chdir: "{{ deploy_dir }}"
+      ignore_errors: yes
 
     - name: Create .env file
       copy:
@@ -47,3 +54,9 @@
       command: make extract-enclave-artifacts
       args:
         chdir: "{{ deploy_dir }}"
+
+    - name: Fetch enclave artifacts to local machine
+      fetch:
+        src: "{{ deploy_dir }}/enclave_artifacts/"
+        dest: "{{ local_artifacts_dir }}/"
+        flat: yes
