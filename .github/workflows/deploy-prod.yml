@@ -71,6 +71,12 @@ jobs:
           body: ${{ steps.Changelog.outputs.changelog }}
           draft: false
           prerelease: false
+      - name: Verify enclave artifacts exist
+        run: |
+          echo "Checking enclave artifacts..."
+          ls -la
+          ls -lah ./enclave_artifacts-backend-1 || echo "⚠️ Directory not found!"
+
 
       - name: Upload all enclave artifacts to release
         uses: svenstaro/upload-release-action@v2
