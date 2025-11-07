@@ -1,0 +1,56 @@
+services:
+  aleo-oracle-notarization-backend:
+    image: ${APP}:latest
+    container_name: aleo-oracle-notarization-backend
+    build:
+      image: ghcr.io/venture23-aleo/aleo-oracle-notarization-backend:${DOCKER_IMAGE_TAG}
+      secrets:
+        - gramine-private-key
+      args:
+        APP: ${APP}
+    platform: linux/amd64
+    ports:
+      - 8000:8000
+      - 8001:8001
+    devices:
+      - /dev/sgx_enclave:/dev/sgx_enclave
+      - /dev/sgx_provision:/dev/sgx_provision
+
+  nginx:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.nginx
+    container_name: nginx-mtls-proxy
+    depends_on:
+      - aleo-oracle-notarization-backend
+    environment:
+      - UPSTREAM_HOST=${UPSTREAM_HOST:-aleo-oracle-notarization-backend}
+      - UPSTREAM_PORT=${UPSTREAM_PORT:-8000}
+      - NGINX_LISTEN_PORT=${NGINX_LISTEN_PORT:-8443}
+      - RATE_LIMIT_PER_SECOND=${RATE_LIMIT_PER_SECOND:-10}
+      - RATE_LIMIT_BURST=${RATE_LIMIT_BURST:-20}
+      - RATE_LIMIT_BURST_API=${RATE_LIMIT_BURST_API:-30}
+      - RATE_LIMIT_ZONE_SIZE=${RATE_LIMIT_ZONE_SIZE:-10m}
+      - CONN_LIMIT_ZONE_SIZE=${CONN_LIMIT_ZONE_SIZE:-10m}
+      - CONN_LIMIT_PER_KEY=${CONN_LIMIT_PER_KEY:-20}
+      - CLIENT_MAX_BODY_SIZE=${CLIENT_MAX_BODY_SIZE:-2m}
+      - PROXY_CONNECT_TIMEOUT=${PROXY_CONNECT_TIMEOUT:-5s}
+      - PROXY_SEND_TIMEOUT=${PROXY_SEND_TIMEOUT:-60s}
+      - PROXY_READ_TIMEOUT=${PROXY_READ_TIMEOUT:-60s}
+    ports:
+      - ${HOST_HTTPS_PORT:-8443}:${NGINX_LISTEN_PORT:-8443}
+    volumes:
+      - ../secrets/mtls/server.crt:/etc/nginx/certs/server.crt:ro
+      - ../secrets/mtls/server.key:/etc/nginx/certs/server.key:ro
+      - ../secrets/mtls/ca.crt:/etc/nginx/certs/ca.crt:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - SETUID
+      - SETGID
+      - CHOWN
+      - CAP_SYS_NICE
+secrets:
+  gramine-private-key:
+    file: ${ENCLAVE_SIGNING_KEY_FILE}

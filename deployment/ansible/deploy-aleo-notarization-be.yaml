@@ -1,0 +1,83 @@
+- name: Deploy Aleo Notarization Backend
+  hosts: all
+  become: yes
+  vars:
+    deploy_dir: "{{ lookup('env', 'DEPLOY_DIR') }}"
+    app_name: "{{ lookup('env', 'APP') }}"
+    tag_name: "{{ lookup('env', 'GITHUB_REF_NAME') }}"
+    repository: "{{ lookup('env', 'GITHUB_REPOSITORY') }}"
+    local_artifacts_dir: "{{ lookup('env', 'LOCAL_ARTIFACTS_DIR') | default('./enclave_artifacts') }}"
+
+  tasks:
+    - name: Ensure deploy directory exists
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+
+    - name: Fetch latest code from GitHub
+      git:
+        repo: "https://github.com/{{ repository }}.git"
+        dest: "{{ deploy_dir }}"
+        version: "{{ tag_name }}"
+        force: yes
+        accept_hostkey: yes
+
+    - name: Stash local tracked changes in deploy directory
+      command: git stash push -m "ansible-deploy-stash"
+      args:
+        chdir: "{{ deploy_dir }}"
+      ignore_errors: yes
+
+    - name: Create .env file
+      copy:
+        dest: "{{ deploy_dir }}/.env"
+        content: |
+          APP={{ app_name }}
+          IMAGE_TAG={{ tag_name }}
+
+    - name: Stop running containers (if any)
+      command: make docker-stop
+      args:
+        chdir: "{{ deploy_dir }}"
+      ignore_errors: yes
+
+    - name: Remove dangling docker images
+      command: docker image prune -af
+
+    - name: Start containers with the tag
+      command: make docker-run IMAGE_TAG={{ tag_name }}
+      args:
+        chdir: "{{ deploy_dir }}"
+
+    - name: Extract enclave artifacts
+      command: make extract-enclave-artifacts
+      args:
+        chdir: "{{ deploy_dir }}"
+
+    - name: Generate SHA256SUM.txt for enclave artifacts on remote host
+      shell: |
+        cd {{ deploy_dir }}/deployment/docker/enclave_artifacts
+        sha256sum \
+          aleo-oracle-notarization-backend.manifest.sgx \
+          aleo-oracle-notarization-backend.sig \
+          aleo-oracle-notarization-backend.manifest \
+          aleo-oracle-notarization-backend.metadata.json \
+          > SHA256SUM.txt
+      args:
+        executable: /bin/bash
+
+    - name: Fetch specific enclave artifacts to local machine
+      vars:
+        files_to_fetch:
+          - aleo-oracle-notarization-backend.manifest.sgx
+          - aleo-oracle-notarization-backend.sig
+          - aleo-oracle-notarization-backend.manifest
+          - aleo-oracle-notarization-backend.metadata.json
+          - SHA256SUM.txt
+      loop: "{{ files_to_fetch }}"
+      loop_control:
+        label: "{{ item }}"
+      fetch:
+        src: "{{ deploy_dir }}/deployment/docker/enclave_artifacts/{{ item }}"
+        dest: "{{ local_artifacts_dir }}/{{ inventory_hostname }}/"
+        flat: yes

@@ -1,0 +1,80 @@
+name: Deploy Aleo Notarization Backend - Prod
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH for Ansible
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_HOST_KEY_PROD }}" | base64 -d > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Install Ansible
+        run: |
+          sudo apt update -y
+          sudo apt install -y ansible
+
+      - name: Generate Ansible inventory
+        env:
+          HOSTS: ${{ secrets.PROD_SSH_HOSTS }}
+        run: |
+          mkdir -p deployment/ansible
+          echo "[aleo_backend]" > deployment/ansible/inventory.ini
+          i=1
+          IFS=',' read -ra ADDR <<< "$HOSTS"
+          for ip in "${ADDR[@]}"; do
+            echo "backend-$i ansible_host=$ip" >> deployment/ansible/inventory.ini
+            ((i++))
+          done
+          echo "[aleo_backend:vars]" >> deployment/ansible/inventory.ini
+          echo "ansible_user=azureuser" >> deployment/ansible/inventory.ini
+          echo "ansible_ssh_private_key_file=~/.ssh/id_rsa" >> deployment/ansible/inventory.ini
+          echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> deployment/ansible/inventory.ini
+
+          echo "✅ Generated inventory:"
+          # cat deployment/ansible/inventory.ini
+      
+      - name: Prepare local artifacts directory
+        run: |
+          mkdir -p ${{ github.workspace }}/enclave_artifacts
+
+      - name: Run Ansible playbook
+        env:
+          APP: ${{ vars.APP }}
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          LOCAL_ARTIFACTS_DIR: ${{ github.workspace }}/enclave_artifacts
+        run: |
+          ansible-playbook deployment/ansible/deploy-aleo-notarization-be.yaml -i deployment/ansible/inventory.ini
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Aleo Notarization Backend ${{ github.ref_name }}"
+          body: |
+            🚀 Release ${{ github.ref_name }}
+            - Automated production deployment completed successfully.
+            - Enclave artifacts are included below.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload enclave artifacts to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ${{ github.workspace }}/enclave_artifacts/backend-1/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
