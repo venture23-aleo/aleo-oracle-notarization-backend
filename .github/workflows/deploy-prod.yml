@@ -56,35 +56,33 @@ jobs:
           ansible-playbook deployment/ansible/deploy-aleo-notorization-be.yaml \
             -i deployment/ansible/inventory.ini
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "Aleo Notarization Backend ${{ github.ref_name }}"
-          body: |
-            🚀 Release ${{ github.ref_name }}
-            - Automated production deployment completed successfully.
-            - Enclave artifacts are included below.
+      - name: Changelog
+        uses: scottbrenner/generate-changelog-action@master
+        id: Changelog
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Debug: list files before release
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Files in current directory:"
-          ls -l
-          echo "Directories starting with enclave_artifacts:"
-          find . -type d -name "enclave_artifacts*"
-          
+          REPO: ${{ github.repository }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Prerelease ${{ github.ref }}
+          body: |
+            ${{ steps.Changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
 
       - name: Upload all enclave artifacts to release
-        uses: softprops/action-gh-release@v1
+        uses: svenstaro/upload-release-action@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          files: ./enclave_artifacts-backend-1/**/*
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./enclave_artifacts-backend-1/*
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
 
 
 
