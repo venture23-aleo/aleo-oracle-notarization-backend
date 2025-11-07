@@ -2,6 +2,8 @@ name: Deploy Aleo Notarization Backend - Prod
 
 on:
   push:
+    branches:
+      - ci/prod-deployment
     tags:
       - '*'
 
