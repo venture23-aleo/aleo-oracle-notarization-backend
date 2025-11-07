@@ -72,15 +72,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Debug: list files before release
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Files in current directory:"
+          ls -l
+          find . -type d -name "enclave_artifacts*"
+          
+
       - name: Upload all enclave artifacts to release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          files: ./enclave_artifacts-backend-1/*
+          files: ./enclave_artifacts-backend-1/**/*
           draft: true
-          make_latest: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
 
 
