@@ -56,10 +56,6 @@ jobs:
           ansible-playbook deployment/ansible/deploy-aleo-notorization-be.yaml \
             -i deployment/ansible/inventory.ini
 
-      - name: Clean aleo-oracle-notarization-backend folder
-        run: |
-          rm -rf aleo-oracle-notarization-backend/*
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -77,6 +73,7 @@ jobs:
           echo "Current directory: $(pwd)"
           echo "Files in current directory:"
           ls -l
+          echo "Directories starting with enclave_artifacts:"
           find . -type d -name "enclave_artifacts*"
           
 
