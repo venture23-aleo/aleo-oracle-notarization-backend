@@ -45,7 +45,6 @@ jobs:
           echo "✅ Generated inventory:"
           # cat deployment/ansible/inventory.ini
 
-
       - name: Run Ansible playbook
         env:
           APP: ${{ vars.APP }}
@@ -53,12 +52,11 @@ jobs:
           GITHUB_REF_NAME: ${{ github.ref_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          ansible-playbook deployment/ansible/deploy-aleo-notorization-be.yaml \
-            -i deployment/ansible/inventory.ini
+          ansible-playbook deployment/ansible/deploy-aleo-notarization-be.yaml -i deployment/ansible/inventory.ini
 
       - name: Changelog
-        uses: scottbrenner/generate-changelog-action@master
         id: Changelog
+        uses: scottbrenner/generate-changelog-action@master
         env:
           REPO: ${{ github.repository }}
 
@@ -70,8 +68,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Prerelease ${{ github.ref }}
-          body: |
-            ${{ steps.Changelog.outputs.changelog }}
+          body: ${{ steps.Changelog.outputs.changelog }}
           draft: false
           prerelease: false
 
@@ -83,7 +80,3 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
           file_glob: true
-
-
-
-
