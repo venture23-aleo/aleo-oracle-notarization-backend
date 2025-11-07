@@ -56,6 +56,10 @@ jobs:
           ansible-playbook deployment/ansible/deploy-aleo-notorization-be.yaml \
             -i deployment/ansible/inventory.ini
 
+      - name: Clean aleo-oracle-notarization-backend folder
+        run: |
+          rm -rf aleo-oracle-notarization-backend/*
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -67,26 +71,16 @@ jobs:
             - Enclave artifacts are included below.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Zip enclave artifacts for host 1
-        run: |
-          ARTIFACT_FOLDER=./enclave_artifacts-backend-1
-          ZIP_FILE=./enclave_artifacts-backend-1.zip
-          zip -r "$ZIP_FILE" "$ARTIFACT_FOLDER"
-      - name: Generate SHA256 checksum
-        run: |
-          ZIP_FILE=./enclave_artifacts-backend-1.zip
-          sha256sum "$ZIP_FILE" > "$ZIP_FILE.sha256"
-
-      - name: Upload enclave artifacts to release
+      
+      - name: Upload all enclave artifacts to release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          files: |
-            ./enclave_artifacts-backend-1.zip
-            ./enclave_artifacts-backend-1.zip.sha256
+          files: ./enclave_artifacts-backend-1/*
           draft: true
           make_latest: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
 

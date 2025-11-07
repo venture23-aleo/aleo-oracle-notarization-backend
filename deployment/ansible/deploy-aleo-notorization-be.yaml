@@ -56,8 +56,26 @@
       args:
         chdir: "{{ deploy_dir }}"
 
-    - name: Fetch enclave artifacts to local machine
+    - name: Fetch specific enclave artifacts to local machine
+      vars:
+        files_to_fetch:
+          - aleo-oracle-notarization-backend.manifest.sgx
+          - aleo-oracle-notarization-backend.sig
+          - aleo-oracle-notarization-backend.manifest
+          - aleo-oracle-notarization-backend.metadata.json
+      loop: "{{ files_to_fetch }}"
+      loop_control:
+        label: "{{ item }}"
       fetch:
-        src: "{{ deploy_dir }}/deployment/docker/enclave_artifacts/"
+        src: "{{ deploy_dir }}/deployment/docker/enclave_artifacts/{{ item }}"
         dest: "{{ local_artifacts_dir }}-{{ inventory_hostname }}/"
-        flat: no
+        flat: yes
+    
+    - name: Generate SHA256SUM.txt for fetched artifacts on local machine
+      delegate_to: localhost
+      shell: |
+        cd {{ local_artifacts_dir }}-{{ inventory_hostname }}
+        sha256sum * > SHA256SUM.txt
+      args:
+        executable: /bin/bash
+
