@@ -2,8 +2,6 @@ name: Deploy Aleo Notarization Backend - Prod
 
 on:
   push:
-    branches:
-      - ci/prod-deployment
     tags:
       - '*'
 
@@ -60,12 +58,6 @@ jobs:
           LOCAL_ARTIFACTS_DIR: ${{ github.workspace }}/enclave_artifacts
         run: |
           ansible-playbook deployment/ansible/deploy-aleo-notarization-be.yaml -i deployment/ansible/inventory.ini
-      - name: Verify enclave artifacts exist
-        run: |
-          echo "Checking enclave artifacts..."
-          pwd
-          ls -la
-          ls -la ${{ github.workspace }}/enclave_artifacts/backend-1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
