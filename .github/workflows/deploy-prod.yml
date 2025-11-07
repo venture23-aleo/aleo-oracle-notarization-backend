@@ -43,7 +43,7 @@ jobs:
           echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> deployment/ansible/inventory.ini
 
           echo "✅ Generated inventory:"
-          cat deployment/ansible/inventory.ini
+          # cat deployment/ansible/inventory.ini
 
 
       - name: Run Ansible playbook
