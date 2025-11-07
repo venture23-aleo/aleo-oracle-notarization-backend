@@ -1,4 +1,3 @@
----
 - name: Deploy Aleo Notarization Backend
   hosts: all
   become: yes
@@ -22,7 +21,6 @@
         version: "{{ tag_name }}"
         force: yes
         accept_hostkey: yes
-
 
     - name: Stash local tracked changes in deploy directory
       command: git stash push -m "ansible-deploy-stash"
@@ -55,7 +53,7 @@
       command: make extract-enclave-artifacts
       args:
         chdir: "{{ deploy_dir }}"
-        
+
     - name: Generate SHA256SUM.txt for enclave artifacts on remote host
       shell: |
         cd {{ deploy_dir }}/deployment/docker/enclave_artifacts
@@ -83,4 +81,3 @@
         src: "{{ deploy_dir }}/deployment/docker/enclave_artifacts/{{ item }}"
         dest: "{{ local_artifacts_dir }}-{{ inventory_hostname }}/"
         flat: yes
-
