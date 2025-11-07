@@ -17,11 +17,12 @@
 
     - name: Fetch latest code from GitHub
       git:
-        repo: "git@github.com:{{ repository }}.git"
+        repo: "https://github.com/{{ repository }}.git"
         dest: "{{ deploy_dir }}"
         version: "{{ tag_name }}"
         force: yes
         accept_hostkey: yes
+
 
     - name: Stash local tracked changes in deploy directory
       command: git stash push -m "ansible-deploy-stash"

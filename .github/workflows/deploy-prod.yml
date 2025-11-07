@@ -31,9 +31,11 @@ jobs:
         run: |
           mkdir -p deployment/ansible
           echo "[aleo_backend]" > deployment/ansible/inventory.ini
+          i=1
           IFS=',' read -ra ADDR <<< "$HOSTS"
           for ip in "${ADDR[@]}"; do
-            echo "$ip" >> deployment/ansible/inventory.ini
+            echo "backend-$i ansible_host=$ip" >> deployment/ansible/inventory.ini
+            ((i++))
           done
           echo "[aleo_backend:vars]" >> deployment/ansible/inventory.ini
           echo "ansible_user=azureuser" >> deployment/ansible/inventory.ini
