@@ -1,4 +1,4 @@
-name: Deploy Aleo Notarization Backend
+name: Deploy Aleo Notarization Backend - develop
 
 on:
   push:
