@@ -55,6 +55,7 @@
       command: make extract-enclave-artifacts
       args:
         chdir: "{{ deploy_dir }}"
+        
     - name: Generate SHA256SUM.txt for enclave artifacts on remote host
       shell: |
         cd {{ deploy_dir }}/deployment/docker/enclave_artifacts
@@ -64,8 +65,8 @@
           aleo-oracle-notarization-backend.manifest \
           aleo-oracle-notarization-backend.metadata.json \
           > SHA256SUM.txt
-  args:
-    executable: /bin/bash
+      args:
+        executable: /bin/bash
 
     - name: Fetch specific enclave artifacts to local machine
       vars:
