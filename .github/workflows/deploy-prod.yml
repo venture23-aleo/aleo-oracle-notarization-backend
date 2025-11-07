@@ -58,6 +58,9 @@ jobs:
       - name: Verify enclave artifacts exist
         run: |
           echo "Checking enclave artifacts..."
+          pwd
+          ls -la
+          ls -la deployment/ansible
           find ./ -type d -name "enclave_artifacts-backend-1"
 
       - name: Create GitHub Release
