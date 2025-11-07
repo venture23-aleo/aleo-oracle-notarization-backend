@@ -46,6 +46,10 @@ jobs:
 
           echo "✅ Generated inventory:"
           # cat deployment/ansible/inventory.ini
+      
+      - name: Prepare local artifacts directory
+        run: |
+          mkdir -p ${{ github.workspace }}/enclave_artifacts
 
       - name: Run Ansible playbook
         env:
@@ -53,6 +57,7 @@ jobs:
           DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          LOCAL_ARTIFACTS_DIR: ${{ github.workspace }}/enclave_artifacts
         run: |
           ansible-playbook deployment/ansible/deploy-aleo-notarization-be.yaml -i deployment/ansible/inventory.ini
       - name: Verify enclave artifacts exist
@@ -60,8 +65,7 @@ jobs:
           echo "Checking enclave artifacts..."
           pwd
           ls -la
-          ls -la deployment/ansible
-          find ./ -type d -name "enclave_artifacts-backend-1"
+          ls -la ${{ github.workspace }}/enclave_artifacts/backend-1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -79,6 +83,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          files: ./deployment/ansible/enclave_artifacts-backend-1/*
+          files: ${{ github.workspace }}/enclave_artifacts/backend-1/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

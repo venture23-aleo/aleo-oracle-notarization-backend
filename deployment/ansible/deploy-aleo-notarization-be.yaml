@@ -79,5 +79,5 @@
         label: "{{ item }}"
       fetch:
         src: "{{ deploy_dir }}/deployment/docker/enclave_artifacts/{{ item }}"
-        dest: "{{ local_artifacts_dir }}-{{ inventory_hostname }}/"
+        dest: "{{ local_artifacts_dir }}/{{ inventory_hostname }}/"
         flat: yes
