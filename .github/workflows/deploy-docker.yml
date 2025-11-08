@@ -3,7 +3,7 @@ name: Deploy Aleo Notarization Backend - develop
 on:
   push:
     branches:
-      - main
+      - archived
 
 jobs:
   deploy:
