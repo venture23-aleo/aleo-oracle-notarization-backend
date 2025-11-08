@@ -106,10 +106,10 @@
                 "endpointTemplate": "/api/v3/ticker/24hr?symbol={symbol}",
                 "symbols": {
                     "USDT": [
-                        "USDT_USD"
+                        "USDTUSD"
                     ],
                     "USDC": [
-                        "USDC_USD"
+                        "USDCUSD"
                     ]
                 }
             },
