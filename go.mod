@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/venture23-aleo/aleo-oracle-encoding v1.1.0
-	github.com/venture23-aleo/aleo-utils-go v1.3.0
+	github.com/venture23-aleo/aleo-utils-go v1.5.0
 )
 
 require (
