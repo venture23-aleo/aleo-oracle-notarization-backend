@@ -9,7 +9,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
-	github.com/venture23-aleo/aleo-oracle-encoding v1.1.0
+	github.com/venture23-aleo/aleo-oracle-encoding v1.1.1-0.20251114075801-6cabfdb78126
 	github.com/venture23-aleo/aleo-utils-go v1.6.0
 )
 

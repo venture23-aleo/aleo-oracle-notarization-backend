@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	aleoUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/aleoutil"
+	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 )
@@ -321,7 +322,11 @@ func TestBuildCompleteOracleData(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			quotePreparationData, err := PrepareDataForQuoteGeneration(testCase.statusCode, testCase.attestationData, testCase.timestamp, testCase.attestationRequest)
+			aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+			if blockHeightError != nil {
+				t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+			}
+			quotePreparationData, err := PrepareDataForQuoteGeneration(testCase.statusCode, testCase.attestationData, testCase.timestamp, int64(aleoBlockHeight), testCase.attestationRequest)
 			if testCase.expectedError != nil {
 				assert.Equal(t, testCase.expectedError, err)
 			} else {
@@ -338,11 +343,11 @@ func TestBuildCompleteOracleData(t *testing.T) {
 
 				switch testCase.attestationRequest.Url {
 				case constants.PriceFeedBTCURL:
-					assert.Equal(t, quotePreparationData.UserDataProof[21], uint8(0xc))
+					assert.Equal(t, quotePreparationData.UserDataProof[23], uint8(0xc))
 				case constants.PriceFeedETHURL:
-					assert.Equal(t, quotePreparationData.UserDataProof[21], uint8(0xb))
+					assert.Equal(t, quotePreparationData.UserDataProof[23], uint8(0xb))
 				case constants.PriceFeedAleoURL:
-					assert.Equal(t, quotePreparationData.UserDataProof[21], uint8(0x8))
+					assert.Equal(t, quotePreparationData.UserDataProof[23], uint8(0x8))
 				}
 
 				expectedUserData, _ := aleoContext.FormatMessage(quotePreparationData.UserDataProof, 8)

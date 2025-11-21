@@ -62,7 +62,7 @@ func prepareAttestationData(attestationData string, encodingOptions *encoding.En
 
 // PrepareProofData encodes all attestation request fields and metadata into a single aligned byte buffer for proof generation,
 // returning the encoded buffer, positional information for each field, and any error encountered during the process.
-func PrepareProofData(statusCode int, attestationData string, timestamp int64, req AttestationRequest) ([]byte, *encoding.ProofPositionalInfo, *appErrors.AppError) {
+func PrepareProofData(statusCode int, attestationData string, timestamp int64, aleoBlockHeight int64, req AttestationRequest) ([]byte, *encoding.ProofPositionalInfo, *appErrors.AppError) {
 	// Prepare the attestation data.
 	var preppedAttestationData string
 
@@ -111,6 +111,13 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 	if err != nil {
 		logger.Error("Failed to write timestamp to buffer: ", "error", err)
 		return nil, nil, appErrors.ErrWritingTimestamp
+	}
+
+	// Write the Aleo block height to the buffer.
+	aleoBlockHeightPositionInfo, err := encoding.WriteWithPadding(recorder, encoding.NumberToBytes(uint64(aleoBlockHeight)))
+	if err != nil {
+		logger.Error("Failed to write Aleo block height to buffer: ", "error", err)
+		return nil, nil, appErrors.ErrWritingAleoBlockHeight
 	}
 
 	// Write the status code to the buffer.
@@ -274,6 +281,7 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 
 	proofPositionalInfo := &encoding.ProofPositionalInfo{
 		Data:            *attestationDataPositionInfo,
+		AleoBlockHeight: *aleoBlockHeightPositionInfo,
 		Timestamp:       *timestampPositionInfo,
 		StatusCode:      *statusCodePositionInfo,
 		Method:          *requestMethodPositionInfo,
@@ -315,7 +323,7 @@ func PrepareEncodedRequestProof(userDataProof []byte, encodedPositions encoding.
 	// Step 1: Retrieve the attestation data and timestamp lengths from the encoded positions.
 	attestationDataLen := encodedPositions.Data.Len
 	timestampLen := encodedPositions.Timestamp.Len
-
+	aleoBlockHeightLen := encodedPositions.AleoBlockHeight.Len
 	logger.Debug("attestationDataLen", "attestationDataLen", attestationDataLen)
 	logger.Debug("timestampLen", "timestampLen", timestampLen)
 
@@ -323,7 +331,7 @@ func PrepareEncodedRequestProof(userDataProof []byte, encodedPositions encoding.
 	metaHeaderLen := 2 * encoding.TARGET_ALIGNMENT
 
 	// Step 3: Calculate the end offset for the section to be zeroed.
-	endOffset := metaHeaderLen + (attestationDataLen+timestampLen)*encoding.TARGET_ALIGNMENT
+	endOffset := metaHeaderLen + (attestationDataLen+timestampLen+aleoBlockHeightLen)*encoding.TARGET_ALIGNMENT
 
 	logger.Debug("endOffset", "endOffset", endOffset)
 

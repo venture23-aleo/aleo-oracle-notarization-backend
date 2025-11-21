@@ -393,7 +393,11 @@ func TestPrepareProofData_WithPositionalInfo(t *testing.T) {
 
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Logf("testCase.attestationData: %v", len(testCase.attestationData))
-			proofData, encodedPositions, err := PrepareProofData(testCase.statusCode, testCase.attestationData, testCase.timestamp, testCase.attestationRequest)
+			aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+			if blockHeightError != nil {
+				t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+			}
+			proofData, encodedPositions, err := PrepareProofData(testCase.statusCode, testCase.attestationData, testCase.timestamp, int64(aleoBlockHeight), testCase.attestationRequest)
 			if testCase.expectedError != nil {
 				assert.Equal(t, testCase.expectedError, err)
 			} else {
@@ -824,8 +828,12 @@ func TestPrepareAttestationData(t *testing.T) {
 				EncodingOptions: testCase.encodingOptions,
 			}
 
+			aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+			if blockHeightError != nil {
+				t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+			}
 			// Call PrepareProofData which internally calls prepareAttestationData
-			result, _, err := PrepareProofData(testCase.statusCode, testCase.attestationData, testCase.timestamp, req)
+			result, _, err := PrepareProofData(testCase.statusCode, testCase.attestationData, testCase.timestamp, int64(aleoBlockHeight), req)
 
 			if testCase.expectedError != nil {
 				assert.Equal(t, testCase.expectedError, err, testCase.description)
@@ -926,7 +934,8 @@ func TestPrepareAttestationData_EdgeCases(t *testing.T) {
 				EncodingOptions: testCase.encodingOptions,
 			}
 
-			_, _, err := PrepareProofData(200, testCase.attestationData, 1715769600, req)
+			aleoBlockHeight := 224254
+			_, _, err := PrepareProofData(200, testCase.attestationData, 1715769600, int64(aleoBlockHeight), req)
 
 			if testCase.expectedError != nil {
 				assert.Equal(t, testCase.expectedError, err, testCase.description)
@@ -934,7 +943,11 @@ func TestPrepareAttestationData_EdgeCases(t *testing.T) {
 				// For edge cases, we mainly want to ensure no panic occurs
 				// The actual behavior might vary depending on the encoding library
 				assert.NotPanics(t, func() {
-					_, _, _ = PrepareProofData(200, testCase.attestationData, 1715769600, req)
+				aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+				if blockHeightError != nil {
+					t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+				}
+					_, _, _ = PrepareProofData(200, testCase.attestationData, 1715769600, int64(aleoBlockHeight), req)
 				}, testCase.description)
 			}
 		})
@@ -958,7 +971,11 @@ func TestPrepareAttestationData_Performance(t *testing.T) {
 	// Benchmark the function
 	start := time.Now()
 	for i := 0; i < 100; i++ {
-		_, _, err := PrepareProofData(200, largeData, 1715769600, req)
+		aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+		if blockHeightError != nil {
+			t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+		}
+		_, _, err := PrepareProofData(200, largeData, 1715769600, int64(aleoBlockHeight), req)
 		assert.Nil(t, err)
 	}
 	duration := time.Since(start)
@@ -1020,7 +1037,11 @@ func TestPrepareAttestationData_PriceFeedExclusion(t *testing.T) {
 
 			// For price feed URLs, the attestation data should be used as-is
 			// without calling prepareAttestationData
-			result, _, err := PrepareProofData(200, testCase.attestationData, 1715769600, req)
+			aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+			if blockHeightError != nil {
+				t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+			}
+			result, _, err := PrepareProofData(200, testCase.attestationData, 1715769600, int64(aleoBlockHeight), req)
 
 			assert.Nil(t, err, testCase.description)
 			assert.NotNil(t, result, "Result should not be nil for price feed URLs")

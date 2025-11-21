@@ -142,6 +142,7 @@ var (
 	ErrTimestampTooOld         = NewAppError(4016, "data extraction error: timestamp too old")
 	ErrMaxResponseBodySizeExceeded = NewAppError(4018, "data extraction error: response body size exceeds the allowed limit")
 	ErrReadingResponseBody         = NewAppError(4019, "data extraction error: failed to read the response body")
+	ErrFetchingAleoBlockHeight     = NewAppError(4020, "data extraction error: failed to fetch the Aleo block height")
 
 	// =============================================================================
 	// ENCODING ERRORS (5000-5999)
@@ -166,7 +167,7 @@ var (
 	ErrSliceToU128             = NewAppError(5018, "encoding error: failed to convert slice to u128")
 	ErrNilEncodingOptions      = NewAppError(5019, "encoding error: encoding options is empty")
 	ErrNilEncodedPositions     = NewAppError(5020, "encoding error: encoded positions is nil")
-
+	ErrWritingAleoBlockHeight  = NewAppError(5021, "encoding error: failed to write Aleo block height to buffer")
 	// =============================================================================
 	// PRICE FEED ERRORS (6000-6999)
 	// =============================================================================

@@ -9,6 +9,7 @@ import (
 	"github.com/venture23-aleo/aleo-oracle-encoding/positionRecorder"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
+	common "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 )
 
 func TestPrepareOracleUserData(t *testing.T) {
@@ -92,7 +93,11 @@ func TestPrepareOracleUserData(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, _, _, err := PrepareOracleUserData(testCase.statusCode, testCase.attestationData, testCase.timestamp, testCase.attestationRequest)
+			aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+			if blockHeightError != nil {
+				t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+			}
+			_, _, _, err := PrepareOracleUserData(testCase.statusCode, testCase.attestationData, testCase.timestamp, int64(aleoBlockHeight), testCase.attestationRequest)
 			assert.Equal(t, testCase.expectedError, err)
 		})
 	}
@@ -315,7 +320,8 @@ func TestPrepareDataForQuoteGeneration(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			quotePreparationData, err := PrepareDataForQuoteGeneration(testCase.statusCode, testCase.attestationData, testCase.timestamp, testCase.attestationRequest)
+			aleoBlockHeight := 224254
+			quotePreparationData, err := PrepareDataForQuoteGeneration(testCase.statusCode, testCase.attestationData, testCase.timestamp, int64(aleoBlockHeight), testCase.attestationRequest)
 			if testCase.expectedError != nil {
 				assert.Equal(t, testCase.expectedError, err)
 			} else {

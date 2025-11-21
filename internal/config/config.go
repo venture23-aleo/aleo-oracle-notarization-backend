@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	rtConfig "github.com/cloudflare/roughtime/config"
+	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 )
 
@@ -47,6 +47,7 @@ type PriceFeedConfig struct {
 	TokenExchanges       TokenExchanges  `json:"tokenExchanges"`
 	MinExchangesRequired int             `json:"minExchangesRequired"`
 	TokenVWAPConfig     TokenVWAPConfigMap  `json:"tokenVWAPConfig"`
+	ProvableBlockHeightURL string `json:"provableBlockHeightURL"`
 }
 
 type RoughtimeServerConfig struct {
@@ -156,6 +157,11 @@ func GetMinExchangesRequired() int {
 	return appConfig.PriceFeedConfig.MinExchangesRequired
 }
 
+func GetProvableBlockHeightURL() string {
+	appConfig := GetAppConfig()
+	return appConfig.PriceFeedConfig.ProvableBlockHeightURL
+}
+
 func loadTokenTradingPairs() {
 	exchangesConfigs := GetExchangesConfigs()
 	tokenExchanges := GetTokenExchanges()
@@ -218,6 +224,10 @@ func ValidateConfigs() error {
 		errors = append(errors, fmt.Sprintf("Failed to load app config: %v", configErr))
 	} else if appConfig.WhitelistedDomains == nil {
 		errors = append(errors, "No whitelisted domains found in app config")
+	}
+
+	if appConfig.PriceFeedConfig.ProvableBlockHeightURL == "" {
+		errors = append(errors, "Provable block height URL is not set")
 	}
 
 	var exchangeKeys []string

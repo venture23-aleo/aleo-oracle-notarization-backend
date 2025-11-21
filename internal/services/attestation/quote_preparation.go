@@ -47,6 +47,7 @@ func PrepareOracleUserData(
 	statusCode int,
 	attestationData string,
 	timestamp uint64,
+	aleoBlockHeight int64,
 	attestationRequest AttestationRequest,
 ) (
 	userDataProof []byte,
@@ -61,7 +62,7 @@ func PrepareOracleUserData(
 	}
 
 	// Step 2: Prepare the proof data.
-	userDataProof, encodedPositions, err = PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
+	userDataProof, encodedPositions, err = PrepareProofData(statusCode, attestationData, int64(timestamp), aleoBlockHeight, attestationRequest)
 	if err != nil {
 		return nil, nil, nil, appErrors.ErrPreparingProofData
 	}
@@ -76,7 +77,7 @@ func PrepareOracleUserData(
 		// MetaHeaders is 32 bytes total.
 		// - The first 21 bytes are reserved for other metadata.
 		// - The token ID is stored at byte index 21 (0-based).
-		userDataProof[21] = byte(tokenID)
+		userDataProof[23] = byte(tokenID)
 	}
 
 	// Step 4: Format the proof data into C0 - C7 chunks.
@@ -283,10 +284,11 @@ func PrepareDataForQuoteGeneration(
 	statusCode int,
 	attestationData string,
 	timestamp uint64,
+	aleoBlockHeight int64,
 	attestationRequest AttestationRequest,
 ) (*QuotePreparationData, *appErrors.AppError) {
 	// Step 1: Prepare user data proof, user data, and encoded positions.
-	userDataProof, userData, encodedPositions, err := PrepareOracleUserData(statusCode, attestationData, timestamp, attestationRequest)
+	userDataProof, userData, encodedPositions, err := PrepareOracleUserData(statusCode, attestationData, timestamp, aleoBlockHeight, attestationRequest)
 	if err != nil {
 		return nil, err
 	}

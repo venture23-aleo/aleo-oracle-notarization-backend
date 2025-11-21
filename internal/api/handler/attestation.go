@@ -134,9 +134,17 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	aleoBlockHeight, err := common.GetAleoCurrentBlockHeight()
+	if err != nil {
+		reqLogger.Error("Failed to get Aleo block height", "error", err)
+		metrics.RecordError("aleo_block_height_fetch_failed", "attestation_handler")
+		httpUtil.WriteJsonError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	// Prepare the oracle data before the quote.
 	reqLogger.Debug("Preparing data for quote generation")
-	quotePrepData, err := attestation.PrepareDataForQuoteGeneration(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), attestationRequest)
+	quotePrepData, err := attestation.PrepareDataForQuoteGeneration(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), aleoBlockHeight, attestationRequest)
 
 	// Check if the error is not nil.
 	if err != nil {
@@ -188,6 +196,7 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 		ResponseStatusCode:   extractDataResult.StatusCode,
 		AttestationReport:    base64.StdEncoding.EncodeToString(quote),
 		OracleData:           *oracleData,
+		AleoBlockHeight:     aleoBlockHeight,
 	}
 
 	// Log successful completion

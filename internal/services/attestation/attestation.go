@@ -42,6 +42,8 @@ type AttestationResponse struct {
 
 	AttestationTimestamp int64 `json:"timestamp"` // The attestation timestamp.
 
+	AleoBlockHeight int64 `json:"aleoBlockHeight"` // The Aleo block height.
+
 	ResponseBody string `json:"responseBody"` // The response body.
 
 	ResponseStatusCode int `json:"responseStatusCode"` // The response status code.
