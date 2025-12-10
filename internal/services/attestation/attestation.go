@@ -75,6 +75,14 @@ type DebugAttestationResponse struct {
 	ExtractedData string `json:"extractedData"` // The extracted data.
 }
 
+type AttestationResponseForMultipleTokens struct {
+	ReportType string `json:"reportType"` // The report type.
+	AttestationTimestamp int64 `json:"timestamp"` // The attestation timestamp.
+	AttestationReport string `json:"attestationReport"` // The attestation report.
+	OracleData OracleData `json:"oracleData"` // The oracle data.
+	AleoBlockHeight int64 `json:"aleoBlockHeight"` // The Aleo block height.
+}
+
 func (ar *AttestationRequest) Normalize() AttestationRequest {
 
 	clone := *ar;

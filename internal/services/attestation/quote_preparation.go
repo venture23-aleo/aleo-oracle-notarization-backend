@@ -61,23 +61,9 @@ func PrepareOracleUserData(
 		return nil, nil, nil, err
 	}
 
-	// Step 2: Prepare the proof data.
-	userDataProof, encodedPositions, err = PrepareProofData(statusCode, attestationData, int64(timestamp), aleoBlockHeight, attestationRequest)
+	userDataProof, encodedPositions, err = PrepareOracleUserDataChunk(statusCode, attestationData, timestamp, aleoBlockHeight, attestationRequest)
 	if err != nil {
-		return nil, nil, nil, appErrors.ErrPreparingProofData
-	}
-
-	if common.IsPriceFeedURL(attestationRequest.Url) {
-		tokenID := common.GetTokenIDFromPriceFeedURL(attestationRequest.Url)
-		logger.Debug("Token ID: ", "tokenID", tokenID)
-		if tokenID == 0 {
-			logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)
-			return nil, nil, nil, appErrors.ErrUnsupportedPriceFeedURL
-		}
-		// MetaHeaders is 32 bytes total.
-		// - The first 21 bytes are reserved for other metadata.
-		// - The token ID is stored at byte index 21 (0-based).
-		userDataProof[23] = byte(tokenID)
+		return nil, nil, nil, err
 	}
 
 	// Step 4: Format the proof data into C0 - C7 chunks.
@@ -90,6 +76,38 @@ func PrepareOracleUserData(
 
 	// Step 5: Return the prepared data.
 	return userDataProof, userData, encodedPositions, nil
+}
+
+
+func PrepareOracleUserDataChunk(statusCode int,
+	attestationData string,
+	timestamp uint64,
+	aleoBlockHeight int64,
+	attestationRequest AttestationRequest) (userDataChunk []byte, encodedPositions *encoding.ProofPositionalInfo, err *appErrors.AppError) {
+	// Step 2: Prepare the proof data.
+	userDataProof, encodedPositions, err := PrepareProofData(statusCode, attestationData, int64(timestamp), aleoBlockHeight, attestationRequest)
+	
+	if err != nil {
+		return nil, nil, appErrors.ErrPreparingProofData
+	}
+
+	if common.IsPriceFeedURL(attestationRequest.Url) {
+		tokenID := common.GetTokenIDFromPriceFeedURL(attestationRequest.Url)
+		logger.Debug("Token ID: ", "tokenID", tokenID)
+		if tokenID == 0 {
+			logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)
+			return nil, nil, appErrors.ErrUnsupportedPriceFeedURL
+		}
+		// MetaHeaders is 32 bytes total.
+		// - The first 21 bytes are reserved for other metadata.
+		// - The token ID is stored at byte index 21 (0-based).
+		userDataProof[23] = byte(tokenID)
+	}
+
+	userDataChunk = make([]byte, constants.ChunkSizeInBytes)
+	copy(userDataChunk, userDataProof)
+
+	return userDataChunk, encodedPositions, nil
 }
 
 // PrepareOracleEncodedRequest prepares the encoded request for oracle operations.
@@ -308,4 +326,18 @@ func PrepareDataForQuoteGeneration(
 		AttestationHash:  attestationHash,
 		Timestamp:        timestamp,
 	}, nil
+}
+
+
+func FormatMessage(message []byte, chunkSize int) (formattedMessage []byte, err *appErrors.AppError) {
+	aleoContext, err := aleoUtil.GetAleoContext()
+	if err != nil {
+		return nil, err
+	}
+
+	formattedMessage, formatError := aleoContext.FormatMessage(message, chunkSize)
+	if formatError != nil {
+		return nil, appErrors.ErrFormattingProofData
+	}
+	return formattedMessage, nil
 }

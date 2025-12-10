@@ -94,4 +94,5 @@ const (
 	// Oracle Report Constants
 	OracleReportChunkSize   = 10
 	OracleUserDataChunkSize = 8
+	ChunkSizeInBytes   = 512
 )
