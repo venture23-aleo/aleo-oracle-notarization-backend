@@ -2,13 +2,15 @@
 
 ## Overview
 
-The Aleo Oracle Notarization Backend now supports price feed attestation requests that fetch volume-weighted average prices from multiple cryptocurrency exchanges. This integration allows users to get attested price data for BTC, ETH, and ALEO tokens.
+The Aleo Oracle Notarization Backend now supports price feed attestation requests that fetch volume-weighted average prices from multiple cryptocurrency exchanges. This integration allows users to get attested price data for BTC, ETH, USDC, USDT and ALEO tokens.
 
 ## Supported Price Feeds
 
 - **BTC**: `price_feed: btc`
 - **ETH**: `price_feed: eth` 
 - **ALEO**: `price_feed: aleo`
+- **USDC**: `price_feed: usdc`
+- **USDT**: `price_feed: usdt`
 
 ## Attestation Request Format
 
