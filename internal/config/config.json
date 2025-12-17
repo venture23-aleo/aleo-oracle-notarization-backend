@@ -190,9 +190,9 @@
         "tokenVWAPConfig": {
             "BTC": {
                 "token": "BTC",
-                "tokenTolerancePercent": 0.02,
+                "tokenTolerancePercent": 0.05,
                 "tokenMADMultiplier": 4,
-                "tokenMaxSpreadPercent": 0.041,
+                "tokenMaxSpreadPercent": 0.11,
                 "tokenMinVolumePerExchange": 100,
                 "tokenMaxExchangeWeightPercent": 50
             },
