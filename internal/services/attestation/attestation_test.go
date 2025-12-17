@@ -664,7 +664,6 @@ func TestOracleData_Structure(t *testing.T) {
 		UserData:               "test-user-data",
 		Report:                 "test-report",
 		Address:                "test-address",
-		EncodedPositions:       encoding.ProofPositionalInfo{},
 		EncodedRequest:         "test-encoded-request",
 		RequestHash:            "test-request-hash",
 		TimestampedRequestHash: "test-timestamped-request-hash",

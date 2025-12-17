@@ -320,7 +320,7 @@ func TestPriceFeed_AllValidExchangeResponse(t *testing.T) {
 		tokenTradingPairs: tokenTradingPairs,
 	}
 
-	for token, _ := range tokenExchanges {
+	for token := range tokenExchanges {
 		price, err := priceFeedClient.GetPriceFeed(context.Background(), token, time.Now().Unix(),12)
 		assert.Nil(t, err)
 		assert.NotNil(t, price)

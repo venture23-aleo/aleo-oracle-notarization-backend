@@ -92,6 +92,10 @@ func TestPrepareOracleUserData(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			// aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+			// if blockHeightError != nil {
+			// 	t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+			// }
 			_, _, _, err := PrepareOracleUserData(testCase.statusCode, testCase.attestationData, testCase.timestamp, testCase.attestationRequest)
 			assert.Equal(t, testCase.expectedError, err)
 		})
@@ -315,6 +319,7 @@ func TestPrepareDataForQuoteGeneration(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			// aleoBlockHeight := 224254
 			quotePreparationData, err := PrepareDataForQuoteGeneration(testCase.statusCode, testCase.attestationData, testCase.timestamp, testCase.attestationRequest)
 			if testCase.expectedError != nil {
 				assert.Equal(t, testCase.expectedError, err)

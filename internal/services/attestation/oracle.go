@@ -29,7 +29,9 @@ type OracleData struct {
 	Address string `json:"address"`
 
 	// Object containing information about the positions of data included in the Attestation Report hash.
-	EncodedPositions encoding.ProofPositionalInfo `json:"encodedPositions"`
+	// To omit this field when empty, use a pointer type so omitempty works as intended.
+	EncodedPositions *encoding.ProofPositionalInfo `json:"encodedPositions,omitempty"`
+
 
 	// Aleo-encoded request. Same as UserData but with zeroed Data and Timestamp fields. Can be used to validate the request in Aleo programs.
 	//
@@ -40,13 +42,13 @@ type OracleData struct {
 	// If both UserDatas match, then we know that the Attestation Report was made using the correct attestation target request!
 	//
 	// To avoid storing the full UserData in an Aleo program, we can hash it and store only the hash in the program. See RequestHash.
-	EncodedRequest string `json:"encodedRequest"`
+	EncodedRequest string `json:"encodedRequest,omitempty"`
 
 	// Poseidon8 hash of the EncodedRequest. Can be used to verify in an Aleo program that the report was made with the correct request.
-	RequestHash string `json:"requestHash"`
+	RequestHash string `json:"requestHash,omitempty"`
 
 	// Poseidon8 hash of the RequestHash with the attestation timestamp. Can be used to verify in an Aleo program that the report was made with the correct request.
-	TimestampedRequestHash string `json:"timestampedRequestHash"`
+	TimestampedRequestHash string `json:"timestampedRequestHash,omitempty"`
 }
 
 // PrepareOracleReport prepares the oracle report from the provided quote.
@@ -104,26 +106,26 @@ func PrepareOracleReport(quote []byte) (oracleReport []byte, appError *appErrors
 // Returns:
 //   - signature (string): The Schnorr signature of the hashed oracle report.
 //   - appError (*appErrors.AppError): An application error if any step fails, otherwise nil.
-func PrepareOracleSignature(oracleReport []byte) (signature string, appError *appErrors.AppError) {
+func PrepareOracleSignature(oracleReport []byte) (signature string, publicKey string, appError *appErrors.AppError) {
 	// Step 1: Retrieve Aleo context
 	aleo, err := aleoUtil.GetAleoContext()
 	if err != nil {
 		logger.Error("Error getting Aleo context: ", "error", err)
-		return "", err
+		return "", "", err
 	}
 
 	// Step 2: Hash the oracle report
 	hashedMessage, hashErr := aleo.HashMessage(oracleReport)
 	if hashErr != nil {
 		logger.Error("Failed to hash report", "error", hashErr)
-		return "", appErrors.ErrHashingReport
+		return "", "", appErrors.ErrHashingReport
 	}
 
 	// Step 3: Sign the hashed message
 	signature, signErr := aleo.Sign(hashedMessage)
 	if signErr != nil {
 		logger.Error("Error while generating signature: ", "error", signErr)
-		return "", appErrors.ErrGeneratingSignature
+		return "", "", appErrors.ErrGeneratingSignature
 	}
 
 	// Step 4: Introduce a small random delay to mitigate timing attacks
@@ -138,7 +140,7 @@ func PrepareOracleSignature(oracleReport []byte) (signature string, appError *ap
 	time.Sleep(time.Duration(delayMs) * time.Millisecond)
 
 	// Step 5: Return the signature
-	return signature, nil
+	return signature, aleo.GetPublicKey(), nil
 }
 
 // GenerateAttestationHash generates an attestation hash from the provided user data.
@@ -203,12 +205,6 @@ func GenerateAttestationHash(userData []byte) (attestationHash []byte, err *appE
 //   - *OracleData: The fully constructed oracle data ready for contract submission.
 //   - *appErrors.AppError: An error object if any step fails, otherwise nil.
 func BuildCompleteOracleData(quotePrepData *QuotePreparationData, quote []byte) (*OracleData, *appErrors.AppError) {
-	// Step 1: Retrieve Aleo context
-	aleoContext, err := aleoUtil.GetAleoContext()
-	if err != nil {
-		logger.Error("Error getting Aleo context: ", "error", err)
-		return nil, err
-	}
 
 	// Step 2: Prepare the encoded request
 	encodedRequest, err := PrepareOracleEncodedRequest(quotePrepData.UserDataProof, quotePrepData.EncodedPositions)
@@ -242,7 +238,7 @@ func BuildCompleteOracleData(quotePrepData *QuotePreparationData, quote []byte) 
 	}
 
 	// Step 6: Prepare the oracle signature
-	signature, err := PrepareOracleSignature(oracleReport)
+	signature, publicKey, err := PrepareOracleSignature(oracleReport)
 
 	if err != nil {
 		logger.Error("Failed to prepare oracle signature: ", "error", err)
@@ -252,13 +248,13 @@ func BuildCompleteOracleData(quotePrepData *QuotePreparationData, quote []byte) 
 	// Step 7: Create the oracle data
 	oracleData := &OracleData{
 		UserData:               string(quotePrepData.UserData),
-		EncodedPositions:       *quotePrepData.EncodedPositions,
+		EncodedPositions:       quotePrepData.EncodedPositions,
 		EncodedRequest:         string(encodedRequest),
 		RequestHash:            requestHashString,
 		TimestampedRequestHash: timestampedHash,
 		Report:                 string(oracleReport),
 		Signature:              signature,
-		Address:                aleoContext.GetPublicKey(),
+		Address:                publicKey,
 	}
 
 	return oracleData, nil

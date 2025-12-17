@@ -113,6 +113,8 @@ func PrepareProofData(statusCode int, attestationData string, timestamp int64, r
 		return nil, nil, appErrors.ErrWritingTimestamp
 	}
 
+	// Write the Aleo block height to the buffer.
+
 	// Write the status code to the buffer.
 	statusCodePositionInfo, err := encoding.WriteWithPadding(recorder, encoding.NumberToBytes(uint64(statusCode)))
 	if err != nil {
@@ -315,7 +317,6 @@ func PrepareEncodedRequestProof(userDataProof []byte, encodedPositions encoding.
 	// Step 1: Retrieve the attestation data and timestamp lengths from the encoded positions.
 	attestationDataLen := encodedPositions.Data.Len
 	timestampLen := encodedPositions.Timestamp.Len
-
 	logger.Debug("attestationDataLen", "attestationDataLen", attestationDataLen)
 	logger.Debug("timestampLen", "timestampLen", timestampLen)
 

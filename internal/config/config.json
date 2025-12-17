@@ -2,6 +2,7 @@
     "port": 8000,
     "metricsPort": 8001,
     "priceFeedConfig": {
+        "provableBlockHeightURL": "https://api.explorer.provable.com/v2/mainnet/block/height/latest",
         "minExchangesRequired": 2,
         "exchangesConfig": {
             "binance": {

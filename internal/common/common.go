@@ -3,7 +3,10 @@ package common
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"io"
 	"math/big"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -169,4 +172,39 @@ func GetTimestampFromRoughtime() (int64, *appErrors.AppError) {
 	t := rt.Midpoint.UTC()
 
 	return t.Unix(), nil
+}
+
+func GetAleoCurrentBlockHeight() (int64, *appErrors.AppError) {
+  url := "https://api.explorer.provable.com/v2/mainnet/block/height/latest"
+  method := "GET"
+
+  client := &http.Client {
+  }
+  
+  req, err := http.NewRequest(method, url, nil)
+
+  if err != nil {
+    return 0, appErrors.ErrFetchingAleoBlockHeight.WithDetails(err.Error())
+  }
+ 
+  req.Header.Add("Accept", "application/json")
+
+  res, err := client.Do(req)
+  if err != nil {
+    return 0, appErrors.ErrFetchingAleoBlockHeight.WithDetails(err.Error())
+  }
+  defer res.Body.Close()
+
+  body, err := io.ReadAll(res.Body)
+  if err != nil {
+    return 0, appErrors.ErrInvalidHTTPRequest.WithDetails(err.Error())
+  }
+ 
+  var blockHeight int64
+  err = json.Unmarshal(body, &blockHeight)
+  if err != nil {
+    return 0, appErrors.ErrFetchingAleoBlockHeight.WithDetails(err.Error())
+  }
+
+  return blockHeight, nil
 }
