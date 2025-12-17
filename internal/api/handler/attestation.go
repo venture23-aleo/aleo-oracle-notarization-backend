@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -21,6 +23,29 @@ import (
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/sgx"
 )
 
+func decodeOneOrMany[T any](raw []byte) ([]T, *appErrors.AppError) {
+	// Array case
+	decArr := json.NewDecoder(bytes.NewReader(raw))
+	decArr.DisallowUnknownFields()
+
+	var many []T
+	if err := decArr.Decode(&many); err == nil {
+		return many, nil
+	}
+
+	// Single case
+	decObj := json.NewDecoder(bytes.NewReader(raw))
+	decObj.DisallowUnknownFields()
+
+	var one T
+	if err := decObj.Decode(&one); err == nil {
+		return []T{one}, nil
+	}
+
+	return nil, appErrors.ErrDecodingRequestBody
+}
+
+
 // GenerateAttestationReport handles the request to generate an attestation report.
 // It supports both single token (object) and multiple tokens (array) in a single endpoint.
 // Request body can be:
@@ -29,6 +54,7 @@ import (
 func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	start := time.Now()
 	status := "failed"
+
 
 	// Close the request body.
 	defer req.Body.Close()
@@ -45,6 +71,16 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Log the incoming request
 	reqLogger.Debug("Attestation report request received", "method", req.Method, "path", req.URL.Path)
 
+		// panic listener
+	defer func() {
+		if r := recover(); r != nil {
+			reqLogger.Error("Panic occurred", "error", r)
+			metrics.RecordError("panic_occurred", "attestation_handler")
+			httpUtil.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrInternal)
+		}
+	}()
+
+
 	contentType := req.Header.Get("Content-Type")
 
 	// Validate Content-Type
@@ -58,63 +94,62 @@ func GenerateAttestationReport(w http.ResponseWriter, req *http.Request) {
 	// Limit the request body size.
 	req.Body = http.MaxBytesReader(w, req.Body, constants.MaxRequestBodySize)
 
-	// Read the raw JSON to detect if it's an array or object
-	var rawJSON json.RawMessage
-	decoder := json.NewDecoder(req.Body)
-	if err := decoder.Decode(&rawJSON); err != nil {
-		if strings.Contains(err.Error(), "http: request body too large") {
-			reqLogger.Error("Request body too large during decode", "error", err)
-			metrics.RecordError("request_body_too_large", "attestation_handler")
-			httpUtil.WriteJsonError(w, http.StatusRequestEntityTooLarge, appErrors.ErrRequestBodyTooLarge)
+	bodyBytes, err := io.ReadAll(req.Body)
+	if err != nil {
+		reqLogger.Error("Failed to read request body", "error", err)
+		metrics.RecordError("request_body_read_failed", "attestation_handler")
+		httpUtil.WriteJsonError(w, http.StatusInternalServerError, appErrors.ErrInternal)
+		return
+	}
+
+	if !json.Valid(bodyBytes) {
+		reqLogger.Error("Invalid JSON request body", "body", string(bodyBytes))
+		metrics.RecordError("invalid_json_request_body", "attestation_handler")
+		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody)
+		return
+	}
+
+	attestationRequests, decodeErr := decodeOneOrMany[attestation.AttestationRequestWithDebug](bodyBytes)
+	if decodeErr != nil {
+		reqLogger.Error("Failed to decode attestation requests", "error", decodeErr)
+		metrics.RecordError("json_decode_failed", "attestation_handler")
+		httpUtil.WriteJsonError(w, http.StatusBadRequest, decodeErr)
+		return
+	}
+
+	requestsLength := len(attestationRequests)
+
+	if requestsLength == 0 {
+		reqLogger.Error("No attestation requests found")
+		metrics.RecordError("no_attestation_requests_found", "attestation_handler")
+		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody)
+		return
+	}
+
+	// Check if all the token URLs are the same.
+	uniqueTokenURLs := make(map[string]bool)
+	for _, attestationRequest := range attestationRequests {
+		url := strings.TrimSpace(strings.ToLower(attestationRequest.Url))
+		if _, exists := uniqueTokenURLs[url]; exists {
+			reqLogger.Error("Duplicate token URL found", "url", attestationRequest.Url)
+			metrics.RecordError("duplicate_token_url_found", "attestation_handler")
+			httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody.WithDetails("Duplicate token URL found"))
 			return
 		}
-		reqLogger.Error("Failed to decode request body", "error", err)
-		metrics.RecordError("json_decode_failed", "attestation_handler")
-		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody)
-		return
+		uniqueTokenURLs[url] = true
 	}
 
-	// Detect if the input is an array or object by checking the first character
-	rawJSONStr := strings.TrimSpace(string(rawJSON))
-	if len(rawJSONStr) == 0 {
-		reqLogger.Error("Empty request body")
-		metrics.RecordError("empty_request_body", "attestation_handler")
-		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody)
-		return
-	}
 
-	// Check if it's an array (starts with '[') or object (starts with '{')
-	if strings.HasPrefix(rawJSONStr, "[") {
-		// Multiple tokens - array of objects
-		reqLogger.Debug("Detected array input - processing multiple tokens")
-		status = processMultipleTokensAttestation(ctx, w, rawJSON, reqLogger)
-	} else if strings.HasPrefix(rawJSONStr, "{") {
-		// Single token - object
-		reqLogger.Debug("Detected object input - processing single token")
-		status = processSingleTokenAttestation(ctx, w, rawJSON, reqLogger)
+	if requestsLength == 1 {
+		status = processSingleTokenAttestation(ctx, w, attestationRequests[0], reqLogger)
 	} else {
-		reqLogger.Error("Invalid JSON format - must be object or array", "first_char", rawJSONStr[0])
-		metrics.RecordError("invalid_json_format", "attestation_handler")
-		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody)
-		return
+		status = processMultipleTokensAttestation(ctx, w, attestationRequests, reqLogger)
 	}
 }
 
 // processSingleTokenAttestation handles a single token attestation request
-func processSingleTokenAttestation(ctx context.Context, w http.ResponseWriter, rawJSON json.RawMessage, reqLogger *slog.Logger) string {
+func processSingleTokenAttestation(ctx context.Context, w http.ResponseWriter, attestationRequestWithDebug attestation.AttestationRequestWithDebug, reqLogger *slog.Logger) string {
 	status := "failed"
-
-	// Decode as single token request (with optional debug flag)
-	var attestationRequestWithDebug attestation.AttestationRequestWithDebug
-	decoder := json.NewDecoder(strings.NewReader(string(rawJSON)))
-	decoder.DisallowUnknownFields()
-
-	if err := decoder.Decode(&attestationRequestWithDebug); err != nil {
-		reqLogger.Error("Failed to decode single token request", "error", err)
-		metrics.RecordError("json_decode_failed", "attestation_handler")
-		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody)
-		return status
-	}
 
 	attestationRequest := attestationRequestWithDebug.AttestationRequest.Normalize()
 
@@ -174,17 +209,17 @@ func processSingleTokenAttestation(ctx context.Context, w http.ResponseWriter, r
 		return "success"
 	}
 
-	aleoBlockHeight, err := common.GetAleoCurrentBlockHeight()
-	if err != nil {
-		reqLogger.Error("Failed to get Aleo block height", "error", err)
-		metrics.RecordError("aleo_block_height_fetch_failed", "attestation_handler")
-		httpUtil.WriteJsonError(w, http.StatusInternalServerError, err)
-		return status
-	}
+	// aleoBlockHeight, err := common.GetAleoCurrentBlockHeight()
+	// if err != nil {
+	// 	reqLogger.Error("Failed to get Aleo block height", "error", err)
+	// 	metrics.RecordError("aleo_block_height_fetch_failed", "attestation_handler")
+	// 	httpUtil.WriteJsonError(w, http.StatusInternalServerError, err)
+	// 	return status
+	// }
 
 	// Prepare the oracle data before the quote.
 	reqLogger.Debug("Preparing data for quote generation")
-	quotePrepData, err := attestation.PrepareDataForQuoteGeneration(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), aleoBlockHeight, attestationRequest)
+	quotePrepData, err := attestation.PrepareDataForQuoteGeneration(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), attestationRequest)
 
 	// Check if the error is not nil.
 	if err != nil {
@@ -236,7 +271,6 @@ func processSingleTokenAttestation(ctx context.Context, w http.ResponseWriter, r
 		ResponseStatusCode:   extractDataResult.StatusCode,
 		AttestationReport:    base64.StdEncoding.EncodeToString(quote),
 		OracleData:           *oracleData,
-		AleoBlockHeight:     aleoBlockHeight,
 	}
 
 	// Log successful completion
@@ -248,27 +282,8 @@ func processSingleTokenAttestation(ctx context.Context, w http.ResponseWriter, r
 }
 
 // processMultipleTokensAttestation handles multiple tokens attestation request
-func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter, rawJSON json.RawMessage, reqLogger *slog.Logger) string {
+func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter, attestationRequests []attestation.AttestationRequestWithDebug, reqLogger *slog.Logger) string {
 	status := "failed"
-
-	// Decode as array of attestation requests
-	var attestationRequests []attestation.AttestationRequest
-	decoder := json.NewDecoder(strings.NewReader(string(rawJSON)))
-	decoder.DisallowUnknownFields()
-
-	if err := decoder.Decode(&attestationRequests); err != nil {
-		reqLogger.Error("Failed to decode multiple tokens request", "error", err)
-		metrics.RecordError("json_decode_failed", "attestation_handler")
-		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody)
-		return status
-	}
-
-	if len(attestationRequests) == 0 {
-		reqLogger.Error("Empty array of attestation requests")
-		metrics.RecordError("empty_array", "attestation_handler")
-		httpUtil.WriteJsonError(w, http.StatusBadRequest, appErrors.ErrDecodingRequestBody)
-		return status
-	}
 
 	reqLogger.Debug("Processing multiple tokens attestation", "count", len(attestationRequests))
 
@@ -281,17 +296,19 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 		return status
 	}
 
-	aleoBlockHeight, err := common.GetAleoCurrentBlockHeight()
-	if err != nil {
-		reqLogger.Error("Failed to get Aleo block height", "error", err)
-		metrics.RecordError("aleo_block_height_fetch_failed", "attestation_handler")
-		httpUtil.WriteJsonError(w, http.StatusInternalServerError, err)
-		return status
-	}
+	// aleoBlockHeight, err := common.GetAleoCurrentBlockHeight()
+	// if err != nil {
+	// 	reqLogger.Error("Failed to get Aleo block height", "error", err)
+	// 	metrics.RecordError("aleo_block_height_fetch_failed", "attestation_handler")
+	// 	httpUtil.WriteJsonError(w, http.StatusInternalServerError, err)
+	// 	return status
+	// }
+
+	normalizedAttestationRequests := make([]attestation.AttestationRequest, len(attestationRequests))
 
 	// Normalize and validate all attestation requests
 	for i, attestationRequest := range attestationRequests {
-		attestationRequest := attestationRequest.Normalize()
+		normalizedAttestationRequest := attestationRequest.AttestationRequest.Normalize()
 
 		if err := attestationRequest.Validate(); err != nil {
 			reqLogger.Error("Attestation request validation failed", "index", i, "error", err)
@@ -299,24 +316,24 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 			httpUtil.WriteJsonError(w, http.StatusBadRequest, err)
 			return status
 		}
-		attestationRequests[i] = attestationRequest
+		normalizedAttestationRequests[i] = normalizedAttestationRequest
 	}
 
 	// Process all attestation requests in parallel
 	type processResult struct {
 		index           int
-		userDataChunk   []byte
+		attestationResult attestation.AttestationResultForEachToken
 		err             *appErrors.AppError
 		extractDuration float64
 	}
 
-	resultChan := make(chan processResult, len(attestationRequests))
+	resultChan := make(chan processResult, len(normalizedAttestationRequests))
 	var wg sync.WaitGroup
 
-	reqLogger.Debug("Starting parallel processing of attestation requests", "count", len(attestationRequests))
+	reqLogger.Debug("Starting parallel processing of attestation requests", "count", len(normalizedAttestationRequests))
 
 	// Launch goroutines for each attestation request
-	for i, attestationRequest := range attestationRequests {
+	for i, normalizedAttestationRequest := range normalizedAttestationRequests {
 		wg.Add(1)
 		go func(idx int, req attestation.AttestationRequest) {
 			defer wg.Done()
@@ -345,7 +362,7 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 			// Prepare the oracle data before the quote.
 			reqLogger.Debug("Preparing data for quote generation", "index", idx)
 
-			userDataChunk, _, err := attestation.PrepareOracleUserDataChunk(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), aleoBlockHeight, req)
+			userDataChunk, _, err := attestation.PrepareOracleUserDataChunk(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), req)
 
 			if err != nil {
 				reqLogger.Error("Failed to prepare data for quote generation", "index", idx, "error", err)
@@ -362,11 +379,19 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 
 			resultChan <- processResult{
 				index:          idx,
-				userDataChunk:  userDataChunk,
 				err:            nil,
 				extractDuration: extractDuration,
-			}
-		}(i, attestationRequest)
+				attestationResult: attestation.AttestationResultForEachToken{
+					Index: idx,
+					UserDataChunk: userDataChunk,
+					AttestationData: extractDataResult.AttestationData,
+					AtttestationRequest: req,
+					ResponseBody: extractDataResult.ResponseBody,
+					ResponseStatusCode: extractDataResult.StatusCode,
+					AttestationTimestamp: timestamp,
+				},
+				}
+		}(i, normalizedAttestationRequest)
 	}
 
 	// Close the channel when all goroutines are done
@@ -377,7 +402,7 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 
 	// Collect results and check for errors
 	mergedUserDataChunks := []byte{}
-	results := make([]processResult, 0, len(attestationRequests))
+	results := make([]processResult, 0, len(normalizedAttestationRequests))
 	hasError := false
 	var firstError *appErrors.AppError
 
@@ -399,9 +424,12 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 	}
 
 	// Sort results by index to maintain order and merge chunks
-	userDataChunksByIndex := make([][]byte, len(attestationRequests))
+	attestationResults := make([]attestation.AttestationResultForEachToken, len(results))
+	userDataChunksByIndex := make([][]byte, len(normalizedAttestationRequests))
+
 	for _, result := range results {
-		userDataChunksByIndex[result.index] = result.userDataChunk
+		attestationResults[result.index] = result.attestationResult
+		userDataChunksByIndex[result.index] = result.attestationResult.UserDataChunk		
 	}
 
 	// Merge all user data chunks in order
@@ -409,9 +437,12 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 		mergedUserDataChunks = append(mergedUserDataChunks, chunk...)
 	}
 
-	reqLogger.Debug("All attestation requests processed successfully in parallel", "count", len(attestationRequests))
+	finalMergedUserDataChunks := make([]byte, constants.OracleUserDataChunkSize * constants.ChunkSizeInBytes)
+	copy(finalMergedUserDataChunks, mergedUserDataChunks)
 
-	mergedUserData, formatErr := attestation.FormatMessage(mergedUserDataChunks, constants.OracleUserDataChunkSize)
+	reqLogger.Debug("All attestation requests processed successfully in parallel", "count", len(normalizedAttestationRequests))
+
+	mergedUserData, formatErr := attestation.FormatMessage(finalMergedUserDataChunks, constants.OracleUserDataChunkSize)
 	if formatErr != nil {
 		reqLogger.Error("Failed to format merged user data", "error", formatErr)
 		metrics.RecordError("user_data_format_failed", "attestation_handler")
@@ -476,7 +507,7 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 			Address:   publicKey,
 			UserData:  string(mergedUserData),
 		},
-		AleoBlockHeight: aleoBlockHeight,
+		AttestationResults: attestationResults,
 	}
 
 	// Log successful completion

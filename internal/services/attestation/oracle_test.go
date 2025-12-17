@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	encoding "github.com/venture23-aleo/aleo-oracle-encoding"
 	aleoUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/aleoutil"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/common"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/constants"
 	appErrors "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/errors"
 )
@@ -322,11 +321,11 @@ func TestBuildCompleteOracleData(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
-			if blockHeightError != nil {
-				t.Fatalf("failed to get aleo block height: %v", blockHeightError)
-			}
-			quotePreparationData, err := PrepareDataForQuoteGeneration(testCase.statusCode, testCase.attestationData, testCase.timestamp, int64(aleoBlockHeight), testCase.attestationRequest)
+			// aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+			// if blockHeightError != nil {
+			// 	t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+			// }
+			quotePreparationData, err := PrepareDataForQuoteGeneration(testCase.statusCode, testCase.attestationData, testCase.timestamp, testCase.attestationRequest)
 			if testCase.expectedError != nil {
 				assert.Equal(t, testCase.expectedError, err)
 			} else {

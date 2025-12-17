@@ -16,7 +16,7 @@ import (
 	httpUtil "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/httputil"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/logger"
 	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/metrics"
-	"github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
+	attestation "github.com/venture23-aleo/aleo-oracle-notarization-backend/internal/services/attestation"
 )
 
 // ExtractDataResult represents the result of data extraction

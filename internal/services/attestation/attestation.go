@@ -42,8 +42,6 @@ type AttestationResponse struct {
 
 	AttestationTimestamp int64 `json:"timestamp"` // The attestation timestamp.
 
-	AleoBlockHeight int64 `json:"aleoBlockHeight"` // The Aleo block height.
-
 	ResponseBody string `json:"responseBody"` // The response body.
 
 	ResponseStatusCode int `json:"responseStatusCode"` // The response status code.
@@ -75,13 +73,25 @@ type DebugAttestationResponse struct {
 	ExtractedData string `json:"extractedData"` // The extracted data.
 }
 
+type AttestationResultForEachToken struct {
+	Index int `json:"-"` // The index of the token.
+	UserDataChunk []byte `json:"-"` // The user data chunk.
+	AttestationData string `json:"attestationData"` // The attestation data.
+	AtttestationRequest AttestationRequest `json:"attestationRequest"` // The attestation request.
+	ResponseBody string `json:"responseBody"` // The response body.
+	ResponseStatusCode int `json:"responseStatusCode"`
+	AttestationTimestamp int64 `json:"timestamp"` // The attestation timestamp.
+}
+
 type AttestationResponseForMultipleTokens struct {
 	ReportType string `json:"reportType"` // The report type.
 	AttestationTimestamp int64 `json:"timestamp"` // The attestation timestamp.
 	AttestationReport string `json:"attestationReport"` // The attestation report.
 	OracleData OracleData `json:"oracleData"` // The oracle data.
-	AleoBlockHeight int64 `json:"aleoBlockHeight"` // The Aleo block height.
+	AttestationResults []AttestationResultForEachToken `json:"attestationResults"` // The attestation results.
 }
+
+
 
 func (ar *AttestationRequest) Normalize() AttestationRequest {
 

@@ -47,7 +47,6 @@ func PrepareOracleUserData(
 	statusCode int,
 	attestationData string,
 	timestamp uint64,
-	aleoBlockHeight int64,
 	attestationRequest AttestationRequest,
 ) (
 	userDataProof []byte,
@@ -61,13 +60,17 @@ func PrepareOracleUserData(
 		return nil, nil, nil, err
 	}
 
-	userDataProof, encodedPositions, err = PrepareOracleUserDataChunk(statusCode, attestationData, timestamp, aleoBlockHeight, attestationRequest)
+	userDataChunk, encodedPositions, err := PrepareOracleUserDataChunk(statusCode, attestationData, timestamp, attestationRequest)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	
+	userDataPrrof := make([]byte, constants.OracleUserDataChunkSize * constants.ChunkSizeInBytes)
+	copy(userDataPrrof, userDataChunk)
+
 
 	// Step 4: Format the proof data into C0 - C7 chunks.
-	userData, formatError := aleoContext.FormatMessage(userDataProof, constants.OracleUserDataChunkSize)
+	userData, formatError := aleoContext.FormatMessage(userDataPrrof, constants.OracleUserDataChunkSize)
 	logger.Debug("User data formatted: ")
 	if formatError != nil {
 		logger.Error("failed to format proof data", "error", formatError)
@@ -75,17 +78,16 @@ func PrepareOracleUserData(
 	}
 
 	// Step 5: Return the prepared data.
-	return userDataProof, userData, encodedPositions, nil
+	return userDataPrrof, userData, encodedPositions, nil
 }
 
 
 func PrepareOracleUserDataChunk(statusCode int,
 	attestationData string,
 	timestamp uint64,
-	aleoBlockHeight int64,
 	attestationRequest AttestationRequest) (userDataChunk []byte, encodedPositions *encoding.ProofPositionalInfo, err *appErrors.AppError) {
 	// Step 2: Prepare the proof data.
-	userDataProof, encodedPositions, err := PrepareProofData(statusCode, attestationData, int64(timestamp), aleoBlockHeight, attestationRequest)
+	userDataProof, encodedPositions, err := PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
 	
 	if err != nil {
 		return nil, nil, appErrors.ErrPreparingProofData
@@ -101,7 +103,7 @@ func PrepareOracleUserDataChunk(statusCode int,
 		// MetaHeaders is 32 bytes total.
 		// - The first 21 bytes are reserved for other metadata.
 		// - The token ID is stored at byte index 21 (0-based).
-		userDataProof[23] = byte(tokenID)
+		userDataProof[21] = byte(tokenID)
 	}
 
 	userDataChunk = make([]byte, constants.ChunkSizeInBytes)
@@ -144,8 +146,8 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 		return nil, err
 	}
 
-	// Step 3: Format the encoded proof data into C0 - C7 chunks.
-	encodedRequest, formatError := aleoContext.FormatMessage(encodedRequestProof, 8)
+	// Step 3: Format the encoded proof data into C0 - C9 chunks.
+	encodedRequest, formatError := aleoContext.FormatMessage(encodedRequestProof, constants.OracleUserDataChunkSize)
 	if formatError != nil {
 		logger.Error("failed to format encoded proof data:", "error", formatError)
 		return nil, appErrors.ErrFormattingEncodedProofData
@@ -302,11 +304,10 @@ func PrepareDataForQuoteGeneration(
 	statusCode int,
 	attestationData string,
 	timestamp uint64,
-	aleoBlockHeight int64,
 	attestationRequest AttestationRequest,
 ) (*QuotePreparationData, *appErrors.AppError) {
 	// Step 1: Prepare user data proof, user data, and encoded positions.
-	userDataProof, userData, encodedPositions, err := PrepareOracleUserData(statusCode, attestationData, timestamp, aleoBlockHeight, attestationRequest)
+	userDataProof, userData, encodedPositions, err := PrepareOracleUserData(statusCode, attestationData, timestamp, attestationRequest)
 	if err != nil {
 		return nil, err
 	}
