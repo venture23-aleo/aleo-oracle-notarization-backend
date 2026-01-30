@@ -128,7 +128,7 @@ func PrepareOracleUserDataChunk(statusCode int,
 // Returns:
 //   - encodedRequest: the resulting encoded request as a byte slice
 //   - err: an application error if any step fails
-func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encoding.ProofPositionalInfo) (encodedRequest []byte, err *appErrors.AppError) {
+func PrepareOracleEncodedRequest(userDataChunk []byte, encodedPositions *encoding.ProofPositionalInfo) (encodedRequest []byte, err *appErrors.AppError) {
 	// Step 1: Retrieve the Aleo context.
 	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
@@ -139,6 +139,9 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 		return nil, appErrors.ErrNilEncodedPositions
 	}
 
+	userDataProof := make([]byte, constants.ChunkSizeInBytes)
+	copy(userDataProof, userDataChunk)
+
 	// Step 2: Prepare the encoded request proof.
 	encodedRequestProof, err := PrepareEncodedRequestProof(userDataProof, *encodedPositions)
 	if err != nil {
@@ -147,7 +150,7 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 	}
 
 	// Step 3: Format the encoded proof data into C0 - C9 chunks.
-	encodedRequest, formatError := aleoContext.FormatMessage(encodedRequestProof, constants.OracleUserDataChunkSize)
+	encodedRequest, formatError := aleoContext.FormatMessage(encodedRequestProof, constants.OracleRequestHashChunkSize)
 	if formatError != nil {
 		logger.Error("failed to format encoded proof data:", "error", formatError)
 		return nil, appErrors.ErrFormattingEncodedProofData
@@ -341,4 +344,29 @@ func FormatMessage(message []byte, chunkSize int) (formattedMessage []byte, err 
 		return nil, appErrors.ErrFormattingProofData
 	}
 	return formattedMessage, nil
+}
+
+
+func GetRequestHashFromSingleChunk(userDataChunk []byte, encodedPositions *encoding.ProofPositionalInfo) (requestHash string, err *appErrors.AppError) {
+	aleoContext, err := aleoUtil.GetAleoContext()
+	if err != nil {
+		return "", err
+	}
+
+	// userData, formatError := aleoContext.FormatMessage(userDataChunk, 1)
+	// if formatError != nil {	
+	// 	return "", appErrors.ErrFormattingProofData
+	// }
+
+	encodedRequest, err := PrepareOracleEncodedRequest(userDataChunk, encodedPositions)
+	if err != nil {
+		return "", err
+	}
+
+	requestHash, hashError := aleoContext.HashMessageToString(encodedRequest)
+	if hashError != nil {
+		return "", appErrors.ErrCreatingRequestHash
+	}
+
+	return requestHash, nil
 }

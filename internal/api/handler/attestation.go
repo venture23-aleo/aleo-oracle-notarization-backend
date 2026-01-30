@@ -271,6 +271,16 @@ func processSingleTokenAttestation(ctx context.Context, w http.ResponseWriter, a
 		ResponseStatusCode:   extractDataResult.StatusCode,
 		AttestationReport:    base64.StdEncoding.EncodeToString(quote),
 		OracleData:           *oracleData,
+		AttestationResults:   []attestation.AttestationResultForEachToken{
+			{
+				AttestationData: extractDataResult.AttestationData,
+				AtttestationRequest: attestationRequest,
+				ResponseBody: extractDataResult.ResponseBody,
+				ResponseStatusCode: extractDataResult.StatusCode,
+				AttestationTimestamp: timestamp,
+				RequestHash: oracleData.RequestHash,
+			},
+		},
 	}
 
 	// Log successful completion
@@ -362,11 +372,23 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 			// Prepare the oracle data before the quote.
 			reqLogger.Debug("Preparing data for quote generation", "index", idx)
 
-			userDataChunk, _, err := attestation.PrepareOracleUserDataChunk(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), req)
+			userDataChunk, encodedPositions, err := attestation.PrepareOracleUserDataChunk(extractDataResult.StatusCode, extractDataResult.AttestationData, uint64(timestamp), req)
 
 			if err != nil {
 				reqLogger.Error("Failed to prepare data for quote generation", "index", idx, "error", err)
 				metrics.RecordError("quote_prep_failed", "attestation_handler")
+				resultChan <- processResult{
+					index:          idx,
+					err:            err,
+					extractDuration: extractDuration,
+				}
+				return
+			}
+
+			requestHash, err := attestation.GetRequestHashFromSingleChunk(userDataChunk, encodedPositions)
+			if err != nil {
+				reqLogger.Error("Failed to get request hash from single chunk", "index", idx, "error", err)
+				metrics.RecordError("request_hash_get_failed", "attestation_handler")
 				resultChan <- processResult{
 					index:          idx,
 					err:            err,
@@ -389,6 +411,7 @@ func processMultipleTokensAttestation(ctx context.Context, w http.ResponseWriter
 					ResponseBody: extractDataResult.ResponseBody,
 					ResponseStatusCode: extractDataResult.StatusCode,
 					AttestationTimestamp: timestamp,
+					RequestHash: requestHash,
 				},
 				}
 		}(i, normalizedAttestationRequest)

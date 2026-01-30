@@ -49,6 +49,8 @@ type AttestationResponse struct {
 	AttestationData string `json:"attestationData"` // The attestation data.
 
 	OracleData OracleData `json:"oracleData"` // The oracle data.
+
+	AttestationResults []AttestationResultForEachToken `json:"attestationResults"` // The attestation results.
 }
 
 // AttestationRequestWithDebug is the attestation request with debug request.
@@ -81,6 +83,7 @@ type AttestationResultForEachToken struct {
 	ResponseBody string `json:"responseBody"` // The response body.
 	ResponseStatusCode int `json:"responseStatusCode"`
 	AttestationTimestamp int64 `json:"timestamp"` // The attestation timestamp.
+	RequestHash string `json:"requestHash"` // The request hash.
 }
 
 type AttestationResponseForMultipleTokens struct {

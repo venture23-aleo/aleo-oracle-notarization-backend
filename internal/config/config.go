@@ -47,7 +47,7 @@ type PriceFeedConfig struct {
 	TokenExchanges       TokenExchanges  `json:"tokenExchanges"`
 	MinExchangesRequired int             `json:"minExchangesRequired"`
 	TokenVWAPConfig     TokenVWAPConfigMap  `json:"tokenVWAPConfig"`
-	ProvableBlockHeightURL string `json:"provableBlockHeightURL"`
+	// ProvableBlockHeightURL string `json:"provableBlockHeightURL"`
 }
 
 type RoughtimeServerConfig struct {
@@ -157,10 +157,10 @@ func GetMinExchangesRequired() int {
 	return appConfig.PriceFeedConfig.MinExchangesRequired
 }
 
-func GetProvableBlockHeightURL() string {
-	appConfig := GetAppConfig()
-	return appConfig.PriceFeedConfig.ProvableBlockHeightURL
-}
+// func GetProvableBlockHeightURL() string {
+// 	appConfig := GetAppConfig()
+// 	return appConfig.PriceFeedConfig.ProvableBlockHeightURL
+// }
 
 func loadTokenTradingPairs() {
 	exchangesConfigs := GetExchangesConfigs()
@@ -226,9 +226,9 @@ func ValidateConfigs() error {
 		errors = append(errors, "No whitelisted domains found in app config")
 	}
 
-	if appConfig.PriceFeedConfig.ProvableBlockHeightURL == "" {
-		errors = append(errors, "Provable block height URL is not set")
-	}
+	// if appConfig.PriceFeedConfig.ProvableBlockHeightURL == "" {
+	// 	errors = append(errors, "Provable block height URL is not set")
+	// }
 
 	var exchangeKeys []string
 	var tokenKeys []string
