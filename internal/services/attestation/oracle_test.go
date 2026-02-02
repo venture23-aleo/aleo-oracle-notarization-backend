@@ -121,7 +121,7 @@ func TestPrepareOracleSignature(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := PrepareOracleSignature(testCase.oracleReport)
+			_, _, err := PrepareOracleSignature(testCase.oracleReport)
 			assert.Equal(t, testCase.expectedError, err)
 			// assert.Equal(t, testCase.expectedSignature, signature)
 		})
@@ -321,6 +321,10 @@ func TestBuildCompleteOracleData(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			// aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+			// if blockHeightError != nil {
+			// 	t.Fatalf("failed to get aleo block height: %v", blockHeightError)
+			// }
 			quotePreparationData, err := PrepareDataForQuoteGeneration(testCase.statusCode, testCase.attestationData, testCase.timestamp, testCase.attestationRequest)
 			if testCase.expectedError != nil {
 				assert.Equal(t, testCase.expectedError, err)

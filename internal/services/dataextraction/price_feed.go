@@ -131,6 +131,10 @@ func GetRetryableHTTPClientForExchange(exchange string, maxRetries int) (*retrya
 			// Take root of the verified chain
 			rootCert := verifiedChains[0][len(verifiedChains[0])-1]
 
+			// rootCertBytes := rootCert.Raw
+			// rootCertPem := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCertBytes})
+			// logger.Info("Root CA PEM", "Exchange", exchange, "rootCertPem", string(rootCertPem))	
+
 			if !bytes.Equal(rootDer, rootCert.Raw) {
 				return fmt.Errorf("root CA mismatch for %s", exchange)
 			}

@@ -189,41 +189,41 @@
         "tokenVWAPConfig": {
             "BTC": {
                 "token": "BTC",
-                "tokenTolerancePercent": 0.05,
-                "tokenMADMultiplier": 4,
-                "tokenMaxSpreadPercent": 0.11,
-                "tokenMinVolumePerExchange": 100,
+                "tokenTolerancePercent": 0.3,
+                "tokenMADMultiplier": 5,
+                "tokenMaxSpreadPercent": 0.63,
+                "tokenMinVolumePerExchange": 500,
                 "tokenMaxExchangeWeightPercent": 50
             },
             "ETH": {
                 "token": "ETH",
-                "tokenTolerancePercent": 0.1,
-                "tokenMADMultiplier": 4,
-                "tokenMaxSpreadPercent": 0.21,
-                "tokenMinVolumePerExchange": 100,
+                "tokenTolerancePercent": 0.3,
+                "tokenMADMultiplier": 5,
+                "tokenMaxSpreadPercent": 0.63,
+                "tokenMinVolumePerExchange": 500,
                 "tokenMaxExchangeWeightPercent": 50
             },
             "ALEO": {
                 "token": "ALEO",
                 "tokenTolerancePercent": 1.5,
-                "tokenMADMultiplier": 7,
+                "tokenMADMultiplier": 15,
                 "tokenMaxSpreadPercent": 3.05,
                 "tokenMinVolumePerExchange": 10000,
                 "tokenMaxExchangeWeightPercent": 50
             },
             "USDT": {
                 "token": "USDT",
-                "tokenTolerancePercent": 0.2,
-                "tokenMADMultiplier": 3,
-                "tokenMaxSpreadPercent": 0.41,
+                "tokenTolerancePercent": 0.3,
+                "tokenMADMultiplier": 6,
+                "tokenMaxSpreadPercent": 0.63,
                 "tokenMinVolumePerExchange": 50000,
                 "tokenMaxExchangeWeightPercent": 50
             },
             "USDC": {
                 "token": "USDC",
-                "tokenTolerancePercent": 0.2,
-                "tokenMADMultiplier": 3,
-                "tokenMaxSpreadPercent": 0.41,
+                "tokenTolerancePercent": 0.3,
+                "tokenMADMultiplier": 6,
+                "tokenMaxSpreadPercent": 0.63,
                 "tokenMinVolumePerExchange": 50000,
                 "tokenMaxExchangeWeightPercent": 50
             }

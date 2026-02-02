@@ -108,6 +108,14 @@ func GenerateAttestedRandom(w http.ResponseWriter, req *http.Request) {
 	statusCode := 200
 	attestationData := randomNumber.String()
 
+	// aleoBlockHeight, blockHeightError := common.GetAleoCurrentBlockHeight()
+	// if blockHeightError != nil {
+	// 	reqLogger.Error("Failed to get Aleo block height", "error", err)
+	// 	metrics.RecordError("aleo_block_height_fetch_failed", "random_handler")
+	// 	httpUtil.WriteJsonError(w, http.StatusInternalServerError, blockHeightError)
+	// 	return
+	// }
+
 	reqLogger.Debug("Preparing data for quote generation")
 	quotePrepData, appError := attestation.PrepareDataForQuoteGeneration(statusCode, attestationData, uint64(timestamp), attestationRequest)
 

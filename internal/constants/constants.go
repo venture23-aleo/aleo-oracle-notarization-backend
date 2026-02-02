@@ -67,11 +67,11 @@ const (
 	PriceFeedAleoURL         string = "price_feed: aleo"
 	PriceFeedUSDTURL         string = "price_feed: usdt"
 	PriceFeedUSDCURL         string = "price_feed: usdc"
-	BTCTokenID               int    = 12
-	ETHTokenID               int    = 11
 	AleoTokenID              int    = 8
 	USDTTokenID              int    = 9
 	USDCTokenID              int    = 10
+	ETHTokenID               int    = 11
+	BTCTokenID               int    = 12
 	AttestationDataSizeLimit int    = 1024 * 3
 	PriceFeedSelector        string = "weightedAvgPrice"
 	MaxAllowedTimeDiff       int64  = 600 // 10 minutes in seconds
@@ -93,5 +93,7 @@ const (
 
 	// Oracle Report Constants
 	OracleReportChunkSize   = 10
-	OracleUserDataChunkSize = 8
+	OracleUserDataChunkSize = 10
+	OracleRequestHashChunkSize = 1
+	ChunkSizeInBytes   = 512
 )

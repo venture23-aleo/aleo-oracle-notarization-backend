@@ -60,27 +60,17 @@ func PrepareOracleUserData(
 		return nil, nil, nil, err
 	}
 
-	// Step 2: Prepare the proof data.
-	userDataProof, encodedPositions, err = PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
+	userDataChunk, encodedPositions, err := PrepareOracleUserDataChunk(statusCode, attestationData, timestamp, attestationRequest)
 	if err != nil {
-		return nil, nil, nil, appErrors.ErrPreparingProofData
+		return nil, nil, nil, err
 	}
+	
+	userDataPrrof := make([]byte, constants.OracleUserDataChunkSize * constants.ChunkSizeInBytes)
+	copy(userDataPrrof, userDataChunk)
 
-	if common.IsPriceFeedURL(attestationRequest.Url) {
-		tokenID := common.GetTokenIDFromPriceFeedURL(attestationRequest.Url)
-		logger.Debug("Token ID: ", "tokenID", tokenID)
-		if tokenID == 0 {
-			logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)
-			return nil, nil, nil, appErrors.ErrUnsupportedPriceFeedURL
-		}
-		// MetaHeaders is 32 bytes total.
-		// - The first 21 bytes are reserved for other metadata.
-		// - The token ID is stored at byte index 21 (0-based).
-		userDataProof[21] = byte(tokenID)
-	}
 
 	// Step 4: Format the proof data into C0 - C7 chunks.
-	userData, formatError := aleoContext.FormatMessage(userDataProof, constants.OracleUserDataChunkSize)
+	userData, formatError := aleoContext.FormatMessage(userDataPrrof, constants.OracleUserDataChunkSize)
 	logger.Debug("User data formatted: ")
 	if formatError != nil {
 		logger.Error("failed to format proof data", "error", formatError)
@@ -88,7 +78,38 @@ func PrepareOracleUserData(
 	}
 
 	// Step 5: Return the prepared data.
-	return userDataProof, userData, encodedPositions, nil
+	return userDataPrrof, userData, encodedPositions, nil
+}
+
+
+func PrepareOracleUserDataChunk(statusCode int,
+	attestationData string,
+	timestamp uint64,
+	attestationRequest AttestationRequest) (userDataChunk []byte, encodedPositions *encoding.ProofPositionalInfo, err *appErrors.AppError) {
+	// Step 2: Prepare the proof data.
+	userDataProof, encodedPositions, err := PrepareProofData(statusCode, attestationData, int64(timestamp), attestationRequest)
+	
+	if err != nil {
+		return nil, nil, appErrors.ErrPreparingProofData
+	}
+
+	if common.IsPriceFeedURL(attestationRequest.Url) {
+		tokenID := common.GetTokenIDFromPriceFeedURL(attestationRequest.Url)
+		logger.Debug("Token ID: ", "tokenID", tokenID)
+		if tokenID == 0 {
+			logger.Error("Unsupported price feed URL: ", "url", attestationRequest.Url)
+			return nil, nil, appErrors.ErrUnsupportedPriceFeedURL
+		}
+		// MetaHeaders is 32 bytes total.
+		// - The first 21 bytes are reserved for other metadata.
+		// - The token ID is stored at byte index 21 (0-based).
+		userDataProof[21] = byte(tokenID)
+	}
+
+	userDataChunk = make([]byte, constants.ChunkSizeInBytes)
+	copy(userDataChunk, userDataProof)
+
+	return userDataChunk, encodedPositions, nil
 }
 
 // PrepareOracleEncodedRequest prepares the encoded request for oracle operations.
@@ -107,7 +128,7 @@ func PrepareOracleUserData(
 // Returns:
 //   - encodedRequest: the resulting encoded request as a byte slice
 //   - err: an application error if any step fails
-func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encoding.ProofPositionalInfo) (encodedRequest []byte, err *appErrors.AppError) {
+func PrepareOracleEncodedRequest(userDataChunk []byte, encodedPositions *encoding.ProofPositionalInfo) (encodedRequest []byte, err *appErrors.AppError) {
 	// Step 1: Retrieve the Aleo context.
 	aleoContext, err := aleoUtil.GetAleoContext()
 	if err != nil {
@@ -118,6 +139,9 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 		return nil, appErrors.ErrNilEncodedPositions
 	}
 
+	userDataProof := make([]byte, constants.ChunkSizeInBytes)
+	copy(userDataProof, userDataChunk)
+
 	// Step 2: Prepare the encoded request proof.
 	encodedRequestProof, err := PrepareEncodedRequestProof(userDataProof, *encodedPositions)
 	if err != nil {
@@ -125,8 +149,8 @@ func PrepareOracleEncodedRequest(userDataProof []byte, encodedPositions *encodin
 		return nil, err
 	}
 
-	// Step 3: Format the encoded proof data into C0 - C7 chunks.
-	encodedRequest, formatError := aleoContext.FormatMessage(encodedRequestProof, 8)
+	// Step 3: Format the encoded proof data into C0 - C9 chunks.
+	encodedRequest, formatError := aleoContext.FormatMessage(encodedRequestProof, constants.OracleRequestHashChunkSize)
 	if formatError != nil {
 		logger.Error("failed to format encoded proof data:", "error", formatError)
 		return nil, appErrors.ErrFormattingEncodedProofData
@@ -306,4 +330,43 @@ func PrepareDataForQuoteGeneration(
 		AttestationHash:  attestationHash,
 		Timestamp:        timestamp,
 	}, nil
+}
+
+
+func FormatMessage(message []byte, chunkSize int) (formattedMessage []byte, err *appErrors.AppError) {
+	aleoContext, err := aleoUtil.GetAleoContext()
+	if err != nil {
+		return nil, err
+	}
+
+	formattedMessage, formatError := aleoContext.FormatMessage(message, chunkSize)
+	if formatError != nil {
+		return nil, appErrors.ErrFormattingProofData
+	}
+	return formattedMessage, nil
+}
+
+
+func GetRequestHashFromSingleChunk(userDataChunk []byte, encodedPositions *encoding.ProofPositionalInfo) (requestHash string, err *appErrors.AppError) {
+	aleoContext, err := aleoUtil.GetAleoContext()
+	if err != nil {
+		return "", err
+	}
+
+	// userData, formatError := aleoContext.FormatMessage(userDataChunk, 1)
+	// if formatError != nil {	
+	// 	return "", appErrors.ErrFormattingProofData
+	// }
+
+	encodedRequest, err := PrepareOracleEncodedRequest(userDataChunk, encodedPositions)
+	if err != nil {
+		return "", err
+	}
+
+	requestHash, hashError := aleoContext.HashMessageToString(encodedRequest)
+	if hashError != nil {
+		return "", appErrors.ErrCreatingRequestHash
+	}
+
+	return requestHash, nil
 }
