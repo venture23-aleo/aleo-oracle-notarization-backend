@@ -189,17 +189,17 @@
         "tokenVWAPConfig": {
             "BTC": {
                 "token": "BTC",
-                "tokenTolerancePercent": 0.2,
-                "tokenMADMultiplier": 4,
-                "tokenMaxSpreadPercent": 0.41,
+                "tokenTolerancePercent": 0.3,
+                "tokenMADMultiplier": 5,
+                "tokenMaxSpreadPercent": 0.63,
                 "tokenMinVolumePerExchange": 500,
                 "tokenMaxExchangeWeightPercent": 50
             },
             "ETH": {
                 "token": "ETH",
-                "tokenTolerancePercent": 0.2,
-                "tokenMADMultiplier": 4,
-                "tokenMaxSpreadPercent": 0.41,
+                "tokenTolerancePercent": 0.3,
+                "tokenMADMultiplier": 5,
+                "tokenMaxSpreadPercent": 0.63,
                 "tokenMinVolumePerExchange": 500,
                 "tokenMaxExchangeWeightPercent": 50
             },
@@ -213,17 +213,17 @@
             },
             "USDT": {
                 "token": "USDT",
-                "tokenTolerancePercent": 0.2,
-                "tokenMADMultiplier": 4,
-                "tokenMaxSpreadPercent": 0.41,
+                "tokenTolerancePercent": 0.3,
+                "tokenMADMultiplier": 5,
+                "tokenMaxSpreadPercent": 0.63,
                 "tokenMinVolumePerExchange": 50000,
                 "tokenMaxExchangeWeightPercent": 50
             },
             "USDC": {
                 "token": "USDC",
-                "tokenTolerancePercent": 0.2,
-                "tokenMADMultiplier": 4,
-                "tokenMaxSpreadPercent": 0.41,
+                "tokenTolerancePercent": 0.3,
+                "tokenMADMultiplier": 5,
+                "tokenMaxSpreadPercent": 0.63,
                 "tokenMinVolumePerExchange": 50000,
                 "tokenMaxExchangeWeightPercent": 50
             }
